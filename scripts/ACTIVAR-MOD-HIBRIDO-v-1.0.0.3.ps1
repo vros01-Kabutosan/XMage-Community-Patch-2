@@ -6,10 +6,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Version = "ACTIVAR-MOD-HIBRIDO-v-1.0.0.2"
+$Version = "ACTIVAR-MOD-HIBRIDO-v-1.0.0.3"
 $Repo = "https://github.com/vros01-Kabutosan/XMage-Community-Patch-2.git"
 $Branch = "work/importacion-instalacion-v-1.0.0"
-$ExpectedCommit = "10cb31477b96318518beeb6abdb58fe15c6507b6"
+$RequiredJavaCommit = "34977be6537ae17e3e79fc72c5b3e4ccd24b9d71"
 $Project = "J:\MTG\PROYECTO-20260829"
 $Active = "J:\MTG\xmage"
 $Logs = Join-Path $Project "05-LOGS"
@@ -71,7 +71,7 @@ try {
     Write-Log "INICIO=$Version"
     Write-Log "REPO=$Repo"
     Write-Log "BRANCH=$Branch"
-    Write-Log "EXPECTED_COMMIT=$ExpectedCommit"
+    Write-Log "REQUIRED_JAVA_COMMIT=$RequiredJavaCommit"
     Write-Log "PROJECT=$Project"
     Write-Log "ACTIVE=$Active"
     Write-Log "ACTIVATE=$Activate"
@@ -100,16 +100,27 @@ try {
     if (-not $sourceIsExact) {
         $stage = Join-Path $BuildRoot "$Version-$Stamp-source"
         Write-Log "CLEAN_CLONE=$stage"
-        & $git clone --single-branch --branch $Branch $Repo $stage 2>&1 |
-            ForEach-Object { Write-Log ("GIT: " + $_) }
+        $cloneOut = Join-Path $Logs "$Version-$Stamp-GIT-OUT.log"
+        $cloneErr = Join-Path $Logs "$Version-$Stamp-GIT-ERR.log"
+        & $git clone --quiet --single-branch --branch $Branch $Repo $stage 1> $cloneOut 2> $cloneErr
         $cloneCode = $LASTEXITCODE
+        if (Test-Path -LiteralPath $cloneOut) {
+            Get-Content -LiteralPath $cloneOut | ForEach-Object { Write-Log ("GIT_OUT: " + $_) }
+        }
+        if (Test-Path -LiteralPath $cloneErr) {
+            Get-Content -LiteralPath $cloneErr | ForEach-Object { Write-Log ("GIT_ERR: " + $_) }
+        }
         Write-Log "GIT_CLONE_EXITCODE=$cloneCode"
-        if ($cloneCode -ne 0) { throw "No se pudo clonar la rama exacta." }
+        if ($cloneCode -ne 0) { throw "No se pudo clonar la rama del mod." }
 
         $clonedHead = (& $git -C $stage rev-parse HEAD 2>$null).Trim()
         Write-Log "CLONED_HEAD=$clonedHead"
-        if ($clonedHead -ne $ExpectedCommit) {
-            throw "El clon no coincide con el commit esperado."
+        & $git -C $stage merge-base --is-ancestor $RequiredJavaCommit $clonedHead 2>$null
+        $ancestorCode = $LASTEXITCODE
+        Write-Log "REQUIRED_JAVA_COMMIT=$RequiredJavaCommit"
+        Write-Log "REQUIRED_JAVA_COMMIT_IS_ANCESTOR_EXITCODE=$ancestorCode"
+        if ($ancestorCode -ne 0) {
+            throw "El clon no contiene el commit Java validado del mod."
         }
         $Source = $stage
         $ClientSource = Join-Path $Source "Mage.Client\target\mage-client-1.4.61.jar"

@@ -231,19 +231,46 @@ public abstract class CardRenderer {
     }
 
     protected int drawExpansionSymbol(Graphics2D g, int x, int y, int w, int h) {
-        int height;
-        Image setSymbol = ManaSymbols.getSetSymbolImage(this.cardView.getExpansionSetCode(), this.cardView.getRarity());
+        // Draw the expansion symbol
+        Image setSymbol = ManaSymbols.getSetSymbolImage(cardView.getExpansionSetCode(), cardView.getRarity());
+        int setSymbolWidth;
         if (setSymbol == null) {
+            // Don't draw anything when we don't have a set symbol
             return 0;
-        }
-        int scale = 1;
-        if (height != -1) {
-            for (height = setSymbol.getHeight(null); height > h + 2; height /= 2) {
-                scale *= 2;
+            /*
+            // Just draw the as a code
+            String code = cardView.getExpansionSetCode();
+            code = (code != null) ? code.toUpperCase(Locale.ENGLISH) : "";
+            FontMetrics metrics = g.getFontMetrics();
+            setSymbolWidth = metrics.stringWidth(code);
+            if (cardView.getRarity() == Rarity.COMMON) {
+                g.setColor(Color.white);
+            } else {
+                g.setColor(Color.black);
             }
+            g.fillRoundRect(
+                    x + w - setSymbolWidth - 1, y + 2,
+                    setSymbolWidth+2, h - 5,
+                    5, 5);
+            g.setColor(getRarityColor());
+            g.drawString(code, x + w - setSymbolWidth, y + h - 3);
+             */
+        } else {
+            // Draw the set symbol
+            int height = setSymbol.getHeight(null);
+            int scale = 1;
+            if (height != -1) {
+                while (height > h + 2) {
+                    scale *= 2;
+                    height /= 2;
+                }
+            }
+            setSymbolWidth = setSymbol.getWidth(null) / scale;
+            g.drawImage(setSymbol,
+                    x + w - setSymbolWidth, y + (h - height) / 2,
+                    setSymbolWidth, height,
+                    null);
         }
-        int setSymbolWidth = setSymbol.getWidth(null) / scale;
-        g.drawImage(setSymbol, x + w - setSymbolWidth, y + (h - height) / 2, setSymbolWidth, height, null);
         return setSymbolWidth;
     }
 

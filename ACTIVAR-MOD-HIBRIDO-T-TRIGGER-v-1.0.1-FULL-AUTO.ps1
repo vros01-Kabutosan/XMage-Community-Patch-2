@@ -705,7 +705,8 @@ try {
 
         if ($Launch) {
             $activeJava8 = Find-ActiveJava8
-            $env:JAVA_HOME = Split-Path -Parent $activeJava8
+            $activeJavaBin = Split-Path -Parent $activeJava8
+            $env:JAVA_HOME = Split-Path -Parent $activeJavaBin
             Write-Log "JAVA_HOME_RUNTIME=$env:JAVA_HOME"
             Write-Log "JAVA_RUNTIME=$activeJava8"
 
@@ -727,6 +728,7 @@ try {
                 throw "No se encontró un launcher de servidor XMage dentro de $Active; no se inicia solo el cliente."
             }
             $serverPath = [string]$serverLauncher[0]
+            Write-Log "SERVER_LAUNCHER=$serverPath"
             $null = Start-ExistingLauncher -Path $serverPath -Label "SERVER"
 
             $serverReady = $false
@@ -760,6 +762,7 @@ try {
                 throw "No se encontró un launcher de cliente XMage dentro de $Active."
             }
             $clientPath = [string]$clientLauncher[0]
+            Write-Log "CLIENT_LAUNCHER=$clientPath"
             $null = Start-ExistingLauncher -Path $clientPath -Label "CLIENT"
             Write-Log "LAUNCH=PASS;SERVER_AND_CLIENT=STARTED"
         }
@@ -767,6 +770,22 @@ try {
 }
 catch {
     Write-Log "ERROR=$($_.Exception.Message)"
+    if ($Launch -and $Activate) {
+        $launched = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $exe = [string]$_.ExecutablePath
+            $cmd = [string]$_.CommandLine
+            $exe.StartsWith($Active, [System.StringComparison]::OrdinalIgnoreCase) -or ($cmd.IndexOf($Active, [System.StringComparison]::OrdinalIgnoreCase) -ge 0)
+        })
+        foreach ($process in $launched) {
+            try {
+                Stop-Process -Id ([int]$process.ProcessId) -Force -ErrorAction Stop
+                Write-Log "LAUNCH_ROLLBACK_STOP=PASS;PID=$($process.ProcessId);NAME=$($process.Name)"
+            }
+            catch {
+                Write-Log "LAUNCH_ROLLBACK_STOP=FAIL;PID=$($process.ProcessId);ERROR=$($_.Exception.Message)"
+            }
+        }
+    }
     if ($Activate -and ($BackupItems.Count -gt 0)) {
         Write-Log "ROLLBACK_BEGIN=YES"
         foreach ($backup in $BackupItems) {

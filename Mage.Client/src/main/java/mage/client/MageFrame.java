@@ -842,14 +842,14 @@ implements MageClient {
     }
 
     public void showGameEndDialog(GameEndView gameEndView) {
-        GameEndDialog gameEndDialog;
-        desktopPane.add((Component)gameEndDialog, (gameEndDialog = new GameEndDialog(gameEndView)).isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+        GameEndDialog gameEndDialog = new GameEndDialog(gameEndView);
+        desktopPane.add(gameEndDialog, gameEndDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         gameEndDialog.showDialog();
     }
 
     public void showTableWaitingDialog(UUID roomId, UUID tableId, boolean isTournament) {
-        TableWaitingDialog tableWaitingDialog;
-        desktopPane.add((Component)tableWaitingDialog, (tableWaitingDialog = new TableWaitingDialog()).isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+        TableWaitingDialog tableWaitingDialog = new TableWaitingDialog();
+        desktopPane.add(tableWaitingDialog, tableWaitingDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         tableWaitingDialog.showDialog(roomId, tableId, isTournament);
     }
 
@@ -1148,14 +1148,16 @@ implements MageClient {
         }
     }
 
-    public void btnAboutActionPerformed(ActionEvent evt) {
-        AboutDialog aboutDialog;
-        JInternalFrame[] windows;
-        for (JInternalFrame window : windows = desktopPane.getAllFrames()) {
-            if (!(window instanceof AboutDialog)) continue;
-            return;
+    public void btnAboutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAboutActionPerformed
+        JInternalFrame[] windows = desktopPane.getAllFrames();
+        for (JInternalFrame window : windows) {
+            if (window instanceof AboutDialog) {
+                // don't open the window twice.
+                return;
+            }
         }
-        desktopPane.add((Component)aboutDialog, (aboutDialog = new AboutDialog()).isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+        AboutDialog aboutDialog = new AboutDialog();
+        desktopPane.add(aboutDialog, aboutDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         aboutDialog.showDialog(VERSION);
     }
 

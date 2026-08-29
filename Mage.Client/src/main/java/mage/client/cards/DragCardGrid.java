@@ -801,12 +801,12 @@ CardEventProducer {
                 });
                 continue;
             }
-            button = new JToggleButton(cardType.toString());
-            this.selectByTypeButtons.put(cardType, button);
-            selectByTypeMode.add(button);
-            selectByTypeModeGroup.add(button);
-            button.addActionListener(e -> {
-                button.setSelected(!button.isSelected());
+            final JToggleButton typeButton = new JToggleButton(cardType.toString());
+            this.selectByTypeButtons.put(cardType, typeButton);
+            selectByTypeMode.add(typeButton);
+            selectByTypeModeGroup.add(typeButton);
+            typeButton.addActionListener(e -> {
+                typeButton.setSelected(!typeButton.isSelected());
                 this.reselectBy();
             });
         }

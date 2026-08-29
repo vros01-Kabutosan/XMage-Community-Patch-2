@@ -8,7 +8,7 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
-$Version = "v-1.0.1.4"
+$Version = "v-1.0.1.5"
 $RepoUrl = "https://github.com/vros01-Kabutosan/XMage-Community-Patch-2.git"
 $Branch = "work/importacion-instalacion-v-1.0.0"
 $Active = "J:\MTG\xmage"
@@ -436,6 +436,32 @@ function Find-Maven {
     return $resolved
 }
 
+function Clear-StaleOverlayTemps {
+    param([string]$Root)
+    $tempFiles = @()
+    foreach ($libraryPath in @((Join-Path $Root "client\lib"), (Join-Path $Root "server\lib"))) {
+        if (Test-Path -Path $libraryPath -PathType Container) {
+            $tempFiles += @(Get-ChildItem -Path $libraryPath -Filter "*.overlay.tmp" -File -Force -ErrorAction SilentlyContinue)
+        }
+    }
+    $tempFiles = @($tempFiles | Sort-Object -Property FullName -Unique)
+    if ($tempFiles.Count -eq 0) {
+        Write-Log "STALE_OVERLAY_TEMP_CLEAN=NONE"
+        return
+    }
+
+    foreach ($tempFile in $tempFiles) {
+        $hash = Get-Hash $tempFile.FullName
+        Write-Log "STALE_OVERLAY_TEMP_FOUND=$($tempFile.FullName);BYTES=$($tempFile.Length);SHA256=$hash"
+        Remove-Item -Path $tempFile.FullName -Force -ErrorAction Stop
+        if (Test-Path -Path $tempFile.FullName -PathType Leaf) {
+            throw "No se pudo eliminar el temporal obsoleto: $($tempFile.FullName)"
+        }
+        Write-Log "STALE_OVERLAY_TEMP_DELETE=PASS;PATH=$($tempFile.FullName)"
+    }
+    Write-Log "STALE_OVERLAY_TEMP_CLEAN=PASS;COUNT=$($tempFiles.Count)"
+}
+
 
 function Test-PortOpen {
     param(
@@ -692,6 +718,7 @@ try {
             Write-Log "PROCESS_STOP=PASS;PID=$($process.ProcessId)"
         }
         Start-Sleep -Milliseconds 500
+        Clear-StaleOverlayTemps -Root $Active
 
         $activeClientMatches = @()
         if (Test-Path -Path (Join-Path $Active "client\lib") -PathType Container) {

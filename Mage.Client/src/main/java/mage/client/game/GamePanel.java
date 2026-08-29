@@ -1,7 +1,82 @@
+/*
+ * Decompiled with CFR.
+ */
 package mage.client.game;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import java.awt.AWTEvent;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Image;
+import java.awt.KeyboardFocusManager;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.geom.RoundRectangle2D;
+import java.beans.PropertyVetoException;
+import java.io.Serializable;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EventListener;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.prefs.Preferences;
+import java.util.stream.Collectors;
+import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JDesktopPane;
+import javax.swing.JInternalFrame;
+import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JSplitPane;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.plaf.basic.BasicInternalFrameUI;
+import javax.swing.plaf.basic.BasicSplitPaneDivider;
+import javax.swing.plaf.basic.BasicSplitPaneUI;
 import mage.cards.Card;
 import mage.cards.MageCard;
 import mage.cards.action.ActionCallback;
@@ -9,107 +84,111 @@ import mage.choices.Choice;
 import mage.client.MageFrame;
 import mage.client.SessionHandler;
 import mage.client.cards.BigCard;
+import mage.client.cards.Cards;
 import mage.client.chat.ChatPanelBasic;
 import mage.client.combat.CombatManager;
 import mage.client.components.HoverButton;
 import mage.client.components.KeyboundButton;
 import mage.client.components.MageComponents;
+import mage.client.components.ability.AbilityPicker;
 import mage.client.components.ext.dlg.DialogManager;
 import mage.client.components.tray.MageTray;
-import mage.client.dialog.*;
-import mage.client.dialog.CardInfoWindowDialog.ShowType;
-import mage.client.game.FeedbackPanel.FeedbackMode;
+import mage.client.dialog.CardHintsHelperDialog;
+import mage.client.dialog.CardInfoWindowDialog;
+import mage.client.dialog.MageDialog;
+import mage.client.dialog.PickChoiceDialog;
+import mage.client.dialog.PickMultiNumberDialog;
+import mage.client.dialog.PickNumberDialog;
+import mage.client.dialog.PickPileDialog;
+import mage.client.dialog.PreferencesDialog;
+import mage.client.dialog.ShowCardsDialog;
+import mage.client.game.BattlefieldPanel;
+import mage.client.game.FeedbackPanel;
+import mage.client.game.FirstButtonMousePressedAction;
+import mage.client.game.GamePane;
+import mage.client.game.HandPanel;
+import mage.client.game.HelperPanel;
+import mage.client.game.PlayAreaPanel;
+import mage.client.game.PlayAreaPanelOptions;
+import mage.client.game.ReplayTask;
 import mage.client.plugins.adapters.MageActionCallback;
 import mage.client.plugins.impl.Plugins;
+import mage.client.util.AppUtil;
+import mage.client.util.CardsViewUtil;
+import mage.client.util.ClientEventType;
+import mage.client.util.DefaultActionCallback;
 import mage.client.util.Event;
-import mage.client.util.*;
+import mage.client.util.GUISizeHelper;
+import mage.client.util.Listener;
 import mage.client.util.audio.AudioManager;
 import mage.client.util.gui.ArrowBuilder;
 import mage.client.util.gui.MageDialogState;
-import mage.constants.*;
+import mage.constants.AbilityType;
+import mage.constants.EnlargeMode;
+import mage.constants.MageObjectType;
+import mage.constants.PhaseStep;
+import mage.constants.PlayerAction;
+import mage.constants.Zone;
 import mage.game.events.PlayerQueryEvent;
 import mage.players.PlayableObjectStats;
 import mage.players.PlayableObjectsList;
-import mage.util.CardUtil;
 import mage.util.DebugUtil;
 import mage.util.MultiAmountMessage;
-import mage.util.StreamUtils;
-import mage.view.*;
+import mage.view.AbilityPickerView;
+import mage.view.CardView;
+import mage.view.CardsView;
+import mage.view.CommandObjectView;
+import mage.view.DungeonView;
+import mage.view.ExileView;
+import mage.view.GameView;
+import mage.view.LookedAtView;
+import mage.view.PermanentView;
+import mage.view.PlayerView;
+import mage.view.RevealedView;
+import mage.view.SimpleCardView;
+import mage.view.SimpleCardsView;
+import mage.view.UserRequestMessage;
 import org.apache.log4j.Logger;
 import org.mage.plugins.card.utils.impl.ImageManagerImpl;
 
-import javax.swing.Timer;
-import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
-import javax.swing.plaf.basic.BasicSplitPaneDivider;
-import javax.swing.plaf.basic.BasicSplitPaneUI;
-import java.awt.*;
-import java.awt.event.*;
-import java.beans.PropertyVetoException;
-import java.io.Serializable;
-import java.lang.reflect.Type;
-import java.util.List;
-import java.util.*;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import static mage.client.dialog.PreferencesDialog.*;
-import static mage.constants.PlayerAction.*;
-
-/**
- * Game GUI: main game panel with all controls
- *
- * @author BetaSteward_at_googlemail.com, nantuko8, JayDi85
- */
-public final class GamePanel extends javax.swing.JPanel {
-
+public final class GamePanel
+extends JPanel {
+    private static final String XCP_STACK_NO_VISIBLE_DRAG_LABEL_MARKER = "XCP_STACK_NO_VISIBLE_DRAG_LABEL_V1_2_1_8";
+    private static final String XCP_STACK_VISIBLE_COUNT_MARKER = "XCP_STACK_VISIBLE_COUNT_V1_2_1_9";
     private static final Logger logger = Logger.getLogger(GamePanel.class);
     private static final String YOUR_HAND = "Your hand";
-
     private static final int SKIP_BUTTONS_SPACE_H = 3;
     private static final int SKIP_BUTTONS_SPACE_V = 3;
-
     private static final int PHASE_BUTTONS_SPACE_H = 3;
     private static final int PHASE_BUTTONS_SPACE_V = 3;
-
     private static final String CMD_AUTO_ORDER_FIRST = "cmdAutoOrderFirst";
     private static final String CMD_AUTO_ORDER_LAST = "cmdAutoOrderLast";
     private static final String CMD_AUTO_ORDER_NAME_FIRST = "cmdAutoOrderNameFirst";
     private static final String CMD_AUTO_ORDER_NAME_LAST = "cmdAutoOrderNameLast";
     private static final String CMD_AUTO_ORDER_RESET_ALL = "cmdAutoOrderResetAll";
-
-    // on window resize: 0.0 keep left size (hand), 1.0 keep right size (stack), 0.5 keep proportion
     private static final double DIVIDER_KEEP_LEFT_COMPONENT = 0.0;
     private static final double DIVIDER_KEEP_RIGHT_COMPONENT = 1.0;
     private static final double DIVIDER_KEEP_PROPORTION = 0.5;
     private static final int DIVIDER_POSITION_DEFAULT = -1;
     private static final int DIVIDER_POSITION_HIDDEN_LEFT_OR_TOP = -2;
     private static final int DIVIDER_POSITION_HIDDEN_RIGHT_OR_BOTTOM = -3;
-
-    private final Map<UUID, PlayAreaPanel> players = new LinkedHashMap<>();
-    private final Map<UUID, Boolean> playersWhoLeft = new LinkedHashMap<>();
-
-    // non modal frames
-    private final Map<UUID, CardInfoWindowDialog> exiles = new HashMap<>();
-    private final Map<String, CardInfoWindowDialog> revealed = new HashMap<>();
-    private final Map<String, CardInfoWindowDialog> lookedAt = new HashMap<>();
-    private final Map<String, CardsView> graveyards = new HashMap<>(); // need to sync selection
-    private final Map<String, CardInfoWindowDialog> graveyardWindows = new HashMap<>();
-    private final Map<String, CardInfoWindowDialog> companion = new HashMap<>();
-    private final Map<String, CardsView> sideboards = new HashMap<>(); // need to sync selection
-    private final Map<String, CardInfoWindowDialog> sideboardWindows = new HashMap<>();
-    private final ArrayList<ShowCardsDialog> pickTarget = new ArrayList<>();
-    private final ArrayList<PickPileDialog> pickPile = new ArrayList<>();
-    private final Map<String, CardHintsHelperDialog> cardHintsWindows = new LinkedHashMap<>();
-
+    private final Map<UUID, PlayAreaPanel> players = new LinkedHashMap<UUID, PlayAreaPanel>();
+    private final Map<UUID, Boolean> playersWhoLeft = new LinkedHashMap<UUID, Boolean>();
+    private final Map<UUID, CardInfoWindowDialog> exiles = new HashMap<UUID, CardInfoWindowDialog>();
+    private final Map<String, CardInfoWindowDialog> revealed = new HashMap<String, CardInfoWindowDialog>();
+    private final Map<String, CardInfoWindowDialog> lookedAt = new HashMap<String, CardInfoWindowDialog>();
+    private final Map<String, CardsView> graveyards = new HashMap<String, CardsView>();
+    private final Map<String, CardInfoWindowDialog> graveyardWindows = new HashMap<String, CardInfoWindowDialog>();
+    private final Map<String, CardInfoWindowDialog> companion = new HashMap<String, CardInfoWindowDialog>();
+    private final Map<String, CardsView> sideboards = new HashMap<String, CardsView>();
+    private final Map<String, CardInfoWindowDialog> sideboardWindows = new HashMap<String, CardInfoWindowDialog>();
+    private final ArrayList<ShowCardsDialog> pickTarget = new ArrayList();
+    private final ArrayList<PickPileDialog> pickPile = new ArrayList();
+    private final Map<String, CardHintsHelperDialog> cardHintsWindows = new LinkedHashMap<String, CardHintsHelperDialog>();
     private UUID currentTableId;
     private UUID parentTableId;
     private UUID gameId;
-    private UUID playerId; // playerId of the player
+    private UUID playerId;
     GamePane gamePane;
     private ReplayTask replayTask;
     private final PickNumberDialog pickNumber;
@@ -117,358 +196,363 @@ public final class GamePanel extends javax.swing.JPanel {
     private JLayeredPane jLayeredPane;
     private String chosenHandKey = "You";
     private final skipButtonsList skipButtons = new skipButtonsList();
-
     private boolean menuNameSet = false;
     private boolean handCardsOfOpponentAvailable = false;
-
-    private final Map<String, Card> loadedCards = new HashMap<>();
-
-    private int storedHeight;
-    private final Map<String, HoverButton> phaseButtons = new LinkedHashMap<>(); // phase name, phase button
-
-    // splitters with save and restore feature
-    // TODO: use same logic for draft and deck editor splitters like SplitterManager
-    private final Map<String, MageSplitter> splitters = new LinkedHashMap<>(); // settings key, splitter
-    // do not save splitters in intermediate state, e.g. connection to new server with active game
+    private final Map<String, Card> loadedCards = new HashMap<String, Card>();
+    private static final String XCP_UI_RESIZE_V1_3 = "XCP_UI_RESIZE_V1_3";
+    private final Map<String, HoverButton> phaseButtons = new LinkedHashMap<String, HoverButton>();
+    private final Map<String, MageSplitter> splitters = new LinkedHashMap<String, MageSplitter>();
     private boolean isSplittersFullyRestored = false;
-
-    public static class MageSplitter {
-        JSplitPane splitPane;
-        double defaultProportion;
-
-        MageSplitter(JSplitPane splitPane, double defaultProportion) {
-            this.splitPane = splitPane;
-            this.defaultProportion = defaultProportion;
-        }
-    }
-
     private MageDialogState choiceWindowState;
-
-    private boolean initComponents;
-
-    private Timer resizeTimer; // can't be final
-
-    private enum PopUpMenuType {
-        TRIGGER_ORDER
-    }
-
-    // CardView popupMenu was invoked last
+    private boolean initComponents = true;
+    private Timer resizeTimer;
     private CardView cardViewPopupMenu;
-
-    // popup menu for triggered abilities order
     private JPopupMenu popupMenuTriggerOrder;
+    private final LastGameData lastGameData = new LastGameData();
+    private static final int BORDER_SIZE = 2;
+    private static final Border BORDER_ACTIVE = new LineBorder(Color.orange, 2);
+    private static final Border BORDER_NON_ACTIVE = new EmptyBorder(2, 2, 2, 2);
+    private static final int holdPriorityMask = System.getProperty("os.name").contains("Mac OS X") ? 256 : 128;
+    private boolean holdingPriority;
+    private AbilityPicker abilityPicker;
+    private BigCard bigCard;
+    private KeyboundButton btnToggleMacro;
+    private KeyboundButton btnCancelSkip;
+    private KeyboundButton btnSkipToNextTurn;
+    private KeyboundButton btnSkipToEndTurn;
+    private KeyboundButton btnSkipToNextMain;
+    private KeyboundButton btnSkipStack;
+    private KeyboundButton btnSkipToYourTurn;
+    private KeyboundButton btnSkipToEndStepBeforeYourTurn;
+    private JButton btnConcede;
+    private JButton btnSwitchHands;
+    private JButton btnNextPlay;
+    private JButton btnPlay;
+    private JButton btnPreviousPlay;
+    private JButton btnSkipForward;
+    private JButton btnStopReplay;
+    private JButton btnStopWatching;
+    private ChatPanelBasic gameChatPanel;
+    private FeedbackPanel feedbackPanel;
+    private HelperPanel helper;
+    private ChatPanelBasic userChatPanel;
+    private JPanel bigCardPanel;
+    private JPanel pnlHelperHandButtonsStackArea;
+    private JSplitPane splitGameAndBigCard;
+    private JSplitPane splitBattlefieldAndChats;
+    private JSplitPane splitChatAndLogs;
+    private JSplitPane splitHandAndStack;
+    private JLabel lblActivePlayer;
+    private JLabel lblPhase;
+    private JLabel lblPriority;
+    private JLabel lblStep;
+    private JLabel lblTurn;
+    private JPanel pnlBattlefield;
+    private JPanel pnlShortCuts;
+    private JPanel pnlReplay;
+    private JLabel txtActivePlayer;
+    private JLabel txtPhase;
+    private JLabel txtPriority;
+    private JLabel txtStep;
+    private JLabel txtTurn;
+    private Map<String, CardsView> handCards;
+    private Cards stackObjects;
+    private JInternalFrame floatingStackFrame;
+    private JLabel floatingStackTitleLabel;
+    private JLabel floatingStackTypeLabel;
+    private JLabel floatingStackOrderLabel;
+    private JPanel floatingStackHeader;
+    private static final String STACK_HEADER_BADGE_MARKER = "XCP_STACK_HEADER_BADGE_V1_2_1_9";
+    private Point floatingStackDragOrigin;
+    private Point floatingStackResizeOrigin;
+    private Dimension floatingStackResizeStartSize;
+    private boolean floatingStackHadObjects = false;
+    private boolean floatingStackRestoringBounds = false;
+    private static final String XCP_STACK_PREF_NODE = "xcpFloatingStackV5";
+    private static final String XCP_STACK_X = "x";
+    private static final String XCP_STACK_Y = "y";
+    private static final String XCP_STACK_W = "width";
+    private static final String XCP_STACK_H = "height";
+    private HandPanel handContainer;
+    private JPanel jPhases;
+    private JPanel phasesContainer;
+    private JLabel txtHoldPriority;
+    private boolean imagePanelState;
 
-    // keep game data for updates/re-draws
-    public static class LastGameData {
-        int messageId;
-        GameView game;
-        boolean showPlayable;
-        Map<String, Serializable> options;
-        Set<UUID> targets;
-        Map<UUID, CardView> allCardsIndex = new HashMap<>(); // fast access to all game objects (for cards hints, etc)
-
-        private void setNewGame(GameView game) {
-            this.game = game;
-            prepareAllCardsIndex();
+    private static void xcpForceLayoutTree(Component component) {
+        if (!(component instanceof Container)) {
+            return;
         }
-
-        private void prepareAllCardsIndex() {
-            this.allCardsIndex.clear();
-            if (this.game == null) {
-                return;
-            }
-
-            this.game.getMyHand().values().forEach(c -> this.allCardsIndex.put(c.getId(), c));
-            this.game.getMyHelperEmblems().values().forEach(c -> this.allCardsIndex.put(c.getId(), c));
-            this.game.getStack().values().forEach(c -> this.allCardsIndex.put(c.getId(), c));
-            this.game.getExile()
-                    .stream()
-                    .flatMap(s -> s.values().stream())
-                    .forEach(c -> this.allCardsIndex.put(c.getId(), c));
-            this.game.getLookedAt()
-                    .stream()
-                    .flatMap(s -> s.getCards().values().stream())
-                    .filter(c -> c instanceof CardView)
-                    .map(c -> (CardView) c)
-                    .forEach(c -> this.allCardsIndex.put(c.getId(), c));
-            this.game.getRevealed().stream()
-                    .flatMap(s -> s.getCards().values().stream())
-                    .forEach(c -> this.allCardsIndex.put(c.getId(), c));
-            this.game.getPlayers().forEach(player -> {
-                player.getBattlefield().values().forEach(c -> this.allCardsIndex.put(c.getId(), c));
-                player.getGraveyard().values().forEach(c -> this.allCardsIndex.put(c.getId(), c));
-                Optional.ofNullable(player.getTopCard()).ifPresent(c -> this.allCardsIndex.put(c.getId(), c));
-                // TODO: add support of dungeon, emblem all another non-card objects
-                // commanders and custom emblems
-                player.getCommandObjectList()
-                        .forEach(object -> {
-                            if (object instanceof CardView) {
-                                // commanders and custom emblems
-                                this.allCardsIndex.put(object.getId(), (CardView) object);
-                            } else if (object instanceof DungeonView) {
-                                // dungeons
-                                this.allCardsIndex.put(object.getId(), new CardView((DungeonView) object));
-                            } else {
-                                // TODO: enable after all view types added here?
-                                //throw new IllegalArgumentException("Unsupported object type: " + object.getName() + " - " + object.getClass().getSimpleName());
-                            }
-                        });
-            });
-        }
-
-        public Set<UUID> getChosenTargets() {
-            if (options != null && options.containsKey("chosenTargets")) {
-                return (Set<UUID>) options.get("chosenTargets");
-            } else {
-                return Collections.emptySet();
-            }
-        }
-
-        public CardView findCard(UUID id) {
-            return this.allCardsIndex.getOrDefault(id, null);
+        Container container = (Container)component;
+        container.doLayout();
+        for (Component child : container.getComponents()) {
+            GamePanel.xcpForceLayoutTree(child);
         }
     }
 
-    private final LastGameData lastGameData = new LastGameData();
+    private void xcpRevalidateAncestors() {
+        for (Container current = this; current != null; current = current.getParent()) {
+            ((Component)current).revalidate();
+            current.doLayout();
+        }
+    }
+
+    private void xcpRefreshBattlefields() {
+        for (PlayAreaPanel playArea : this.players.values()) {
+            BattlefieldPanel battlefield = playArea.getBattlefieldPanel();
+            battlefield.updateSize();
+            this.xcpNormalizeBattlefieldViewport(battlefield);
+            battlefield.revalidate();
+        }
+    }
+
+    private void xcpNormalizeBattlefieldViewport(BattlefieldPanel battlefield) {
+        JLayeredPane mainPanel = battlefield.getMainPanel();
+        Dimension preferred = mainPanel.getPreferredSize();
+        int maxBottom = 0;
+        for (Component component : mainPanel.getComponents()) {
+            if (!component.isVisible()) continue;
+            Rectangle bounds = component.getBounds();
+            maxBottom = Math.max(maxBottom, bounds.y + bounds.height);
+        }
+        int normalizedHeight = Math.max(1, maxBottom);
+        if (preferred.height > normalizedHeight) {
+            mainPanel.setPreferredSize(new Dimension(preferred.width, normalizedHeight));
+        }
+    }
 
     public LastGameData getLastGameData() {
         return this.lastGameData;
     }
 
     public GamePanel() {
-        initComponents = true;
-        initComponents();
-
-        // prepare command panels (feedback, hand, skip buttons and stack)
+        this.initComponents();
         if (DebugUtil.GUI_GAME_DRAW_COMMANDS_PANEL_BORDER) {
-            pnlHelperHandButtonsStackArea.setBorder(BorderFactory.createLineBorder(Color.MAGENTA));
+            this.pnlHelperHandButtonsStackArea.setBorder(BorderFactory.createLineBorder(Color.MAGENTA));
         }
-
-        // all game panels
-        pnlHelperHandButtonsStackArea.removeAll();
-        pnlHelperHandButtonsStackArea.setLayout(new BorderLayout());
-        // battlefields + phases
+        this.pnlHelperHandButtonsStackArea.removeAll();
+        this.pnlHelperHandButtonsStackArea.setLayout(new BorderLayout());
         JPanel pnlBattlefieldAndPhases = new JPanel(new BorderLayout());
         pnlBattlefieldAndPhases.setOpaque(false);
-        pnlBattlefieldAndPhases.add(pnlBattlefield, BorderLayout.CENTER);
-        pnlBattlefieldAndPhases.add(phasesContainer, BorderLayout.EAST);
-        pnlHelperHandButtonsStackArea.add(pnlBattlefieldAndPhases, BorderLayout.CENTER);
-        // commands (feedback + hand + skip + stack)
+        pnlBattlefieldAndPhases.add((Component)this.pnlBattlefield, "Center");
+        pnlBattlefieldAndPhases.add((Component)this.phasesContainer, "East");
+        this.pnlHelperHandButtonsStackArea.add((Component)pnlBattlefieldAndPhases, "Center");
         JPanel pnlCommandsRoot = new JPanel(new BorderLayout());
         pnlCommandsRoot.setOpaque(false);
-        // ... feedback + hand
         JPanel pnlCommandsFeedbackAndHand = new JPanel(new BorderLayout());
         pnlCommandsFeedbackAndHand.setOpaque(false);
-        pnlCommandsFeedbackAndHand.add(feedbackPanel, BorderLayout.NORTH);
-        pnlCommandsFeedbackAndHand.add(handContainer, BorderLayout.CENTER);
-        // ... skip + stack
+        pnlCommandsFeedbackAndHand.add((Component)this.feedbackPanel, "North");
+        pnlCommandsFeedbackAndHand.add((Component)this.handContainer, "Center");
         JPanel pnlCommandsSkipAndStack = new JPanel(new BorderLayout());
         pnlCommandsSkipAndStack.setOpaque(false);
-        pnlCommandsSkipAndStack.add(pnlShortCuts, BorderLayout.NORTH);
-        pnlCommandsSkipAndStack.add(stackObjects, BorderLayout.CENTER);
-        // ... split: feedback + hand <|> skip + stack
-        splitHandAndStack.setLeftComponent(pnlCommandsFeedbackAndHand);
-        splitHandAndStack.setRightComponent(pnlCommandsSkipAndStack);
-        splitHandAndStack.setResizeWeight(DIVIDER_KEEP_RIGHT_COMPONENT);
-        pnlCommandsFeedbackAndHand.setMinimumSize(new Dimension(0, 0)); // allow any sizes for hand
-        pnlCommandsSkipAndStack.setMinimumSize(new Dimension(0, 0)); // allow any sizes for stack
-        // ... all
-        pnlCommandsRoot.add(splitHandAndStack, BorderLayout.CENTER);
-        pnlHelperHandButtonsStackArea.add(pnlCommandsRoot, BorderLayout.SOUTH);
-
-        // prepare commands buttons panel with flow layout (instead custom from IDE)
-        // size changes in helper method at the end
+        pnlCommandsSkipAndStack.add((Component)this.pnlShortCuts, "South");
+        pnlCommandsFeedbackAndHand.setMinimumSize(new Dimension(0, 0));
+        pnlCommandsSkipAndStack.setMinimumSize(new Dimension(0, 0));
+        pnlCommandsRoot.add((Component)pnlCommandsFeedbackAndHand, "Center");
+        pnlCommandsRoot.add((Component)pnlCommandsSkipAndStack, "South");
+        this.pnlHelperHandButtonsStackArea.add((Component)pnlCommandsRoot, "South");
         if (DebugUtil.GUI_GAME_DRAW_SKIP_BUTTONS_PANEL_BORDER) {
-            pnlShortCuts.setBorder(BorderFactory.createLineBorder(Color.red));
+            this.pnlShortCuts.setBorder(BorderFactory.createLineBorder(Color.red));
         }
-        pnlShortCuts.removeAll();
-        pnlShortCuts.setLayout(null); // real layout on size settings
-        pnlShortCuts.add(btnSkipToNextTurn);
-        pnlShortCuts.add(btnSkipToEndTurn);
-        pnlShortCuts.add(btnSkipToNextMain);
-        pnlShortCuts.add(btnSkipToYourTurn);
-        pnlShortCuts.add(btnSkipStack);
-        pnlShortCuts.add(btnSkipToEndStepBeforeYourTurn);
-        pnlShortCuts.add(txtHoldPriority);
-        //pnlShortCuts.add(btnToggleMacro);
-        pnlShortCuts.add(btnSwitchHands);
-        pnlShortCuts.add(btnCancelSkip);
-        pnlShortCuts.add(btnConcede);
-        pnlShortCuts.add(btnStopWatching);
-
-        pickNumber = new PickNumberDialog();
-        MageFrame.getDesktop().add(pickNumber, pickNumber.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
-
-        pickMultiNumber = new PickMultiNumberDialog();
-        MageFrame.getDesktop().add(pickMultiNumber, pickMultiNumber.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
-
+        this.pnlShortCuts.removeAll();
+        this.pnlShortCuts.setLayout(null);
+        this.pnlShortCuts.add(this.btnSkipToNextTurn);
+        this.pnlShortCuts.add(this.btnSkipToEndTurn);
+        this.pnlShortCuts.add(this.btnSkipToNextMain);
+        this.pnlShortCuts.add(this.btnSkipToYourTurn);
+        this.pnlShortCuts.add(this.btnSkipStack);
+        this.pnlShortCuts.add(this.btnSkipToEndStepBeforeYourTurn);
+        this.pnlShortCuts.add(this.btnCancelSkip);
+        this.pnlShortCuts.add(this.txtHoldPriority);
+        this.pnlShortCuts.add(this.btnSwitchHands);
+        this.pnlShortCuts.add(this.btnConcede);
+        this.pnlShortCuts.add(this.btnStopWatching);
+        this.pickNumber = new PickNumberDialog();
+        MageFrame.getDesktop().add((Component)this.pickNumber, this.pickNumber.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+        this.pickMultiNumber = new PickMultiNumberDialog();
+        MageFrame.getDesktop().add((Component)this.pickMultiNumber, this.pickMultiNumber.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         this.feedbackPanel.setConnectedChatPanel(this.userChatPanel);
-
-        // Override layout (I can't edit generated code)
-        // TODO: research - why it used all that panels on the root
         this.setLayout(new BorderLayout());
         final JLayeredPane jLayeredBackgroundPane = new JLayeredPane();
         jLayeredBackgroundPane.setSize(1024, 768);
         this.add(jLayeredBackgroundPane);
-        jLayeredBackgroundPane.add(splitGameAndBigCard, JLayeredPane.DEFAULT_LAYER);
-
-        Map<String, JComponent> myUi = getUIComponents(jLayeredBackgroundPane);
+        jLayeredBackgroundPane.add((Component)this.splitGameAndBigCard, JLayeredPane.DEFAULT_LAYER);
+        Map<String, JComponent> myUi = this.getUIComponents(jLayeredBackgroundPane);
         Plugins.instance.updateGamePanel(myUi);
+        this.initFloatingStackWindow();
+        this.addComponentListener(new ComponentAdapter(){
 
-        // Enlarge jlayeredpane on resize of game panel
-        addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                int width = ((JComponent) e.getSource()).getWidth();
-                int height = ((JComponent) e.getSource()).getHeight();
-                jLayeredBackgroundPane.setSize(width, height);
-                splitGameAndBigCard.setSize(width, height);
-
-                if (height < storedHeight) {
-                    // TODO: wtf, is it needs? Research and delete that code with storedHeight
-                    pnlBattlefield.setSize(0, 200);
-                }
-                storedHeight = height;
-
-                sizeToScreen();
+                int width = ((JComponent)e.getSource()).getWidth();
+                int height = ((JComponent)e.getSource()).getHeight();
+                jLayeredBackgroundPane.setBounds(0, 0, width, height);
+                jLayeredBackgroundPane.setPreferredSize(new Dimension(width, height));
+                GamePanel.this.splitGameAndBigCard.setBounds(0, 0, width, height);
+                GamePanel.this.splitGameAndBigCard.setPreferredSize(new Dimension(width, height));
+                GamePanel.this.setMinimumSize(new Dimension(0, 0));
+                GamePanel.this.setPreferredSize(new Dimension(width, height));
+                GamePanel.this.pnlHelperHandButtonsStackArea.revalidate();
+                GamePanel.this.pnlBattlefield.setMinimumSize(new Dimension(0, 0));
+                GamePanel.xcpForceLayoutTree(GamePanel.this);
+                GamePanel.this.xcpRefreshBattlefields();
+                GamePanel.this.xcpRevalidateAncestors();
+                SwingUtilities.invokeLater(() -> {
+                    if (!GamePanel.this.isDisplayable()) {
+                        return;
+                    }
+                    GamePanel.xcpForceLayoutTree(GamePanel.this);
+                    GamePanel.this.xcpRefreshBattlefields();
+                    GamePanel.this.xcpRevalidateAncestors();
+                    GamePanel.this.repaint();
+                });
+                SwingUtilities.invokeLater(() -> SwingUtilities.invokeLater(() -> {
+                    if (!GamePanel.this.isDisplayable()) {
+                        return;
+                    }
+                    GamePanel.xcpForceLayoutTree(GamePanel.this);
+                    GamePanel.this.xcpRefreshBattlefields();
+                    GamePanel.this.xcpRevalidateAncestors();
+                    GamePanel.this.repaint();
+                }));
+                GamePanel.this.repaint();
+                GamePanel.this.sizeToScreen();
             }
         });
+        this.bigCardPanel.addComponentListener(new ComponentAdapter(){
 
-        bigCardPanel.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                // TODO: on panel resize card don't want to redraw until new mouse move over card
-                sizeBigCard();
+                GamePanel.this.sizeBigCard();
             }
         });
+        ComponentAdapter componentAdapterPlayField = new ComponentAdapter(){
 
-        // Resize the width of the stack area if the size of the play area is changed
-        ComponentAdapter componentAdapterPlayField = new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                if (initComponents) {
+                if (GamePanel.this.initComponents) {
                     return;
                 }
-                if (resizeTimer.isRunning()) {
-                    resizeTimer.restart();
+                if (GamePanel.this.resizeTimer.isRunning()) {
+                    GamePanel.this.resizeTimer.restart();
                 } else {
-                    resizeTimer.start();
+                    GamePanel.this.resizeTimer.start();
                 }
             }
         };
-
-        resizeTimer = new Timer(1000, evt -> SwingUtilities.invokeLater(() -> {
-            if (initComponents) {
+        this.resizeTimer = new Timer(1000, evt -> SwingUtilities.invokeLater(() -> {
+            if (this.initComponents) {
                 return;
             }
-            resizeTimer.stop();
-            setGUISize(false);
-            feedbackPanel.changeGUISize();
+            this.resizeTimer.stop();
+            this.setGUISize(false);
+            this.feedbackPanel.changeGUISize();
+            GamePanel.xcpForceLayoutTree(this);
+            this.xcpRefreshBattlefields();
+            this.xcpRevalidateAncestors();
+            this.repaint();
+            SwingUtilities.invokeLater(() -> {
+                if (!this.isDisplayable()) {
+                    return;
+                }
+                GamePanel.xcpForceLayoutTree(this);
+                this.xcpRefreshBattlefields();
+                this.xcpRevalidateAncestors();
+                this.repaint();
+            });
         }));
-
-        pnlHelperHandButtonsStackArea.addComponentListener(componentAdapterPlayField);
-
-        initComponents = false;
-
-        setGUISize(true);
+        this.pnlHelperHandButtonsStackArea.addComponentListener(componentAdapterPlayField);
+        this.initComponents = false;
+        this.setGUISize(true);
     }
 
     private Map<String, JComponent> getUIComponents(JLayeredPane jLayeredPane) {
-        Map<String, JComponent> components = new HashMap<>();
-
-        components.put("splitChatAndLogs", splitChatAndLogs);
-        components.put("splitHandAndStack", splitHandAndStack);
-        components.put("splitBattlefieldAndChats", splitBattlefieldAndChats);
-        components.put("splitGameAndBigCard", splitGameAndBigCard);
-        components.put("pnlBattlefield", pnlBattlefield);
-        components.put("pnlHelperHandButtonsStackArea", pnlHelperHandButtonsStackArea);
-        components.put("hand", handContainer);
-        components.put("gameChatPanel", gameChatPanel);
-        components.put("userChatPanel", userChatPanel);
+        HashMap<String, JComponent> components = new HashMap<String, JComponent>();
+        components.put("splitChatAndLogs", this.splitChatAndLogs);
+        components.put("splitHandAndStack", this.splitHandAndStack);
+        components.put("splitBattlefieldAndChats", this.splitBattlefieldAndChats);
+        components.put("splitGameAndBigCard", this.splitGameAndBigCard);
+        components.put("pnlBattlefield", this.pnlBattlefield);
+        components.put("pnlHelperHandButtonsStackArea", this.pnlHelperHandButtonsStackArea);
+        components.put("hand", this.handContainer);
+        components.put("gameChatPanel", this.gameChatPanel);
+        components.put("userChatPanel", this.userChatPanel);
         components.put("jLayeredPane", jLayeredPane);
         components.put("gamePanel", this);
-
         return components;
     }
 
     public void cleanUp() {
-        MageFrame.removeGame(gameId);
-
+        MageFrame.removeGame(this.gameId);
         this.gameChatPanel.cleanUp();
         this.userChatPanel.cleanUp();
-
         this.removeListener();
-
         this.handContainer.cleanUp();
+        this.disposeFloatingStackWindow();
         this.stackObjects.cleanUp();
-        for (Map.Entry<UUID, PlayAreaPanel> playAreaPanelEntry : players.entrySet()) {
-            playAreaPanelEntry.getValue().CleanUp();
+        for (Map.Entry<UUID, PlayAreaPanel> entry : this.players.entrySet()) {
+            entry.getValue().CleanUp();
         }
         this.players.clear();
         this.playersWhoLeft.clear();
-
-        uninstallComponents();
-
-        if (pickNumber != null) {
-            pickNumber.removeDialog();
+        this.uninstallComponents();
+        if (this.pickNumber != null) {
+            this.pickNumber.removeDialog();
         }
-        if (pickMultiNumber != null) {
-            pickMultiNumber.removeDialog();
+        if (this.pickMultiNumber != null) {
+            this.pickMultiNumber.removeDialog();
         }
-        for (CardInfoWindowDialog windowDialog : exiles.values()) {
-            windowDialog.cleanUp();
-            windowDialog.removeDialog();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.exiles.values()) {
+            cardInfoWindowDialog.cleanUp();
+            cardInfoWindowDialog.removeDialog();
         }
-        for (CardInfoWindowDialog windowDialog : graveyardWindows.values()) {
-            windowDialog.cleanUp();
-            windowDialog.removeDialog();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+            cardInfoWindowDialog.cleanUp();
+            cardInfoWindowDialog.removeDialog();
         }
-        for (CardInfoWindowDialog windowDialog : sideboardWindows.values()) {
-            windowDialog.cleanUp();
-            windowDialog.removeDialog();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.sideboardWindows.values()) {
+            cardInfoWindowDialog.cleanUp();
+            cardInfoWindowDialog.removeDialog();
         }
-        for (CardInfoWindowDialog windowDialog : revealed.values()) {
-            windowDialog.cleanUp();
-            windowDialog.removeDialog();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.revealed.values()) {
+            cardInfoWindowDialog.cleanUp();
+            cardInfoWindowDialog.removeDialog();
         }
-        for (CardInfoWindowDialog windowDialog : lookedAt.values()) {
-            windowDialog.cleanUp();
-            windowDialog.removeDialog();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.lookedAt.values()) {
+            cardInfoWindowDialog.cleanUp();
+            cardInfoWindowDialog.removeDialog();
         }
-        for (CardInfoWindowDialog windowDialog : companion.values()) {
-            windowDialog.cleanUp();
-            windowDialog.removeDialog();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
+            cardInfoWindowDialog.cleanUp();
+            cardInfoWindowDialog.removeDialog();
         }
-        for (CardHintsHelperDialog windowDialog : cardHintsWindows.values()) {
-            windowDialog.cleanUp();
-            windowDialog.removeDialog();
+        for (CardHintsHelperDialog cardHintsHelperDialog : this.cardHintsWindows.values()) {
+            cardHintsHelperDialog.cleanUp();
+            cardHintsHelperDialog.removeDialog();
         }
-
-        clearPickDialogs();
-
+        this.clearPickDialogs();
         Plugins.instance.getActionCallback().hideOpenComponents();
         try {
             Component popupContainer = MageFrame.getUI().getComponent(MageComponents.POPUP_CONTAINER);
             popupContainer.setVisible(false);
-        } catch (InterruptedException ex) {
-            logger.fatal("popupContainer error:", ex);
+        }
+        catch (InterruptedException ex) {
+            logger.fatal((Object)"popupContainer error:", (Throwable)ex);
         }
     }
 
     private void hidePickDialogs() {
-        // temporary hide opened dialog on redraw/update
-        for (ShowCardsDialog dialog : this.pickTarget) {
-            dialog.setVisible(false);
+        for (ShowCardsDialog showCardsDialog : this.pickTarget) {
+            showCardsDialog.setVisible(false);
         }
-        for (PickPileDialog dialog : this.pickPile) {
-            dialog.setVisible(false);
+        for (PickPileDialog pickPileDialog : this.pickPile) {
+            pickPileDialog.setVisible(false);
         }
     }
 
     private void clearPickDialogs() {
-        // remove dialogs forever on clean or full update
-        clearPickTargetDialogs();
-        clearPickPileDialogs();
+        this.clearPickTargetDialogs();
+        this.clearPickPileDialogs();
     }
 
     private void clearPickTargetDialogs() {
@@ -487,184 +571,167 @@ public final class GamePanel extends javax.swing.JPanel {
         this.pickPile.clear();
     }
 
-
     public void changeGUISize() {
-        initComponents = true;
-        setGUISize(true);
-        stackObjects.changeGUISize();
-        feedbackPanel.changeGUISize();
-        handContainer.changeGUISize();
-        for (PlayAreaPanel playAreaPanel : players.values()) {
+        this.initComponents = true;
+        this.setGUISize(true);
+        this.stackObjects.changeGUISize();
+        this.feedbackPanel.changeGUISize();
+        this.handContainer.changeGUISize();
+        for (PlayAreaPanel playAreaPanel : this.players.values()) {
             playAreaPanel.changeGUISize();
         }
-
-        for (CardInfoWindowDialog windowDialog : exiles.values()) {
-            windowDialog.changeGUISize();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.exiles.values()) {
+            cardInfoWindowDialog.changeGUISize();
         }
-        for (CardInfoWindowDialog windowDialog : revealed.values()) {
-            windowDialog.changeGUISize();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.revealed.values()) {
+            cardInfoWindowDialog.changeGUISize();
         }
-        for (CardInfoWindowDialog windowDialog : lookedAt.values()) {
-            windowDialog.changeGUISize();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.lookedAt.values()) {
+            cardInfoWindowDialog.changeGUISize();
         }
-        for (CardInfoWindowDialog windowDialog : companion.values()) {
-            windowDialog.changeGUISize();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
+            cardInfoWindowDialog.changeGUISize();
         }
-        for (CardInfoWindowDialog windowDialog : graveyardWindows.values()) {
-            windowDialog.changeGUISize();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+            cardInfoWindowDialog.changeGUISize();
         }
-        for (CardInfoWindowDialog windowDialog : sideboardWindows.values()) {
-            windowDialog.changeGUISize();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.sideboardWindows.values()) {
+            cardInfoWindowDialog.changeGUISize();
         }
-        for (CardHintsHelperDialog windowDialog : cardHintsWindows.values()) {
-            windowDialog.changeGUISize();
+        for (CardHintsHelperDialog cardHintsHelperDialog : this.cardHintsWindows.values()) {
+            cardHintsHelperDialog.changeGUISize();
         }
-        for (ShowCardsDialog windowDialog : pickTarget) {
-            windowDialog.changeGUISize();
+        for (ShowCardsDialog showCardsDialog : this.pickTarget) {
+            showCardsDialog.changeGUISize();
         }
-        for (PickPileDialog windowDialog : pickPile) {
-            windowDialog.changeGUISize();
+        for (PickPileDialog pickPileDialog : this.pickPile) {
+            pickPileDialog.changeGUISize();
         }
-
         this.revalidate();
         this.repaint();
-        initComponents = false;
+        this.initComponents = false;
     }
 
     private void setGUISize(boolean themeReload) {
-        splitters.values().forEach(splitter -> {
-            splitter.splitPane.setDividerSize(GUISizeHelper.dividerBarSize);
-        });
-
-        txtHoldPriority.setFont(new Font(GUISizeHelper.gameFeedbackPanelFont.getFontName(), Font.BOLD, GUISizeHelper.gameFeedbackPanelFont.getSize()));
-        GUISizeHelper.changePopupMenuFont(popupMenuTriggerOrder);
-
-        // commands panel
-        // hand <|> stack
-        int upperPanelsHeight = getSkipButtonsPanelDefaultHeight();
-        feedbackPanel.setPreferredSize(new Dimension(Short.MAX_VALUE, upperPanelsHeight));
-        feedbackPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, upperPanelsHeight));
-        pnlShortCuts.setPreferredSize(new Dimension(500, upperPanelsHeight));
-        pnlShortCuts.setMaximumSize(new Dimension(500, upperPanelsHeight));
-
-        // stack
-        stackObjects.setCardDimension(GUISizeHelper.handCardDimension);
-        stackObjects.changeGUISize(); // must call to cards fit
-
-        // game logs and chat
-        userChatPanel.changeGUISize(GUISizeHelper.chatFont);
-        gameChatPanel.changeGUISize(GUISizeHelper.chatFont);
-
-        // skip buttons - sizes
-        // must be able to put controls in 2 rows
+        this.splitters.values().forEach(splitter -> splitter.splitPane.setDividerSize(GUISizeHelper.dividerBarSize));
+        this.txtHoldPriority.setFont(new Font(GUISizeHelper.gameFeedbackPanelFont.getFontName(), 1, GUISizeHelper.gameFeedbackPanelFont.getSize()));
+        GUISizeHelper.changePopupMenuFont(this.popupMenuTriggerOrder);
+        int upperPanelsHeight = this.getSkipButtonsPanelDefaultHeight();
+        int feedbackButtonRowHeight = Math.round((float)(GUISizeHelper.gameFeedbackPanelButtonHeight * 150) / 100.0f);
+        int feedbackTextRowHeight = GUISizeHelper.gameFeedbackPanelMainMessageFontSize + GUISizeHelper.gameFeedbackPanelExtraMessageFontSize + 30;
+        int feedbackRowHeight = Math.max(feedbackButtonRowHeight, feedbackTextRowHeight);
+        int feedbackPanelHeight = Math.max(upperPanelsHeight, feedbackRowHeight * 2);
+        this.feedbackPanel.setPreferredSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
+        this.feedbackPanel.setMinimumSize(new Dimension(0, feedbackPanelHeight));
+        this.feedbackPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
+        this.pnlShortCuts.setPreferredSize(new Dimension(Short.MAX_VALUE, upperPanelsHeight));
+        this.pnlShortCuts.setMaximumSize(new Dimension(Short.MAX_VALUE, upperPanelsHeight));
+        this.stackObjects.setCardDimension(this.getFloatingStackCardDimension());
+        this.stackObjects.changeGUISize();
+        this.userChatPanel.changeGUISize(GUISizeHelper.chatFont);
+        this.gameChatPanel.changeGUISize(GUISizeHelper.chatFont);
         float guiScale = GUISizeHelper.dialogGuiScale;
-        int hGap = GUISizeHelper.guiSizeScale(SKIP_BUTTONS_SPACE_H, guiScale);
-        int vGap = GUISizeHelper.guiSizeScale(SKIP_BUTTONS_SPACE_V, guiScale);
-        pnlShortCuts.setLayout(new FlowLayout(FlowLayout.RIGHT, hGap, vGap));
-        // skip buttons - sizes
+        int hGap = GUISizeHelper.guiSizeScale(3, guiScale);
+        int vGap = GUISizeHelper.guiSizeScale(3, guiScale);
+        this.pnlShortCuts.setLayout(new FlowLayout(1, hGap, vGap));
         Dimension strictSize = new Dimension(2 * GUISizeHelper.gameCommandButtonHeight, GUISizeHelper.gameCommandButtonHeight);
-        setSkipButtonSize(btnCancelSkip, guiScale, strictSize);
-        setSkipButtonSize(btnSkipToNextTurn, guiScale, strictSize);
-        setSkipButtonSize(btnSkipToEndTurn, guiScale, strictSize);
-        setSkipButtonSize(btnSkipToEndStepBeforeYourTurn, guiScale, strictSize);
-        setSkipButtonSize(btnSkipToYourTurn, guiScale, strictSize);
-        setSkipButtonSize(btnSkipToNextMain, guiScale, strictSize);
-        setSkipButtonSize(btnSkipStack, guiScale, strictSize);
-        setSkipButtonSize(btnConcede, guiScale, strictSize);
-        setSkipButtonSize(btnToggleMacro, guiScale, strictSize);
-        setSkipButtonSize(btnSwitchHands, guiScale, strictSize);
-        setSkipButtonSize(btnStopWatching, guiScale, strictSize);
-        pnlShortCuts.invalidate();
-
-        // phase buttons - sizes
+        this.setSkipButtonSize(this.btnCancelSkip, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnSkipToNextTurn, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnSkipToEndTurn, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnSkipToEndStepBeforeYourTurn, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnSkipToYourTurn, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnSkipToNextMain, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnSkipStack, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnConcede, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnToggleMacro, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnSwitchHands, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnStopWatching, guiScale, strictSize);
+        this.pnlShortCuts.invalidate();
         int buttonSize = GUISizeHelper.gamePhaseButtonSize;
         guiScale = GUISizeHelper.dialogGuiScale;
-        hGap = GUISizeHelper.guiSizeScale(PHASE_BUTTONS_SPACE_H, guiScale);
-        vGap = GUISizeHelper.guiSizeScale(PHASE_BUTTONS_SPACE_V, guiScale);
-        BoxLayout layout = new BoxLayout(jPhases, BoxLayout.Y_AXIS);
-        jPhases.setLayout(layout);
-        int fullPhaseWidth = Math.round(1.5f * GUISizeHelper.gamePhaseButtonSize);
-        jPhases.setPreferredSize(new Dimension(fullPhaseWidth, (vGap * phaseButtons.size()) + (buttonSize * phaseButtons.size())));
-        jPhases.setMaximumSize(new Dimension(fullPhaseWidth, Short.MAX_VALUE));
-        phaseButtons.forEach((phaseName, phaseButton) -> {
-            phaseButton.setPreferredSize(new Dimension(buttonSize, buttonSize));
-        });
-        // phase buttons - active size
-        if (lastGameData.game != null) {
-            updateActivePhase(lastGameData.game.getStep());
+        hGap = GUISizeHelper.guiSizeScale(3, guiScale);
+        vGap = GUISizeHelper.guiSizeScale(3, guiScale);
+        BoxLayout layout = new BoxLayout(this.jPhases, 1);
+        this.jPhases.setLayout(layout);
+        int fullPhaseWidth = Math.round(1.5f * (float)GUISizeHelper.gamePhaseButtonSize);
+        this.jPhases.setPreferredSize(new Dimension(fullPhaseWidth, vGap * this.phaseButtons.size() + buttonSize * this.phaseButtons.size()));
+        this.jPhases.setMaximumSize(new Dimension(fullPhaseWidth, Short.MAX_VALUE));
+        this.phaseButtons.forEach((phaseName, phaseButton) -> phaseButton.setPreferredSize(new Dimension(buttonSize, buttonSize)));
+        if (this.lastGameData.game != null) {
+            this.updateActivePhase(this.lastGameData.game.getStep());
         }
-
         if (themeReload) {
-            reloadThemeRelatedGraphic();
+            this.reloadThemeRelatedGraphic();
         }
     }
 
     private int getSkipButtonsPanelDefaultHeight() {
-        // make sure it will get two rows of buttons
         float guiScale = GUISizeHelper.dialogGuiScale;
-        int vGap = GUISizeHelper.guiSizeScale(SKIP_BUTTONS_SPACE_V, guiScale);
-        //int extraSpace = GUISizeHelper.guiSizeScale(30, guiScale); // extra space for messages in feedback
-        int extraSpace = 0; // no needs in extra space for 3+ lines
-        int lines = 3;
-        return extraSpace + ((lines * 2 - 1) * vGap) + (lines * GUISizeHelper.gameCommandButtonHeight);
+        int hGap = GUISizeHelper.guiSizeScale(3, guiScale);
+        int vGap = GUISizeHelper.guiSizeScale(3, guiScale);
+        int availableWidth = this.pnlShortCuts.getWidth();
+        if (availableWidth <= 0) {
+            availableWidth = this.pnlHelperHandButtonsStackArea.getWidth();
+        }
+        int requiredWidth = 0;
+        int visibleCount = 0;
+        for (Component component : this.pnlShortCuts.getComponents()) {
+            if (!component.isVisible()) continue;
+            requiredWidth += component.getPreferredSize().width;
+            ++visibleCount;
+        }
+        if (visibleCount > 1) {
+            requiredWidth += (visibleCount - 1) * hGap;
+        }
+        boolean fitsOneRow = availableWidth <= 0 || requiredWidth <= availableWidth;
+        int lines = fitsOneRow ? 1 : 2;
+        return (lines * 2 - 1) * vGap + lines * GUISizeHelper.gameCommandButtonHeight;
     }
 
     private void reloadThemeRelatedGraphic() {
-        // skip buttons - images
         int buttonHeight = GUISizeHelper.gameCommandButtonHeight;
-        setSkipButtonImage(btnCancelSkip, ImageManagerImpl.instance.getCancelSkipButtonImage(buttonHeight));
-        setSkipButtonImage(btnSkipToNextTurn, ImageManagerImpl.instance.getSkipNextTurnButtonImage(buttonHeight));
-        setSkipButtonImage(btnSkipToEndTurn, ImageManagerImpl.instance.getSkipEndTurnButtonImage(buttonHeight));
-        setSkipButtonImage(btnSkipToEndStepBeforeYourTurn, ImageManagerImpl.instance.getSkipEndStepBeforeYourTurnButtonImage(buttonHeight));
-        setSkipButtonImage(btnSkipToYourTurn, ImageManagerImpl.instance.getSkipYourNextTurnButtonImage(buttonHeight));
-        setSkipButtonImage(btnSkipToNextMain, ImageManagerImpl.instance.getSkipMainButtonImage(buttonHeight));
-        setSkipButtonImage(btnSkipStack, ImageManagerImpl.instance.getSkipStackButtonImage(buttonHeight));
-        setSkipButtonImage(btnConcede, ImageManagerImpl.instance.getConcedeButtonImage(buttonHeight));
-        setSkipButtonImage(btnToggleMacro, ImageManagerImpl.instance.getToggleRecordMacroButtonImage(buttonHeight));
-        setSkipButtonImage(btnSwitchHands, ImageManagerImpl.instance.getSwitchHandsButtonImage(buttonHeight));
-        setSkipButtonImage(btnStopWatching, ImageManagerImpl.instance.getStopWatchButtonImage(buttonHeight));
-
-        // hotkeys for skip buttons
+        this.setSkipButtonImage(this.btnCancelSkip, ImageManagerImpl.instance.getCancelSkipButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnSkipToNextTurn, ImageManagerImpl.instance.getSkipNextTurnButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnSkipToEndTurn, ImageManagerImpl.instance.getSkipEndTurnButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnSkipToEndStepBeforeYourTurn, ImageManagerImpl.instance.getSkipEndStepBeforeYourTurnButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnSkipToYourTurn, ImageManagerImpl.instance.getSkipYourNextTurnButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnSkipToNextMain, ImageManagerImpl.instance.getSkipMainButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnSkipStack, ImageManagerImpl.instance.getSkipStackButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnConcede, ImageManagerImpl.instance.getConcedeButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnToggleMacro, ImageManagerImpl.instance.getToggleRecordMacroButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnSwitchHands, ImageManagerImpl.instance.getSwitchHandsButtonImage(buttonHeight));
+        this.setSkipButtonImage(this.btnStopWatching, ImageManagerImpl.instance.getStopWatchButtonImage(buttonHeight));
         boolean displayButtonText = PreferencesDialog.getCurrentTheme().isShortcutsVisibleForSkipButtons();
-        btnCancelSkip.setShowKey(displayButtonText);
-        btnSkipToNextTurn.setShowKey(displayButtonText);
-        btnSkipToEndTurn.setShowKey(displayButtonText);
-        btnSkipToEndStepBeforeYourTurn.setShowKey(displayButtonText);
-        btnSkipToYourTurn.setShowKey(displayButtonText);
-        btnSkipToNextMain.setShowKey(displayButtonText);
-        btnSkipStack.setShowKey(displayButtonText);
-        btnToggleMacro.setShowKey(displayButtonText);
-
-        // phase buttons
-        phaseButtons.forEach((phaseName, phaseButton) -> {
-            Image buttonImage = ImageManagerImpl.instance.getPhaseImage(phaseName, GUISizeHelper.gamePhaseButtonSize);
+        this.btnCancelSkip.setShowKey(displayButtonText);
+        this.btnSkipToNextTurn.setShowKey(displayButtonText);
+        this.btnSkipToEndTurn.setShowKey(displayButtonText);
+        this.btnSkipToEndStepBeforeYourTurn.setShowKey(displayButtonText);
+        this.btnSkipToYourTurn.setShowKey(displayButtonText);
+        this.btnSkipToNextMain.setShowKey(displayButtonText);
+        this.btnSkipStack.setShowKey(displayButtonText);
+        this.btnToggleMacro.setShowKey(displayButtonText);
+        this.phaseButtons.forEach((phaseName, phaseButton) -> {
+            Image buttonImage = ImageManagerImpl.instance.getPhaseImage((String)phaseName, GUISizeHelper.gamePhaseButtonSize);
             Rectangle buttonRect = new Rectangle(buttonImage.getWidth(null), buttonImage.getHeight(null));
             phaseButton.update(phaseButton.getText(), buttonImage, buttonImage, buttonImage, buttonImage, buttonRect);
         });
-
-        // player panels
-        if (lastGameData.game != null) {
-            lastGameData.game.getPlayers().forEach(player -> {
+        if (this.lastGameData.game != null) {
+            this.lastGameData.game.getPlayers().forEach(player -> {
                 PlayAreaPanel playPanel = this.players.getOrDefault(player.getPlayerId(), null);
                 if (playPanel != null) {
-                    // see test render dialog for refresh commands order
                     playPanel.getPlayerPanel().fullRefresh(GUISizeHelper.playerPanelGuiScale);
-                    playPanel.init(player, bigCard, gameId, player.getPriorityTimeLeftSecs());
-                    playPanel.update(lastGameData.game, player, lastGameData.targets, lastGameData.getChosenTargets());
+                    playPanel.init((PlayerView)player, this.bigCard, this.gameId, player.getPriorityTimeLeftSecs());
+                    playPanel.update(this.lastGameData.game, (PlayerView)player, this.lastGameData.targets, this.lastGameData.getChosenTargets());
                     playPanel.getPlayerPanel().sizePlayerPanel(false);
                 }
             });
         }
-
-        // as workaround: can change size for closed ability picker only
         if (this.abilityPicker != null && !this.abilityPicker.isVisible()) {
             this.abilityPicker.fullRefresh(GUISizeHelper.dialogGuiScale);
-            this.abilityPicker.init(gameId, bigCard);
+            this.abilityPicker.init(this.gameId, this.bigCard);
         }
         if (this.pickMultiNumber != null && !this.pickMultiNumber.isVisible()) {
-            // TODO: add pick number dialogs support here
-            //this.pickMultiNumber.fullRefresh(GUISizeHelper.dialogGuiScale);
-            this.pickMultiNumber.init(gameId, bigCard);
+            this.pickMultiNumber.init(this.gameId, this.bigCard);
         }
     }
 
@@ -674,26 +741,24 @@ public final class GamePanel extends javax.swing.JPanel {
 
     private void setSkipButtonSize(JComponent button, float guiScale, Dimension size) {
         if (button instanceof KeyboundButton) {
-            ((KeyboundButton) button).updateGuiScale(guiScale);
+            ((KeyboundButton)button).updateGuiScale(guiScale);
         }
     }
 
     private Map<String, Integer> loadSplitterLocationsFromSettings(String settingsKey) {
-        Map<String, Integer> res;
-        Type type = new TypeToken<Map<String, Integer>>() {
-        }.getType();
+        HashMap res;
+        Type type = new TypeToken<Map<String, Integer>>(){}.getType();
         try {
             String savedData = PreferencesDialog.getCachedValue(settingsKey, "");
-            res = new Gson().fromJson(savedData, type);
-        } catch (Exception e) {
+            res = (HashMap)new Gson().fromJson(savedData, type);
+        }
+        catch (Exception e) {
             res = null;
-            logger.error("Found broken data for divider locations " + settingsKey, e);
+            logger.error((Object)("Found broken data for divider locations " + settingsKey), (Throwable)e);
         }
-
         if (res == null) {
-            res = new HashMap<>();
+            res = new HashMap();
         }
-
         return res;
     }
 
@@ -702,75 +767,52 @@ public final class GamePanel extends javax.swing.JPanel {
     }
 
     private void saveSplitters() {
-        if (!isSplittersFullyRestored) {
-            logger.warn("splitters do not fully restored yet");
+        if (!this.isSplittersFullyRestored) {
+            logger.warn((Object)"splitters do not fully restored yet");
             return;
         }
-
-        splitters.forEach((settingsKey, splitter) -> {
-            saveSplitter(splitter.splitPane, settingsKey);
-        });
+        this.splitters.forEach((settingsKey, splitter) -> this.saveSplitter(splitter.splitPane, (String)settingsKey));
     }
 
     private void saveSplitter(JSplitPane splitPane, String settingsKey) {
-        Map<String, Integer> allLocations = loadSplitterLocationsFromSettings(settingsKey);
-
+        Map<String, Integer> allLocations = this.loadSplitterLocationsFromSettings(settingsKey);
         Rectangle screenRec = MageFrame.getDesktop().getBounds();
         String screenKey = String.format("%d_x_%d", screenRec.width, screenRec.height);
-
-        // store location information (position or hidden state)
-        // splits with hidden panels will give location < min/max divider
         int newLocation = splitPane.getDividerLocation();
         if (newLocation == 0 || newLocation < splitPane.getMinimumDividerLocation()) {
-            newLocation = DIVIDER_POSITION_HIDDEN_LEFT_OR_TOP;
+            newLocation = -2;
         } else if (newLocation > splitPane.getMaximumDividerLocation()) {
-            newLocation = DIVIDER_POSITION_HIDDEN_RIGHT_OR_BOTTOM;
+            newLocation = -3;
         }
-
         allLocations.put(screenKey, newLocation);
-        saveSplitterLocationsToSettings(allLocations, settingsKey);
+        this.saveSplitterLocationsToSettings(allLocations, settingsKey);
     }
 
-    /**
-     * Restore split position from last time used
-     *
-     * @param splitPane
-     * @param settingsKey
-     * @param defaultProportion 0.25 means 25% for left component and 75% for right
-     */
     private void restoreSplitter(JSplitPane splitPane, String settingsKey, double defaultProportion) {
-        Map<String, Integer> allLocations = loadSplitterLocationsFromSettings(settingsKey);
-
+        Map<String, Integer> allLocations = this.loadSplitterLocationsFromSettings(settingsKey);
         Rectangle screenRec = MageFrame.getDesktop().getBounds();
         String screenKey = String.format("%d_x_%d", screenRec.width, screenRec.height);
-
-        // on first run it has nothing in saved values, so make sure to use default location (depends on inner components preferred sizes)
-        // WARNING, new divider location must be restored independently in swing threads one by one
-        int newLocation = allLocations.getOrDefault(screenKey, DIVIDER_POSITION_DEFAULT);
-        if (newLocation == DIVIDER_POSITION_DEFAULT) {
-            // use default location
+        int newLocation = allLocations.getOrDefault(screenKey, -1);
+        if (newLocation == -1) {
             SwingUtilities.invokeLater(() -> {
                 splitPane.resetToPreferredSizes();
                 splitPane.setDividerLocation(defaultProportion);
             });
-        } else if (newLocation == DIVIDER_POSITION_HIDDEN_LEFT_OR_TOP) {
-            // use hidden (hide left)
+        } else if (newLocation == -2) {
             SwingUtilities.invokeLater(() -> {
                 splitPane.resetToPreferredSizes();
                 splitPane.setDividerLocation(defaultProportion);
                 splitPane.getLeftComponent().setMinimumSize(new Dimension());
-                splitPane.setDividerLocation(0.0d);
+                splitPane.setDividerLocation(0.0);
             });
-        } else if (newLocation == DIVIDER_POSITION_HIDDEN_RIGHT_OR_BOTTOM) {
-            // use hidden (hide right)
+        } else if (newLocation == -3) {
             SwingUtilities.invokeLater(() -> {
                 splitPane.resetToPreferredSizes();
                 splitPane.setDividerLocation(defaultProportion);
                 splitPane.getRightComponent().setMinimumSize(new Dimension());
-                splitPane.setDividerLocation(1.0d);
+                splitPane.setDividerLocation(1.0);
             });
         } else {
-            // use saved location
             SwingUtilities.invokeLater(() -> {
                 splitPane.resetToPreferredSizes();
                 splitPane.setDividerLocation(defaultProportion);
@@ -780,50 +822,38 @@ public final class GamePanel extends javax.swing.JPanel {
     }
 
     private void restoreSplitters() {
-        // split/divider locations must be restored after game panel will be visible, e.g. on frame activated
-        isSplittersFullyRestored = false;
-        SwingUtilities.invokeLater(() -> {
-            restoreSplittersByQueue(new LinkedHashMap<>(this.splitters));
-        });
+        this.isSplittersFullyRestored = false;
+        SwingUtilities.invokeLater(() -> this.restoreSplittersByQueue(new LinkedHashMap<String, MageSplitter>(this.splitters)));
     }
 
     private void restoreSplittersByQueue(Map<String, MageSplitter> splittersQueue) {
         if (splittersQueue.isEmpty()) {
-            isSplittersFullyRestored = true;
+            this.isSplittersFullyRestored = true;
             return;
         }
-
-        // current
-        String currentKey = splittersQueue.keySet().stream().findFirst().get();
+        String currentKey = (String)splittersQueue.keySet().stream().findFirst().get();
         MageSplitter currentSplitter = splittersQueue.remove(currentKey);
-        restoreSplitter(currentSplitter.splitPane, currentKey, currentSplitter.defaultProportion);
-
-        // next in queue
-        SwingUtilities.invokeLater(() -> {
-            restoreSplittersByQueue(splittersQueue);
-        });
+        this.restoreSplitter(currentSplitter.splitPane, currentKey, currentSplitter.defaultProportion);
+        SwingUtilities.invokeLater(() -> this.restoreSplittersByQueue(splittersQueue));
     }
 
     private void sizeBigCard() {
-        int width = bigCard.getParent().getWidth();
-        int height = Math.round(width * GUISizeHelper.CARD_WIDTH_TO_HEIGHT_COEF);
-        bigCard.setPreferredSize(new Dimension(width, height));
-        bigCard.setMaximumSize(new Dimension(Short.MAX_VALUE, height));
+        int width = this.bigCard.getParent().getWidth();
+        int height = Math.round((float)width * 1.426282f);
+        this.bigCard.setPreferredSize(new Dimension(width, height));
+        this.bigCard.setMaximumSize(new Dimension(Short.MAX_VALUE, height));
     }
 
     private void sizeToScreen() {
-        // on resize frame
         Rectangle rect = this.getBounds();
-        pnlShortCuts.revalidate();
-        for (PlayAreaPanel p : players.values()) {
+        this.pnlShortCuts.revalidate();
+        for (PlayAreaPanel p : this.players.values()) {
             p.getPlayerPanel().sizePlayerPanel(false);
         }
-
         ArrowBuilder.getBuilder().setSize(rect.width, rect.height);
-
-        DialogManager.getManager(gameId).setScreenWidth(rect.width);
-        DialogManager.getManager(gameId).setScreenHeight(rect.height);
-        DialogManager.getManager(gameId).setBounds(0, 0, rect.width, rect.height);
+        DialogManager.getManager(this.gameId).setScreenWidth(rect.width);
+        DialogManager.getManager(this.gameId).setScreenHeight(rect.height);
+        DialogManager.getManager(this.gameId).setBounds(0, 0, rect.width, rect.height);
     }
 
     public synchronized void showGame(UUID currentTableId, UUID parentTableId, UUID gameId, UUID playerId, GamePane gamePane) {
@@ -833,35 +863,29 @@ public final class GamePanel extends javax.swing.JPanel {
         this.gamePane = gamePane;
         this.playerId = playerId;
         MageFrame.addGame(gameId, this);
-        this.feedbackPanel.init(gameId, bigCard);
+        this.feedbackPanel.init(gameId, this.bigCard);
         this.feedbackPanel.clear();
-        this.pickMultiNumber.init(gameId, bigCard);
-        this.abilityPicker.init(gameId, bigCard);
+        this.pickMultiNumber.init(gameId, this.bigCard);
+        this.abilityPicker.init(gameId, this.bigCard);
         this.btnConcede.setVisible(true);
         this.btnStopWatching.setVisible(false);
         this.btnSwitchHands.setVisible(false);
         this.btnCancelSkip.setVisible(true);
         this.btnToggleMacro.setVisible(true);
-
-        // cards popup info in chats
-        this.gameChatPanel.setGameData(gameId, bigCard);
-        this.userChatPanel.setGameData(gameId, bigCard);
-
+        this.gameChatPanel.setGameData(gameId, this.bigCard);
+        this.userChatPanel.setGameData(gameId, this.bigCard);
         this.btnSkipToNextTurn.setVisible(true);
         this.btnSkipToEndTurn.setVisible(true);
         this.btnSkipToNextMain.setVisible(true);
         this.btnSkipStack.setVisible(true);
         this.btnSkipToYourTurn.setVisible(true);
         this.btnSkipToEndStepBeforeYourTurn.setVisible(true);
-
         this.pnlReplay.setVisible(false);
-
         this.gameChatPanel.clear();
-        SessionHandler.getGameChatId(gameId).ifPresent(uuid -> this.gameChatPanel.connect(uuid));
+        SessionHandler.getGameChatId(gameId).ifPresent(uuid -> this.gameChatPanel.connect((UUID)uuid));
         if (!SessionHandler.joinGame(gameId)) {
-            removeGame();
+            this.removeGame();
         } else {
-            // play start sound
             AudioManager.playYourGameStarted();
             if (!AppUtil.isAppActive()) {
                 MageTray.instance.displayMessage("Your game has started!");
@@ -877,31 +901,27 @@ public final class GamePanel extends javax.swing.JPanel {
         this.gamePane = gamePane;
         this.playerId = null;
         MageFrame.addGame(gameId, this);
-        this.feedbackPanel.init(gameId, bigCard);
+        this.feedbackPanel.init(gameId, this.bigCard);
         this.feedbackPanel.clear();
-
         this.btnConcede.setVisible(false);
         this.btnStopWatching.setVisible(true);
         this.btnSwitchHands.setVisible(false);
         this.chosenHandKey = "";
         this.btnCancelSkip.setVisible(false);
         this.btnToggleMacro.setVisible(false);
-
         this.btnSkipToNextTurn.setVisible(false);
         this.btnSkipToEndTurn.setVisible(false);
         this.btnSkipToNextMain.setVisible(false);
         this.btnSkipStack.setVisible(false);
         this.btnSkipToYourTurn.setVisible(false);
         this.btnSkipToEndStepBeforeYourTurn.setVisible(false);
-
         this.pnlReplay.setVisible(false);
         this.gameChatPanel.clear();
-        SessionHandler.getGameChatId(gameId).ifPresent(uuid
-                -> this.gameChatPanel.connect(uuid));
+        SessionHandler.getGameChatId(gameId).ifPresent(uuid -> this.gameChatPanel.connect((UUID)uuid));
         if (!SessionHandler.watchGame(gameId)) {
-            removeGame();
+            this.removeGame();
         }
-        for (PlayAreaPanel panel : players.values()) {
+        for (PlayAreaPanel panel : this.players.values()) {
             panel.setPlayingMode(false);
         }
     }
@@ -912,7 +932,7 @@ public final class GamePanel extends javax.swing.JPanel {
         this.gameId = gameId;
         this.playerId = null;
         MageFrame.addGame(gameId, this);
-        this.feedbackPanel.init(gameId, bigCard);
+        this.feedbackPanel.init(gameId, this.bigCard);
         this.feedbackPanel.clear();
         this.btnConcede.setVisible(false);
         this.btnSkipToNextTurn.setVisible(false);
@@ -921,318 +941,259 @@ public final class GamePanel extends javax.swing.JPanel {
         this.pnlReplay.setVisible(true);
         this.gameChatPanel.clear();
         if (!SessionHandler.startReplay(gameId)) {
-            removeGame();
+            this.removeGame();
         }
-        for (PlayAreaPanel panel : players.values()) {
+        for (PlayAreaPanel panel : this.players.values()) {
             panel.setPlayingMode(false);
         }
     }
 
-    /**
-     * Closes the game and it's resources
-     */
     public void removeGame() {
-        Component c = this.getParent();
-        while (c != null && !(c instanceof GamePane)) {
-            c = c.getParent();
+        Container c;
+        for (c = this.getParent(); c != null && !(c instanceof GamePane); c = c.getParent()) {
         }
         if (c != null) {
-            ((GamePane) c).removeGame();
+            ((GamePane)c).removeGame();
         }
     }
 
     public synchronized void init(int messageId, GameView game, boolean callGameUpdateAfterInit) {
-        addPlayers(game);
-
-        // default menu states
-        setMenuStates(
-                PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT, "true").equals("true"),
-                PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT_ONLY_ONE, "true").equals("true"),
-                PreferencesDialog.getCachedValue(KEY_USE_FIRST_MANA_ABILITY, "false").equals("true"),
-                holdingPriority
-        );
-
+        this.addPlayers(game);
+        this.setMenuStates(PreferencesDialog.getCachedValue("gameManaAutopayment", "true").equals("true"), PreferencesDialog.getCachedValue("gameManaAutopaymentOnlyOne", "true").equals("true"), PreferencesDialog.getCachedValue("useFirstManaAbility", "false").equals("true"), this.holdingPriority);
         if (callGameUpdateAfterInit) {
-            updateGame(messageId, game);
+            this.updateGame(messageId, game);
         }
     }
 
     private void addPlayers(GameView game) {
+        int playerNum;
         this.players.clear();
         this.playersWhoLeft.clear();
         this.pnlBattlefield.removeAll();
-        //arrange players in a circle with the session player at the bottom left
         int numSeats = game.getPlayers().size();
         int numColumns = (numSeats + 1) / 2;
-        boolean oddNumber = (numColumns > 1 && numSeats % 2 == 1);
+        boolean oddNumber = numColumns > 1 && numSeats % 2 == 1;
         int col = 0;
-        int row = 1;
+        boolean row = true;
         int playerSeat = 0;
-        if (playerId != null) {
-            for (PlayerView player : game.getPlayers()) {
-                if (playerId.equals(player.getPlayerId())) {
-                    break;
-                }
-                playerSeat++;
+        if (this.playerId != null) {
+            PlayerView player;
+            Iterator iterator = game.getPlayers().iterator();
+            while (iterator.hasNext() && !this.playerId.equals((player = (PlayerView)iterator.next()).getPlayerId())) {
+                ++playerSeat;
             }
         }
-        PlayerView player = game.getPlayers().get(playerSeat);
-        PlayAreaPanel playAreaPanel = new PlayAreaPanel(player, bigCard, gameId, game.getPriorityTime(), this,
-                new PlayAreaPanelOptions(game.isPlayer(), player.isHuman(), game.isPlayer(),
-                        game.isRollbackTurnsAllowed(), row == 0));
-        players.put(player.getPlayerId(), playAreaPanel);
-        playersWhoLeft.put(player.getPlayerId(), false);
+        PlayerView player = (PlayerView)game.getPlayers().get(playerSeat);
+        PlayAreaPanel playAreaPanel = new PlayAreaPanel(player, this.bigCard, this.gameId, game.getPriorityTime(), this, new PlayAreaPanelOptions(game.isPlayer(), player.isHuman(), game.isPlayer(), game.isRollbackTurnsAllowed(), !row));
+        this.players.put(player.getPlayerId(), playAreaPanel);
+        this.playersWhoLeft.put(player.getPlayerId(), false);
         GridBagConstraints c = new GridBagConstraints();
-        c.fill = GridBagConstraints.BOTH;
+        c.fill = 1;
         c.weightx = 0.5;
         c.weighty = 0.5;
         if (oddNumber) {
             c.gridwidth = 2;
         }
-        c.gridx = col;
+        c.gridx = col++;
         c.gridy = 0;
-
-        // Top panel (row=0)
         JPanel topPanel = new JPanel();
         topPanel.setOpaque(false);
-
-        // Bottom panel (row=1)
         JPanel bottomPanel = new JPanel();
         bottomPanel.setOpaque(false);
         topPanel.setLayout(new GridBagLayout());
         bottomPanel.setLayout(new GridBagLayout());
-
-        bottomPanel.add(playAreaPanel, c);
+        bottomPanel.add((Component)playAreaPanel, c);
         playAreaPanel.setVisible(true);
         if (oddNumber) {
-            col++;
+            // empty if block
         }
-        int playerNum = playerSeat + 1;
-        if (playerNum >= numSeats) {
+        if ((playerNum = playerSeat + 1) >= numSeats) {
             playerNum = 0;
         }
-        while (true) {
-            if (row == 1) {
-                col++;
-            } else {
-                col--;
-            }
+        do {
+            col = row ? ++col : --col;
             if (col >= numColumns) {
-                row = 0;
+                row = false;
                 col = numColumns - 1;
             }
-            player = game.getPlayers().get(playerNum);
-            PlayAreaPanel playerPanel = new PlayAreaPanel(player, bigCard, gameId, game.getPriorityTime(), this,
-                    new PlayAreaPanelOptions(game.isPlayer(), player.isHuman(), false, game.isRollbackTurnsAllowed(),
-                            row == 0));
-            players.put(player.getPlayerId(), playerPanel);
-            playersWhoLeft.put(player.getPlayerId(), false);
+            player = (PlayerView)game.getPlayers().get(playerNum);
+            PlayAreaPanel playerPanel = new PlayAreaPanel(player, this.bigCard, this.gameId, game.getPriorityTime(), this, new PlayAreaPanelOptions(game.isPlayer(), player.isHuman(), false, game.isRollbackTurnsAllowed(), !row));
+            this.players.put(player.getPlayerId(), playerPanel);
+            this.playersWhoLeft.put(player.getPlayerId(), false);
             c = new GridBagConstraints();
-            c.fill = GridBagConstraints.BOTH;
+            c.fill = 1;
             c.weightx = 0.5;
             c.weighty = 0.5;
             c.gridx = col;
             c.gridy = 0;
-
-            if (row == 0) {
-                topPanel.add(playerPanel, c);
+            if (!row) {
+                topPanel.add((Component)playerPanel, c);
             } else {
-                bottomPanel.add(playerPanel, c);
+                bottomPanel.add((Component)playerPanel, c);
             }
-
             playerPanel.setVisible(true);
-            playerNum++;
-            if (playerNum >= numSeats) {
-                playerNum = 0;
-            }
-            if (playerNum == playerSeat) {
-                break;
-            }
-        }
-
-        // set init sizes
-        for (PlayAreaPanel p : players.values()) {
+            if (++playerNum < numSeats) continue;
+            playerNum = 0;
+        } while (playerNum != playerSeat);
+        for (PlayAreaPanel p : this.players.values()) {
             p.getPlayerPanel().sizePlayerPanel(false);
         }
-
+        int sharedBattlefieldMinHeight = Math.max(topPanel.getPreferredSize().height, bottomPanel.getPreferredSize().height);
+        topPanel.setMinimumSize(new Dimension(0, sharedBattlefieldMinHeight));
+        bottomPanel.setMinimumSize(new Dimension(0, sharedBattlefieldMinHeight));
         GridBagConstraints panelC = new GridBagConstraints();
-        panelC.fill = GridBagConstraints.BOTH;
+        panelC.fill = 1;
         panelC.weightx = 0.5;
         panelC.weighty = 0.5;
         panelC.gridwidth = 1;
         panelC.gridy = 0;
-        this.pnlBattlefield.add(topPanel, panelC);
+        this.pnlBattlefield.add((Component)topPanel, panelC);
         panelC.gridy = 1;
-        this.pnlBattlefield.add(bottomPanel, panelC);
+        this.pnlBattlefield.add((Component)bottomPanel, panelC);
     }
 
     public synchronized void updateGame(int messageId, GameView game) {
-        updateGame(messageId, game, false, null, null);
+        this.updateGame(messageId, game, false, null, null);
     }
 
     public synchronized void updateGame(int messageId, GameView game, boolean showPlayable, Map<String, Serializable> options, Set<UUID> targets) {
-        keepLastGameData(messageId, game, showPlayable, options, targets);
-
+        this.keepLastGameData(messageId, game, showPlayable, options, targets);
         if (this.players.isEmpty() && !game.getPlayers().isEmpty()) {
-            logger.warn("Found empty players list, trying to init game again (possible reason: reconnection)");
-            init(messageId, game, false);
+            logger.warn((Object)"Found empty players list, trying to init game again (possible reason: reconnection)");
+            this.init(messageId, game, false);
         }
-
-        prepareSelectableView();
-        updateGame();
+        this.prepareSelectableView();
+        this.updateGame();
     }
 
     public synchronized void updateGame() {
-        if (playerId == null && lastGameData.game.getWatchedHands().isEmpty()) {
+        if (this.playerId == null && this.lastGameData.game.getWatchedHands().isEmpty()) {
             this.handContainer.setVisible(false);
         } else {
             this.handContainer.setVisible(true);
-            handCards.clear();
-            if (!lastGameData.game.getWatchedHands().isEmpty()) {
-                for (Map.Entry<String, SimpleCardsView> hand : lastGameData.game.getWatchedHands().entrySet()) {
-                    handCards.put(hand.getKey(), CardsViewUtil.convertSimple(hand.getValue(), loadedCards));
+            this.handCards.clear();
+            if (!this.lastGameData.game.getWatchedHands().isEmpty()) {
+                for (Map.Entry hand : this.lastGameData.game.getWatchedHands().entrySet()) {
+                    this.handCards.put((String)hand.getKey(), CardsViewUtil.convertSimple((SimpleCardsView)hand.getValue(), this.loadedCards));
                 }
             }
-            if (playerId != null) {
-                handCards.put(YOUR_HAND, lastGameData.game.getMyHand());
-                // Get opponents hand cards if available (only possible for players)
-                if (!lastGameData.game.getOpponentHands().isEmpty()) {
-                    for (Map.Entry<String, SimpleCardsView> hand : lastGameData.game.getOpponentHands().entrySet()) {
-                        handCards.put(hand.getKey(), CardsViewUtil.convertSimple(hand.getValue(), loadedCards));
+            if (this.playerId != null) {
+                this.handCards.put(YOUR_HAND, this.lastGameData.game.getMyHand());
+                if (!this.lastGameData.game.getOpponentHands().isEmpty()) {
+                    for (Map.Entry hand : this.lastGameData.game.getOpponentHands().entrySet()) {
+                        this.handCards.put((String)hand.getKey(), CardsViewUtil.convertSimple((SimpleCardsView)hand.getValue(), this.loadedCards));
                     }
                 }
-                if (!handCards.containsKey(chosenHandKey)) {
-                    chosenHandKey = YOUR_HAND;
+                if (!this.handCards.containsKey(this.chosenHandKey)) {
+                    this.chosenHandKey = YOUR_HAND;
                 }
-            } else if (chosenHandKey.isEmpty() && !handCards.isEmpty()) {
-                chosenHandKey = handCards.keySet().iterator().next();
+            } else if (this.chosenHandKey.isEmpty() && !this.handCards.isEmpty()) {
+                this.chosenHandKey = this.handCards.keySet().iterator().next();
             }
-            if (chosenHandKey != null && handCards.containsKey(chosenHandKey)) {
-                handContainer.loadCards(handCards.get(chosenHandKey), bigCard, gameId);
+            if (this.chosenHandKey != null && this.handCards.containsKey(this.chosenHandKey)) {
+                this.handContainer.loadCards(this.handCards.get(this.chosenHandKey), this.bigCard, this.gameId);
             }
-
-            hideAll();
-
-            if (playerId != null) {
-                // set visible only if we have any other hand visible than ours
-                btnSwitchHands.setVisible(handCards.size() > 1);
-                boolean change = (handCardsOfOpponentAvailable == lastGameData.game.getOpponentHands().isEmpty());
+            this.hideAll();
+            if (this.playerId != null) {
+                boolean change;
+                this.btnSwitchHands.setVisible(this.handCards.size() > 1);
+                boolean bl = change = this.handCardsOfOpponentAvailable == this.lastGameData.game.getOpponentHands().isEmpty();
                 if (change) {
-                    handCardsOfOpponentAvailable = !handCardsOfOpponentAvailable;
-                    if (handCardsOfOpponentAvailable) {
+                    boolean bl2 = this.handCardsOfOpponentAvailable = !this.handCardsOfOpponentAvailable;
+                    if (this.handCardsOfOpponentAvailable) {
                         MageFrame.getInstance().showMessage("You control other player's turn. \nUse \"Switch Hand\" button to switch between cards in different hands.");
                     } else {
                         MageFrame.getInstance().showMessage("You lost control on other player's turn.");
                     }
                 }
             } else {
-                btnSwitchHands.setVisible(!handCards.isEmpty());
+                this.btnSwitchHands.setVisible(!this.handCards.isEmpty());
             }
         }
-
-        if (lastGameData.game.getPhase() != null) {
-            this.txtPhase.setText(lastGameData.game.getPhase().toString());
+        if (this.lastGameData.game.getPhase() != null) {
+            this.txtPhase.setText(this.lastGameData.game.getPhase().toString());
         } else {
             this.txtPhase.setText("");
         }
-
-        if (lastGameData.game.getStep() != null) {
-            updateActivePhase(lastGameData.game.getStep());
-            this.txtStep.setText(lastGameData.game.getStep().toString());
+        if (this.lastGameData.game.getStep() != null) {
+            this.updateActivePhase(this.lastGameData.game.getStep());
+            this.txtStep.setText(this.lastGameData.game.getStep().toString());
         } else {
-            logger.debug("Step is empty");
+            logger.debug((Object)"Step is empty");
             this.txtStep.setText("");
         }
-
-        this.txtActivePlayer.setText(lastGameData.game.getActivePlayerName());
-        this.txtPriority.setText(lastGameData.game.getPriorityPlayerName());
-        this.txtTurn.setText(Integer.toString(lastGameData.game.getTurn()));
-
-        List<UUID> possibleAttackers = new ArrayList<>();
-        if (lastGameData.options != null && lastGameData.options.containsKey(Constants.Option.POSSIBLE_ATTACKERS)) {
-            if (lastGameData.options.get(Constants.Option.POSSIBLE_ATTACKERS) instanceof List) {
-                possibleAttackers.addAll((List) lastGameData.options.get(Constants.Option.POSSIBLE_ATTACKERS));
-            }
+        this.txtActivePlayer.setText(this.lastGameData.game.getActivePlayerName());
+        this.txtPriority.setText(this.lastGameData.game.getPriorityPlayerName());
+        this.txtTurn.setText(Integer.toString(this.lastGameData.game.getTurn()));
+        ArrayList possibleAttackers = new ArrayList();
+        if (this.lastGameData.options != null && this.lastGameData.options.containsKey("possibleAttackers") && this.lastGameData.options.get("possibleAttackers") instanceof List) {
+            possibleAttackers.addAll((List)((Object)this.lastGameData.options.get("possibleAttackers")));
         }
-
-        List<UUID> possibleBlockers = new ArrayList<>();
-        if (lastGameData.options != null && lastGameData.options.containsKey(Constants.Option.POSSIBLE_BLOCKERS)) {
-            if (lastGameData.options.get(Constants.Option.POSSIBLE_BLOCKERS) instanceof List) {
-                possibleBlockers.addAll((List) lastGameData.options.get(Constants.Option.POSSIBLE_BLOCKERS));
-            }
+        ArrayList possibleBlockers = new ArrayList();
+        if (this.lastGameData.options != null && this.lastGameData.options.containsKey("possibleBlockers") && this.lastGameData.options.get("possibleBlockers") instanceof List) {
+            possibleBlockers.addAll((List)((Object)this.lastGameData.options.get("possibleBlockers")));
         }
-
-        for (PlayerView player : lastGameData.game.getPlayers()) {
-            if (players.containsKey(player.getPlayerId())) {
+        for (PlayerView player : this.lastGameData.game.getPlayers()) {
+            if (this.players.containsKey(player.getPlayerId())) {
+                CardInfoWindowDialog windowDialog2;
                 if (!possibleAttackers.isEmpty()) {
                     for (UUID permanentId : possibleAttackers) {
-                        if (player.getBattlefield().containsKey(permanentId)) {
-                            player.getBattlefield().get(permanentId).setCanAttack(true);
-                        }
+                        if (!player.getBattlefield().containsKey(permanentId)) continue;
+                        ((PermanentView)player.getBattlefield().get(permanentId)).setCanAttack(true);
                     }
                 }
                 if (!possibleBlockers.isEmpty()) {
                     for (UUID permanentId : possibleBlockers) {
-                        if (player.getBattlefield().containsKey(permanentId)) {
-                            player.getBattlefield().get(permanentId).setCanBlock(true);
-                        }
+                        if (!player.getBattlefield().containsKey(permanentId)) continue;
+                        ((PermanentView)player.getBattlefield().get(permanentId)).setCanBlock(true);
                     }
                 }
-                players.get(player.getPlayerId()).update(lastGameData.game, player, lastGameData.targets, lastGameData.getChosenTargets());
-                if (player.getPlayerId().equals(playerId)) {
-                    skipButtons.updateFromPlayer(player);
+                this.players.get(player.getPlayerId()).update(this.lastGameData.game, player, this.lastGameData.targets, this.lastGameData.getChosenTargets());
+                if (player.getPlayerId().equals(this.playerId)) {
+                    this.skipButtons.updateFromPlayer(player);
                 }
-
-                // update open or remove closed graveyard windows
-                graveyards.put(player.getName(), player.getGraveyard());
-                if (graveyardWindows.containsKey(player.getName())) {
-                    CardInfoWindowDialog windowDialog = graveyardWindows.get(player.getName());
-                    if (windowDialog.isClosed()) {
-                        graveyardWindows.remove(player.getName());
+                this.graveyards.put(player.getName(), player.getGraveyard());
+                if (this.graveyardWindows.containsKey(player.getName())) {
+                    windowDialog2 = this.graveyardWindows.get(player.getName());
+                    if (windowDialog2.isClosed()) {
+                        this.graveyardWindows.remove(player.getName());
                     } else {
-                        windowDialog.loadCardsAndShow(player.getGraveyard(), bigCard, gameId, false);
+                        windowDialog2.loadCardsAndShow(player.getGraveyard(), this.bigCard, this.gameId, false);
                     }
                 }
-
-                // update open or remove closed sideboard windows
-                sideboards.put(player.getName(), player.getSideboard());
-                if (sideboardWindows.containsKey(player.getName())) {
-                    CardInfoWindowDialog windowDialog = sideboardWindows.get(player.getName());
-                    if (windowDialog.isClosed()) {
-                        sideboardWindows.remove(player.getName());
+                this.sideboards.put(player.getName(), player.getSideboard());
+                if (this.sideboardWindows.containsKey(player.getName())) {
+                    windowDialog2 = this.sideboardWindows.get(player.getName());
+                    if (windowDialog2.isClosed()) {
+                        this.sideboardWindows.remove(player.getName());
                     } else {
-                        windowDialog.loadCardsAndShow(player.getSideboard(), bigCard, gameId, false);
+                        windowDialog2.loadCardsAndShow(player.getSideboard(), this.bigCard, this.gameId, false);
                     }
                 }
-
-                // show top card window
-                if (player.getTopCard() != null) {
-                    CardsView cardsView = new CardsView();
-                    cardsView.put(player.getTopCard().getId(), player.getTopCard());
-                    handleGameInfoWindow(revealed, ShowType.REVEAL_TOP_LIBRARY, player.getName() + "'s top library card", cardsView);
-                }
-            } else if (!players.isEmpty()) {
-                logger.warn("Couldn't find player.");
-                logger.warn("   uuid:" + player.getPlayerId());
-                logger.warn("   players:");
-                for (PlayAreaPanel p : players.values()) {
-                    logger.warn(String.valueOf(p));
-                }
-            } else {
-                // can happen at the game start before player list is initiated
+                if (player.getTopCard() == null) continue;
+                Iterator<Object> cardsView = new CardsView();
+                cardsView.put(player.getTopCard().getId(), player.getTopCard());
+                this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL_TOP_LIBRARY, player.getName() + "'s top library card", (LinkedHashMap)((Object)cardsView));
+                continue;
+            }
+            if (this.players.isEmpty()) continue;
+            logger.warn((Object)"Couldn't find player.");
+            logger.warn((Object)("   uuid:" + player.getPlayerId()));
+            logger.warn((Object)"   players:");
+            for (PlayAreaPanel p : this.players.values()) {
+                logger.warn((Object)String.valueOf(p));
             }
         }
-        updateSkipButtons();
-
-        if (!menuNameSet) {
+        this.updateSkipButtons();
+        if (!this.menuNameSet) {
             StringBuilder sb = new StringBuilder();
-            if (playerId == null) {
+            if (this.playerId == null) {
                 sb.append("Watching: ");
             } else {
                 sb.append("Playing: ");
             }
             boolean first = true;
-            for (PlayerView player : lastGameData.game.getPlayers()) {
+            for (PlayerView player : this.lastGameData.game.getPlayers()) {
                 if (first) {
                     first = false;
                 } else {
@@ -1240,102 +1201,2049 @@ public final class GamePanel extends javax.swing.JPanel {
                 }
                 sb.append(player.getName());
             }
-            menuNameSet = true;
-            gamePane.setTitle(sb.toString());
+            this.menuNameSet = true;
+            this.gamePane.setTitle(sb.toString());
         }
-
-        displayStack(lastGameData.game, bigCard, feedbackPanel, gameId);
-
-        // auto-show exile views
-        for (ExileView exile : lastGameData.game.getExile()) {
-            CardInfoWindowDialog exileWindow = exiles.getOrDefault(exile.getId(), null);
+        this.displayStack(this.lastGameData.game, this.bigCard, this.feedbackPanel, this.gameId);
+        for (ExileView exile : this.lastGameData.game.getExile()) {
+            CardInfoWindowDialog exileWindow = this.exiles.getOrDefault(exile.getId(), null);
             if (exileWindow == null) {
-                exileWindow = new CardInfoWindowDialog(ShowType.EXILE, exile.getName());
-                exiles.put(exile.getId(), exileWindow);
-                MageFrame.getDesktop().add(exileWindow, exileWindow.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+                exileWindow = new CardInfoWindowDialog(CardInfoWindowDialog.ShowType.EXILE, exile.getName());
+                this.exiles.put(exile.getId(), exileWindow);
+                MageFrame.getDesktop().add((Component)exileWindow, exileWindow.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
                 exileWindow.show();
             }
-            exileWindow.loadCardsAndShow(exile, bigCard, gameId);
+            exileWindow.loadCardsAndShow(exile, this.bigCard, this.gameId);
         }
-
-        // update open or remove closed card hints windows
-        clearClosedCardHintsWindows();
-        cardHintsWindows.forEach((s, windowDialog) -> {
-            // TODO: optimize for multiple windows (prepare data here and send it for filters/groups)
-            windowDialog.loadHints(lastGameData.game);
-        });
-
-        // reveal and look at dialogs can unattached, so windows opened by game doesn't have it
-        showRevealed(lastGameData.game);
-        showLookedAt(lastGameData.game);
-
-        // sideboard dialogs is unattached all the time -- user opens it by command
-
-        showCompanion(lastGameData.game);
-        if (!lastGameData.game.getCombat().isEmpty()) {
-            CombatManager.instance.showCombat(lastGameData.game.getCombat(), gameId);
+        this.clearClosedCardHintsWindows();
+        this.cardHintsWindows.forEach((s, windowDialog) -> windowDialog.loadHints(this.lastGameData.game));
+        this.showRevealed(this.lastGameData.game);
+        this.showLookedAt(this.lastGameData.game);
+        this.showCompanion(this.lastGameData.game);
+        if (!this.lastGameData.game.getCombat().isEmpty()) {
+            CombatManager.instance.showCombat(this.lastGameData.game.getCombat(), this.gameId);
         } else {
-            CombatManager.instance.hideCombat(gameId);
+            CombatManager.instance.hideCombat(this.gameId);
         }
-
-        for (PlayerView player : lastGameData.game.getPlayers()) {
-            if (player.hasLeft() && !playersWhoLeft.get(player.getPlayerId())) {
-                PlayAreaPanel playerLeftPanel = players.get(player.getPlayerId());
-                playersWhoLeft.put(player.getPlayerId(), true);
-
-                Container parent = playerLeftPanel.getParent();
-                GridBagLayout layout = (GridBagLayout) parent.getLayout();
-
-                for (Component otherPanel : parent.getComponents()) {
-
-                    if (otherPanel instanceof PlayAreaPanel) {
-                        GridBagConstraints gbc = layout.getConstraints(otherPanel);
-                        if (gbc.weightx > 0.1) {
-                            gbc.weightx = 0.99;
-                        }
-                        gbc.fill = GridBagConstraints.BOTH;
-                        gbc.anchor = GridBagConstraints.WEST;
-                        if (gbc.gridx > 0) {
-                            gbc.anchor = GridBagConstraints.EAST;
-                        }
-                        if (otherPanel == playerLeftPanel) {
-                            gbc.weightx = 0.01;
-                            Dimension d = playerLeftPanel.getPreferredSize();
-                            d.width = 95;
-                            otherPanel.setPreferredSize(d);
-                        }
-                        parent.remove(otherPanel);
-                        parent.add(otherPanel, gbc);
-                    }
+        for (PlayerView player : this.lastGameData.game.getPlayers()) {
+            if (!player.hasLeft() || this.playersWhoLeft.get(player.getPlayerId()).booleanValue()) continue;
+            PlayAreaPanel playerLeftPanel = this.players.get(player.getPlayerId());
+            this.playersWhoLeft.put(player.getPlayerId(), true);
+            Container parent = playerLeftPanel.getParent();
+            GridBagLayout layout = (GridBagLayout)parent.getLayout();
+            for (Component otherPanel : parent.getComponents()) {
+                if (!(otherPanel instanceof PlayAreaPanel)) continue;
+                GridBagConstraints gbc = layout.getConstraints(otherPanel);
+                if (gbc.weightx > 0.1) {
+                    gbc.weightx = 0.99;
                 }
-
-                parent.validate();
-                parent.repaint();
+                gbc.fill = 1;
+                gbc.anchor = 17;
+                if (gbc.gridx > 0) {
+                    gbc.anchor = 13;
+                }
+                if (otherPanel == playerLeftPanel) {
+                    gbc.weightx = 0.01;
+                    Dimension d = playerLeftPanel.getPreferredSize();
+                    d.width = 95;
+                    otherPanel.setPreferredSize(d);
+                }
+                parent.remove(otherPanel);
+                parent.add(otherPanel, gbc);
             }
+            parent.validate();
+            parent.repaint();
         }
-
-        //logger.info("game update, message = " + lastGameData.messageId + ", options = " + lastGameData.options + ", priority = " + lastGameData.game.getPriorityPlayerName());
-        feedbackPanel.disableUndo();
-        feedbackPanel.updateOptions(lastGameData.options);
-
+        this.feedbackPanel.disableUndo();
+        this.feedbackPanel.updateOptions(this.lastGameData.options);
+        this.xcpRefreshBattlefields();
         this.revalidate();
         this.repaint();
     }
 
-    // skip buttons border
-    private static final int BORDER_SIZE = 2;
-    private static final Border BORDER_ACTIVE = new LineBorder(Color.orange, BORDER_SIZE);
-    private static final Border BORDER_NON_ACTIVE = new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE);
+    private void updateSkipButtons() {
+        this.btnSkipToNextTurn.setToolTipText(this.skipButtons.turn.getTooltip());
+        this.btnSkipToEndTurn.setToolTipText(this.skipButtons.untilEndOfTurn.getTooltip());
+        this.btnSkipToNextMain.setToolTipText(this.skipButtons.untilNextMain.getTooltip());
+        this.btnSkipStack.setToolTipText(this.skipButtons.untilStackResolved.getTooltip());
+        this.btnSkipToYourTurn.setToolTipText(this.skipButtons.allTurns.getTooltip());
+        this.btnSkipToEndStepBeforeYourTurn.setToolTipText(this.skipButtons.untilUntilEndStepBeforeMyTurn.getTooltip());
+        this.btnSkipToNextTurn.setBorder(this.skipButtons.turn.getBorder());
+        this.btnSkipToEndTurn.setBorder(this.skipButtons.untilEndOfTurn.getBorder());
+        this.btnSkipToNextMain.setBorder(this.skipButtons.untilNextMain.getBorder());
+        this.btnSkipStack.setBorder(this.skipButtons.untilStackResolved.getBorder());
+        this.btnSkipToYourTurn.setBorder(this.skipButtons.allTurns.getBorder());
+        this.btnSkipToEndStepBeforeYourTurn.setBorder(this.skipButtons.untilUntilEndStepBeforeMyTurn.getBorder());
+    }
 
-    // skip buttons info
+    public void setMenuStates(boolean manaPoolAutomatic, boolean manaPoolAutomaticRestricted, boolean useFirstManaAbility, boolean holdPriority) {
+        for (PlayAreaPanel playAreaPanel : this.players.values()) {
+            playAreaPanel.setMenuStates(manaPoolAutomatic, manaPoolAutomaticRestricted, useFirstManaAbility, holdPriority);
+        }
+    }
+
+    private Dimension getFloatingStackCardDimension() {
+        Dimension base = GUISizeHelper.handCardDimension;
+        double scale = 1.03;
+        return new Dimension(Math.max(base.width, (int)Math.round((double)base.width * scale)), Math.max(base.height, (int)Math.round((double)base.height * scale)));
+    }
+
+    private Preferences getFloatingStackPreferences() {
+        return Preferences.userNodeForPackage(GamePanel.class).node(XCP_STACK_PREF_NODE);
+    }
+
+    private void restoreFloatingStackBounds() {
+        if (this.floatingStackFrame == null) {
+            return;
+        }
+        JDesktopPane desktop = MageFrame.getDesktop();
+        Dimension desktopSize = desktop == null ? new Dimension(1280, 720) : desktop.getSize();
+        Dimension cardSize = this.getFloatingStackCardDimension();
+        int defaultWidth = Math.max(270, cardSize.width + 70);
+        int defaultHeight = Math.max(470, cardSize.height + 190);
+        Preferences prefs = this.getFloatingStackPreferences();
+        int width = Math.max(this.floatingStackFrame.getMinimumSize().width, prefs.getInt(XCP_STACK_W, defaultWidth));
+        int height = Math.max(this.floatingStackFrame.getMinimumSize().height, prefs.getInt(XCP_STACK_H, defaultHeight));
+        width = Math.min(width, Math.max(300, desktopSize.width - 20));
+        height = Math.min(height, Math.max(360, desktopSize.height - 20));
+        int defaultX = Math.max(10, desktopSize.width - width - 28);
+        int defaultY = Math.max(10, desktopSize.height - height - GUISizeHelper.guiSizeScale(95, GUISizeHelper.dialogGuiScale));
+        int x = prefs.getInt(XCP_STACK_X, defaultX);
+        int y = prefs.getInt(XCP_STACK_Y, defaultY);
+        x = Math.max(0, Math.min(x, Math.max(0, desktopSize.width - width)));
+        y = Math.max(0, Math.min(y, Math.max(0, desktopSize.height - height)));
+        this.floatingStackRestoringBounds = true;
+        this.floatingStackFrame.setBounds(x, y, width, height);
+        this.floatingStackRestoringBounds = false;
+    }
+
+    private void saveFloatingStackBounds() {
+        if (this.floatingStackFrame == null || this.floatingStackRestoringBounds) {
+            return;
+        }
+        Rectangle bounds = this.floatingStackFrame.getBounds();
+        if (bounds.width < 1 || bounds.height < 1) {
+            return;
+        }
+        Preferences prefs = this.getFloatingStackPreferences();
+        prefs.putInt(XCP_STACK_X, bounds.x);
+        prefs.putInt(XCP_STACK_Y, bounds.y);
+        prefs.putInt(XCP_STACK_W, bounds.width);
+        prefs.putInt(XCP_STACK_H, bounds.height);
+    }
+
+    private JPanel createFloatingStackHeader() {
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setBorder(new EmptyBorder(8, 12, 4, 12));
+        JPanel titleRow = new JPanel(new BorderLayout());
+        titleRow.setOpaque(false);
+        this.floatingStackTitleLabel = new JLabel("The Stack (0)");
+        this.floatingStackTitleLabel.setFont(GUISizeHelper.dialogFont.deriveFont(1));
+        this.floatingStackTitleLabel.setForeground(new Color(132, 181, 232));
+        this.floatingStackTitleLabel.setHorizontalAlignment(0);
+        this.floatingStackTitleLabel.setToolTipText("The object marked 1st resolves first");
+        titleRow.add((Component)this.floatingStackTitleLabel, "Center");
+        header.add((Component)titleRow, "North");
+        this.floatingStackTypeLabel = new JLabel("");
+        this.floatingStackTypeLabel.setOpaque(true);
+        this.floatingStackTypeLabel.setForeground(new Color(250, 235, 185));
+        this.floatingStackTypeLabel.setBackground(new Color(18, 22, 28, 238));
+        this.floatingStackTypeLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(185, 151, 72, 235)), new EmptyBorder(2, 8, 2, 8)));
+        this.floatingStackTypeLabel.setFont(GUISizeHelper.dialogFont.deriveFont(1));
+        this.floatingStackTypeLabel.setVisible(false);
+        JPanel typeRow = new JPanel(new FlowLayout(1, 0, 1));
+        typeRow.setOpaque(false);
+        typeRow.add(this.floatingStackTypeLabel);
+        this.floatingStackOrderLabel = new JLabel("");
+        this.floatingStackOrderLabel.setOpaque(true);
+        this.floatingStackOrderLabel.setForeground(new Color(166, 224, 181));
+        this.floatingStackOrderLabel.setBackground(new Color(24, 49, 34, 220));
+        this.floatingStackOrderLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(78, 137, 95, 190)), new EmptyBorder(1, 5, 1, 5)));
+        this.floatingStackOrderLabel.setFont(GUISizeHelper.dialogFont.deriveFont(0, Math.max(9.0f, GUISizeHelper.dialogFont.getSize2D() - 3.0f)));
+        this.floatingStackOrderLabel.setHorizontalAlignment(0);
+        this.floatingStackOrderLabel.setToolTipText("Next to resolve");
+        this.floatingStackOrderLabel.setVisible(false);
+        JPanel orderRow = new JPanel(new FlowLayout(1, 0, 1));
+        orderRow.setOpaque(false);
+        orderRow.add(this.floatingStackOrderLabel);
+        JPanel statusRows = new JPanel();
+        statusRows.setOpaque(false);
+        statusRows.setLayout(new BoxLayout(statusRows, 1));
+        statusRows.add(typeRow);
+        statusRows.add(orderRow);
+        header.add((Component)statusRows, "South");
+        MouseAdapter dragAdapter = new MouseAdapter(){
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                GamePanel.this.floatingStackDragOrigin = e.getPoint();
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (GamePanel.this.floatingStackFrame == null || GamePanel.this.floatingStackDragOrigin == null) {
+                    return;
+                }
+                Point frameLocation = GamePanel.this.floatingStackFrame.getLocation();
+                int nextX = frameLocation.x + e.getX() - ((GamePanel)GamePanel.this).floatingStackDragOrigin.x;
+                int nextY = frameLocation.y + e.getY() - ((GamePanel)GamePanel.this).floatingStackDragOrigin.y;
+                JDesktopPane desktop = MageFrame.getDesktop();
+                if (desktop != null) {
+                    nextX = Math.max(0, Math.min(nextX, Math.max(0, desktop.getWidth() - GamePanel.this.floatingStackFrame.getWidth())));
+                    nextY = Math.max(0, Math.min(nextY, Math.max(0, desktop.getHeight() - GamePanel.this.floatingStackFrame.getHeight())));
+                }
+                GamePanel.this.floatingStackFrame.setLocation(nextX, nextY);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                GamePanel.this.saveFloatingStackBounds();
+                GamePanel.this.floatingStackDragOrigin = null;
+            }
+        };
+        header.addMouseListener(dragAdapter);
+        header.addMouseMotionListener(dragAdapter);
+        this.floatingStackTitleLabel.addMouseListener(dragAdapter);
+        this.floatingStackTitleLabel.addMouseMotionListener(dragAdapter);
+        this.floatingStackTypeLabel.addMouseListener(dragAdapter);
+        this.floatingStackTypeLabel.addMouseMotionListener(dragAdapter);
+        this.floatingStackOrderLabel.addMouseListener(dragAdapter);
+        this.floatingStackOrderLabel.addMouseMotionListener(dragAdapter);
+        return header;
+    }
+
+    private void initFloatingStackWindow() {
+        if (this.floatingStackFrame != null) {
+            return;
+        }
+        this.stackObjects.setVerticalStackLayout(true);
+        this.stackObjects.setZone(Zone.STACK);
+        this.stackObjects.addCardEventListener(event -> {
+            if (event.getSource() instanceof CardView && (event.getEventType() == ClientEventType.CARD_CLICK || event.getEventType() == ClientEventType.CARD_DOUBLE_CLICK)) {
+                CardView selected = (CardView)event.getSource();
+                logger.info((Object)("Floating stack card click: game=" + this.gameId + " id=" + selected.getId() + " name=" + selected.getName() + " ability=" + selected.isAbility() + " event=" + (Object)((Object)event.getEventType())));
+                DefaultActionCallback.instance.mouseClicked(this.gameId, selected);
+            }
+        });
+        this.stackObjects.setCardDimension(this.getFloatingStackCardDimension());
+        this.stackObjects.setBackgroundColor(new Color(22, 27, 33));
+        this.stackObjects.setBorder(new EmptyBorder(6, 6, 6, 6));
+        this.floatingStackFrame = new JInternalFrame("", true, false, false, false);
+        this.floatingStackFrame.setDefaultCloseOperation(0);
+        this.floatingStackFrame.setFrameIcon(null);
+        this.floatingStackFrame.setOpaque(false);
+        this.floatingStackFrame.setBackground(new Color(0, 0, 0, 0));
+        this.floatingStackFrame.setBorder(new EmptyBorder(4, 4, 4, 4));
+        if (this.floatingStackFrame.getUI() instanceof BasicInternalFrameUI) {
+            ((BasicInternalFrameUI)this.floatingStackFrame.getUI()).setNorthPane(null);
+        }
+        JPanel content = new JPanel(new BorderLayout()){
+
+            /*
+             * WARNING - Removed try catching itself - possible behaviour change.
+             */
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D)g.create();
+                try {
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    int width = this.getWidth() - 1;
+                    int height = this.getHeight() - 1;
+                    int arc = Math.min(28, Math.max(18, Math.min(width, height) / 6));
+                    g2.setColor(new Color(22, 27, 33, 250));
+                    g2.fillRoundRect(0, 0, width, height, arc, arc);
+                    g2.setColor(new Color(92, 101, 114, 220));
+                    g2.drawRoundRect(0, 0, width, height, arc, arc);
+                }
+                finally {
+                    g2.dispose();
+                }
+            }
+
+            /*
+             * WARNING - Removed try catching itself - possible behaviour change.
+             */
+            @Override
+            protected void paintChildren(Graphics g) {
+                Graphics2D g2 = (Graphics2D)g.create();
+                try {
+                    int width = Math.max(1, this.getWidth() - 1);
+                    int height = Math.max(1, this.getHeight() - 1);
+                    int arc = Math.min(28, Math.max(18, Math.min(width, height) / 6));
+                    g2.clip(new RoundRectangle2D.Double(0.0, 0.0, width, height, arc, arc));
+                    super.paintChildren(g2);
+                }
+                finally {
+                    g2.dispose();
+                }
+            }
+        };
+        content.setOpaque(false);
+        content.setBorder(new EmptyBorder(5, 5, 5, 5));
+        this.floatingStackHeader = this.createFloatingStackHeader();
+        content.add((Component)this.floatingStackHeader, "North");
+        content.add((Component)this.stackObjects, "Center");
+        JPanel bottomResizeGrip = new JPanel(new BorderLayout());
+        bottomResizeGrip.setOpaque(false);
+        bottomResizeGrip.setPreferredSize(new Dimension(1, 12));
+        bottomResizeGrip.setCursor(Cursor.getPredefinedCursor(9));
+        bottomResizeGrip.setToolTipText(null);
+        MouseAdapter bottomResizeAdapter = new MouseAdapter(){
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (GamePanel.this.floatingStackFrame == null) {
+                    return;
+                }
+                GamePanel.this.floatingStackResizeOrigin = e.getLocationOnScreen();
+                GamePanel.this.floatingStackResizeStartSize = GamePanel.this.floatingStackFrame.getSize();
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (GamePanel.this.floatingStackFrame == null || GamePanel.this.floatingStackResizeOrigin == null || GamePanel.this.floatingStackResizeStartSize == null) {
+                    return;
+                }
+                Point now = e.getLocationOnScreen();
+                int dy = now.y - ((GamePanel)GamePanel.this).floatingStackResizeOrigin.y;
+                int minHeight = ((GamePanel)GamePanel.this).floatingStackFrame.getMinimumSize().height;
+                int newHeight = Math.max(minHeight, ((GamePanel)GamePanel.this).floatingStackResizeStartSize.height + dy);
+                JDesktopPane desktop = MageFrame.getDesktop();
+                if (desktop != null) {
+                    newHeight = Math.min(newHeight, Math.max(minHeight, desktop.getHeight() - GamePanel.this.floatingStackFrame.getY()));
+                }
+                GamePanel.this.floatingStackFrame.setSize(GamePanel.this.floatingStackFrame.getWidth(), newHeight);
+                GamePanel.this.floatingStackFrame.revalidate();
+                GamePanel.this.floatingStackFrame.repaint();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                GamePanel.this.saveFloatingStackBounds();
+                GamePanel.this.floatingStackResizeOrigin = null;
+                GamePanel.this.floatingStackResizeStartSize = null;
+            }
+        };
+        bottomResizeGrip.addMouseListener(bottomResizeAdapter);
+        bottomResizeGrip.addMouseMotionListener(bottomResizeAdapter);
+        content.add((Component)bottomResizeGrip, "South");
+        this.floatingStackFrame.setContentPane(content);
+        Dimension cardSize = this.getFloatingStackCardDimension();
+        this.floatingStackFrame.setMinimumSize(new Dimension(Math.max(235, cardSize.width + 50), Math.max(420, cardSize.height + 190)));
+        JDesktopPane desktop = MageFrame.getDesktop();
+        if (desktop != null) {
+            desktop.add((Component)this.floatingStackFrame, JLayeredPane.PALETTE_LAYER);
+        }
+        this.restoreFloatingStackBounds();
+        this.floatingStackFrame.addComponentListener(new ComponentAdapter(){
+
+            @Override
+            public void componentMoved(ComponentEvent e) {
+                GamePanel.this.saveFloatingStackBounds();
+            }
+
+            @Override
+            public void componentResized(ComponentEvent e) {
+                GamePanel.this.saveFloatingStackBounds();
+            }
+        });
+        this.floatingStackFrame.setVisible(false);
+    }
+
+    private void disposeFloatingStackWindow() {
+        if (this.floatingStackFrame == null) {
+            return;
+        }
+        this.saveFloatingStackBounds();
+        this.floatingStackFrame.setVisible(false);
+        Container parent = this.floatingStackFrame.getParent();
+        if (parent != null) {
+            parent.remove(this.floatingStackFrame);
+            parent.revalidate();
+            parent.repaint();
+        }
+        this.floatingStackFrame.dispose();
+        this.floatingStackFrame = null;
+        this.floatingStackHeader = null;
+        this.floatingStackTitleLabel = null;
+        this.floatingStackTypeLabel = null;
+        this.floatingStackOrderLabel = null;
+        this.floatingStackDragOrigin = null;
+        this.floatingStackResizeOrigin = null;
+        this.floatingStackResizeStartSize = null;
+        this.floatingStackHadObjects = false;
+    }
+
+    private String getFloatingStackTypeLabel(CardView card) {
+        if (card == null) {
+            return "";
+        }
+        AbilityType abilityType = card.getAbilityType();
+        if (abilityType == AbilityType.SPELL || card.getMageObjectType() == MageObjectType.SPELL) {
+            return "Spell";
+        }
+        if (!card.isAbility() && abilityType == null) {
+            return "";
+        }
+        if (abilityType == null || abilityType.isTriggeredAbility()) {
+            return "Triggered Ability";
+        }
+        if (abilityType.isActivatedAbility()) {
+            return "Activated Ability";
+        }
+        if (abilityType == AbilityType.STATIC) {
+            return "Static Ability";
+        }
+        if (abilityType == AbilityType.SPECIAL_ACTION) {
+            return "Special Action";
+        }
+        return (Object)((Object)abilityType) + " Ability";
+    }
+
+    private String getFloatingStackOrderLabel(CardView card) {
+        if (card == null) {
+            return "";
+        }
+        String name = card.getName();
+        if (name == null || name.trim().isEmpty()) {
+            name = "unnamed object";
+        }
+        String safeName = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\\\"", "&quot;");
+        return "<html><div style=\"width:220px;text-align:center\">NEXT \u00b7 " + safeName + "</div></html>";
+    }
+
+    private void updateFloatingStackVisibility(GameView game) {
+        boolean hasObjects;
+        int objectCount = game.getStack().size();
+        CardView topStackObject = game.getStack().isEmpty() ? null : (CardView)game.getStack().values().iterator().next();
+        String type = this.getFloatingStackTypeLabel(topStackObject);
+        if (this.floatingStackFrame == null) {
+            this.initFloatingStackWindow();
+        }
+        boolean bl = hasObjects = objectCount > 0;
+        if (this.floatingStackFrame != null) {
+            if (this.floatingStackTitleLabel != null) {
+                this.floatingStackTitleLabel.setText("The Stack (" + objectCount + ")");
+                this.floatingStackTitleLabel.setToolTipText("The object marked 1st resolves first (" + objectCount + " object" + (objectCount == 1 ? "" : "s") + ")");
+            }
+            if (this.floatingStackTypeLabel != null) {
+                this.floatingStackTypeLabel.setText(type);
+                this.floatingStackTypeLabel.setVisible(!type.isEmpty());
+            }
+            if (this.floatingStackOrderLabel != null) {
+                this.floatingStackOrderLabel.setText(this.getFloatingStackOrderLabel(topStackObject));
+                this.floatingStackOrderLabel.setVisible(hasObjects);
+                this.floatingStackHeader.revalidate();
+                this.floatingStackHeader.repaint();
+                logger.info((Object)("Floating stack guide: text=" + this.floatingStackOrderLabel.getText() + " visible=" + this.floatingStackOrderLabel.isVisible()));
+            }
+            if (hasObjects && !this.floatingStackHadObjects) {
+                this.floatingStackFrame.setVisible(true);
+                this.floatingStackFrame.toFront();
+            } else if (!hasObjects && this.floatingStackHadObjects) {
+                this.saveFloatingStackBounds();
+                this.floatingStackFrame.setVisible(false);
+            }
+        }
+        this.floatingStackHadObjects = hasObjects;
+    }
+
+    private void displayStack(GameView game, BigCard bigCard, FeedbackPanel feedbackPanel, UUID gameId) {
+        this.stackObjects.loadCards(game.getStack(), bigCard, gameId, false);
+        String stackAudit = game.getStack().values().stream().map(card -> card.getName() + "[" + card.getId() + "]").collect(Collectors.joining(" -> "));
+        logger.info((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
+        this.updateFloatingStackVisibility(game);
+    }
+
+    private void updateActivePhase(PhaseStep currentStep) {
+        if (currentStep == null) {
+            return;
+        }
+        switch (currentStep) {
+            case UNTAP: {
+                this.updatePhaseButtons("Untap");
+                break;
+            }
+            case UPKEEP: {
+                this.updatePhaseButtons("Upkeep");
+                break;
+            }
+            case DRAW: {
+                this.updatePhaseButtons("Draw");
+                break;
+            }
+            case PRECOMBAT_MAIN: {
+                this.updatePhaseButtons("Main1");
+                break;
+            }
+            case BEGIN_COMBAT: {
+                this.updatePhaseButtons("Combat_Start");
+                break;
+            }
+            case DECLARE_ATTACKERS: {
+                this.updatePhaseButtons("Combat_Attack");
+                break;
+            }
+            case DECLARE_BLOCKERS: {
+                this.updatePhaseButtons("Combat_Block");
+                break;
+            }
+            case FIRST_COMBAT_DAMAGE:
+            case COMBAT_DAMAGE: {
+                this.updatePhaseButtons("Combat_Damage");
+                break;
+            }
+            case END_COMBAT: {
+                this.updatePhaseButtons("Combat_End");
+                break;
+            }
+            case POSTCOMBAT_MAIN: {
+                this.updatePhaseButtons("Main2");
+                break;
+            }
+            case END_TURN:
+            case CLEANUP: {
+                this.updatePhaseButtons("Cleanup");
+                break;
+            }
+        }
+    }
+
+    private void updatePhaseButtons(String currentPhaseName) {
+        this.phaseButtons.forEach((phaseName, phaseButton) -> {
+            if (phaseName.equals(currentPhaseName)) {
+                phaseButton.setAlignmentX(0.5f);
+            } else {
+                phaseButton.setAlignmentX(0.0f);
+            }
+        });
+        this.jPhases.invalidate();
+    }
+
+    public void onDeactivated() {
+        this.saveSplitters();
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.exiles.values()) {
+            cardInfoWindowDialog.hideDialog();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.revealed.values()) {
+            cardInfoWindowDialog.hideDialog();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.lookedAt.values()) {
+            cardInfoWindowDialog.hideDialog();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+            cardInfoWindowDialog.hideDialog();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
+            cardInfoWindowDialog.hideDialog();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.sideboardWindows.values()) {
+            cardInfoWindowDialog.hideDialog();
+        }
+        for (CardHintsHelperDialog cardHintsHelperDialog : this.cardHintsWindows.values()) {
+            cardHintsHelperDialog.hideDialog();
+        }
+    }
+
+    public void onActivated() {
+        SwingUtilities.invokeLater(this::restoreSplitters);
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.exiles.values()) {
+            cardInfoWindowDialog.show();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.revealed.values()) {
+            cardInfoWindowDialog.show();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.lookedAt.values()) {
+            cardInfoWindowDialog.show();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+            cardInfoWindowDialog.show();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
+            cardInfoWindowDialog.show();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.sideboardWindows.values()) {
+            cardInfoWindowDialog.show();
+        }
+        for (CardHintsHelperDialog cardHintsHelperDialog : this.cardHintsWindows.values()) {
+            cardHintsHelperDialog.show();
+        }
+    }
+
+    public void openGraveyardWindow(String playerName) {
+        if (this.graveyardWindows.containsKey(playerName)) {
+            CardInfoWindowDialog cardInfoWindowDialog = this.graveyardWindows.get(playerName);
+            if (cardInfoWindowDialog.isVisible()) {
+                cardInfoWindowDialog.hideDialog();
+            } else {
+                cardInfoWindowDialog.show();
+            }
+            return;
+        }
+        CardInfoWindowDialog newGraveyard = new CardInfoWindowDialog(CardInfoWindowDialog.ShowType.GRAVEYARD, playerName);
+        this.graveyardWindows.put(playerName, newGraveyard);
+        MageFrame.getDesktop().add((Component)newGraveyard, newGraveyard.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+        newGraveyard.loadCardsAndShow(this.graveyards.get(playerName), this.bigCard, this.gameId, false);
+    }
+
+    private void clearClosedCardHintsWindows() {
+        this.cardHintsWindows.entrySet().removeIf(entry -> ((CardHintsHelperDialog)entry.getValue()).isClosed());
+    }
+
+    public void openCardHintsWindow(String code) {
+        this.clearClosedCardHintsWindows();
+        if (this.cardHintsWindows.size() >= 5) {
+            this.cardHintsWindows.values().stream().reduce((a, b) -> b).ifPresent(CardHintsHelperDialog::show);
+            return;
+        }
+        CardHintsHelperDialog newDialog = new CardHintsHelperDialog();
+        newDialog.setSize(GUISizeHelper.dialogGuiScaleSize(newDialog.getSize()));
+        newDialog.setGameData(this.lastGameData.game, this.gameId, this.bigCard);
+        this.cardHintsWindows.put(code + UUID.randomUUID(), newDialog);
+        MageFrame.getDesktop().add((Component)newDialog, newDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+        newDialog.loadHints(this.lastGameData.game);
+    }
+
+    public void openSideboardWindow(UUID playerId) {
+        if (this.lastGameData == null) {
+            return;
+        }
+        PlayerView playerView = this.lastGameData.game.getPlayers().stream().filter(p -> p.getPlayerId().equals(playerId)).findFirst().orElse(null);
+        if (playerView == null) {
+            return;
+        }
+        if (this.sideboardWindows.containsKey(playerView.getName())) {
+            CardInfoWindowDialog windowDialog = this.sideboardWindows.get(playerView.getName());
+            if (windowDialog.isVisible()) {
+                windowDialog.hideDialog();
+            } else {
+                windowDialog.show();
+            }
+            return;
+        }
+        CardInfoWindowDialog windowDialog = new CardInfoWindowDialog(CardInfoWindowDialog.ShowType.SIDEBOARD, playerView.getName());
+        this.sideboardWindows.put(playerView.getName(), windowDialog);
+        MageFrame.getDesktop().add((Component)windowDialog, windowDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+        windowDialog.loadCardsAndShow(this.sideboards.get(playerView.getName()), this.bigCard, this.gameId, false);
+    }
+
+    public void openTopLibraryWindow(String playerName) {
+        String title = playerName + "'s top library card";
+        if (this.revealed.containsKey(title)) {
+            CardInfoWindowDialog cardInfoWindowDialog = this.revealed.get(title);
+            if (cardInfoWindowDialog.isVisible()) {
+                cardInfoWindowDialog.hideDialog();
+            } else {
+                cardInfoWindowDialog.show();
+            }
+        }
+    }
+
+    private void showRevealed(GameView game) {
+        for (RevealedView revealView : game.getRevealed()) {
+            this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, revealView.getName(), (LinkedHashMap)revealView.getCards());
+        }
+        this.removeClosedCardInfoWindows(this.revealed);
+    }
+
+    private void showLookedAt(GameView game) {
+        for (LookedAtView lookedAtView : game.getLookedAt()) {
+            this.handleGameInfoWindow(this.lookedAt, CardInfoWindowDialog.ShowType.LOOKED_AT, lookedAtView.getName(), (LinkedHashMap)lookedAtView.getCards());
+        }
+        this.removeClosedCardInfoWindows(this.lookedAt);
+    }
+
+    private void showCompanion(GameView game) {
+        for (RevealedView revealView : game.getCompanion()) {
+            this.handleGameInfoWindow(this.companion, CardInfoWindowDialog.ShowType.COMPANION, revealView.getName(), (LinkedHashMap)revealView.getCards());
+        }
+        this.companion.forEach((name, companionDialog) -> {
+            if (game.getCompanion().stream().noneMatch(revealedView -> revealedView.getName().equals(name))) {
+                try {
+                    companionDialog.setClosed(true);
+                }
+                catch (PropertyVetoException e) {
+                    logger.error((Object)"Couldn't close companion dialog", (Throwable)e);
+                }
+            }
+        });
+        this.removeClosedCardInfoWindows(this.companion);
+    }
+
+    private void handleGameInfoWindow(Map<String, CardInfoWindowDialog> windowMap, CardInfoWindowDialog.ShowType showType, String name, LinkedHashMap cardsView) {
+        CardInfoWindowDialog cardInfoWindowDialog;
+        if (!windowMap.containsKey(name)) {
+            cardInfoWindowDialog = new CardInfoWindowDialog(showType, name);
+            windowMap.put(name, cardInfoWindowDialog);
+            MageFrame.getDesktop().add((Component)cardInfoWindowDialog, cardInfoWindowDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+        } else {
+            cardInfoWindowDialog = windowMap.get(name);
+        }
+        if (cardInfoWindowDialog != null && !cardInfoWindowDialog.isClosed()) {
+            switch (showType) {
+                case REVEAL:
+                case REVEAL_TOP_LIBRARY:
+                case COMPANION: {
+                    cardInfoWindowDialog.loadCardsAndShow((CardsView)cardsView, this.bigCard, this.gameId, false);
+                    break;
+                }
+                case LOOKED_AT: {
+                    cardInfoWindowDialog.loadCardsAndShow(CardsViewUtil.convertSimple((SimpleCardsView)cardsView), this.bigCard, this.gameId, false);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void removeClosedCardInfoWindows(Map<String, CardInfoWindowDialog> windowMap) {
+        windowMap.entrySet().removeIf(entry -> ((CardInfoWindowDialog)entry.getValue()).isClosed());
+    }
+
+    public void ask(int messageId, GameView gameView, String question, Map<String, Serializable> options) {
+        this.updateGame(messageId, gameView, false, options, null);
+        this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.QUESTION, question, "", false, options, true, gameView.getPhase());
+    }
+
+    public boolean isMissGameData() {
+        return this.lastGameData.game == null || this.lastGameData.game.getPlayers().isEmpty();
+    }
+
+    private void keepLastGameData(int messageId, GameView game, boolean showPlayable, Map<String, Serializable> options, Set<UUID> targets) {
+        this.lastGameData.messageId = messageId;
+        this.lastGameData.setNewGame(game);
+        this.lastGameData.showPlayable = showPlayable;
+        this.lastGameData.options = options;
+        this.lastGameData.targets = targets;
+    }
+
+    private void prepareSelectableView() {
+        if (this.lastGameData.game == null) {
+            return;
+        }
+        Zone needZone = Zone.ALL;
+        if (this.lastGameData.options != null && this.lastGameData.options.containsKey("targetZone")) {
+            needZone = (Zone)((Object)this.lastGameData.options.get("targetZone"));
+        }
+        Set<UUID> needChosen = this.lastGameData.getChosenTargets();
+        Set<UUID> needSelectable = this.lastGameData.targets != null ? this.lastGameData.targets : new HashSet<UUID>();
+        PlayableObjectsList needPlayable = this.lastGameData.showPlayable && this.lastGameData.game.getCanPlayObjects() != null ? this.lastGameData.game.getCanPlayObjects() : new PlayableObjectsList();
+        if (needChosen.isEmpty() && needSelectable.isEmpty() && needPlayable.isEmpty()) {
+            return;
+        }
+        if (needZone == Zone.HAND || needZone == Zone.ALL) {
+            for (Object card : this.lastGameData.game.getMyHand().values()) {
+                if (needSelectable.contains(card.getId())) {
+                    card.setChoosable(true);
+                }
+                if (needChosen.contains(card.getId())) {
+                    card.setSelected(true);
+                }
+                if (!needPlayable.containsObject(card.getId())) continue;
+                card.setPlayableStats(needPlayable.getStats(card.getId()));
+            }
+            List list = this.lastGameData.game.getOpponentHands().values().stream().flatMap(s -> s.values().stream()).collect(Collectors.toList());
+            for (SimpleCardView card : list) {
+                if (needSelectable.contains(card.getId())) {
+                    card.setChoosable(true);
+                }
+                if (needChosen.contains(card.getId())) {
+                    card.setSelected(true);
+                }
+                if (!needPlayable.containsObject(card.getId())) continue;
+                card.setPlayableStats(needPlayable.getStats(card.getId()));
+            }
+            list = this.lastGameData.game.getWatchedHands().values().stream().flatMap(s -> s.values().stream()).collect(Collectors.toList());
+            for (SimpleCardView card : list) {
+                if (needSelectable.contains(card.getId())) {
+                    card.setChoosable(true);
+                }
+                if (needChosen.contains(card.getId())) {
+                    card.setSelected(true);
+                }
+                if (!needPlayable.containsObject(card.getId())) continue;
+                card.setPlayableStats(needPlayable.getStats(card.getId()));
+            }
+        }
+        if (needZone == Zone.STACK || needZone == Zone.ALL) {
+            for (Object card : this.lastGameData.game.getStack().entrySet()) {
+                if (needSelectable.contains(card.getKey())) {
+                    ((CardView)card.getValue()).setChoosable(true);
+                }
+                if (needChosen.contains(card.getKey())) {
+                    ((CardView)card.getValue()).setSelected(true);
+                }
+                if (!needPlayable.containsObject((UUID)card.getKey())) continue;
+                ((CardView)card.getValue()).setPlayableStats(needPlayable.getStats((UUID)card.getKey()));
+            }
+        }
+        if (needZone == Zone.BATTLEFIELD || needZone == Zone.ALL) {
+            for (PlayerView player : this.lastGameData.game.getPlayers()) {
+                for (Map.Entry perm : player.getBattlefield().entrySet()) {
+                    if (needSelectable.contains(perm.getKey())) {
+                        ((PermanentView)perm.getValue()).setChoosable(true);
+                    }
+                    if (needChosen.contains(perm.getKey())) {
+                        ((PermanentView)perm.getValue()).setSelected(true);
+                    }
+                    if (!needPlayable.containsObject((UUID)perm.getKey())) continue;
+                    ((PermanentView)perm.getValue()).setPlayableStats(needPlayable.getStats((UUID)perm.getKey()));
+                }
+            }
+        }
+        if (needZone == Zone.GRAVEYARD || needZone == Zone.ALL) {
+            for (PlayerView player : this.lastGameData.game.getPlayers()) {
+                for (Object card : player.getGraveyard().entrySet()) {
+                    if (needSelectable.contains(card.getKey())) {
+                        ((CardView)card.getValue()).setChoosable(true);
+                    }
+                    if (needChosen.contains(card.getKey())) {
+                        ((CardView)card.getValue()).setSelected(true);
+                    }
+                    if (!needPlayable.containsObject((UUID)card.getKey())) continue;
+                    ((CardView)card.getValue()).setPlayableStats(needPlayable.getStats((UUID)card.getKey()));
+                }
+            }
+        }
+        if (needZone == Zone.OUTSIDE || needZone == Zone.ALL) {
+            for (PlayerView player : this.lastGameData.game.getPlayers()) {
+                for (Object card : player.getSideboard().entrySet()) {
+                    if (needSelectable.contains(card.getKey())) {
+                        ((CardView)card.getValue()).setChoosable(true);
+                    }
+                    if (needChosen.contains(card.getKey())) {
+                        ((CardView)card.getValue()).setSelected(true);
+                    }
+                    if (!needPlayable.containsObject((UUID)card.getKey())) continue;
+                    ((CardView)card.getValue()).setPlayableStats(needPlayable.getStats((UUID)card.getKey()));
+                }
+            }
+        }
+        this.prepareSelectableWindows(this.sideboardWindows.values(), needSelectable, needChosen, needPlayable);
+        if (needZone == Zone.EXILED || needZone == Zone.ALL) {
+            for (PlayerView player : this.lastGameData.game.getPlayers()) {
+                for (Object card : player.getExile().values()) {
+                    if (needSelectable.contains(card.getId())) {
+                        card.setChoosable(true);
+                    }
+                    if (needChosen.contains(card.getId())) {
+                        card.setSelected(true);
+                    }
+                    if (!needPlayable.containsObject(card.getId())) continue;
+                    card.setPlayableStats(needPlayable.getStats(card.getId()));
+                }
+            }
+            for (ExileView exile : this.lastGameData.game.getExile()) {
+                for (Object card : exile.entrySet()) {
+                    if (needSelectable.contains(card.getKey())) {
+                        ((CardView)card.getValue()).setChoosable(true);
+                    }
+                    if (needChosen.contains(card.getKey())) {
+                        ((CardView)card.getValue()).setSelected(true);
+                    }
+                    if (!needPlayable.containsObject((UUID)card.getKey())) continue;
+                    ((CardView)card.getValue()).setPlayableStats(needPlayable.getStats((UUID)card.getKey()));
+                }
+            }
+        }
+        if (needZone == Zone.COMMAND || needZone == Zone.ALL) {
+            for (PlayerView player : this.lastGameData.game.getPlayers()) {
+                for (CommandObjectView com : player.getCommandObjectList()) {
+                    if (needSelectable.contains(com.getId())) {
+                        com.setChoosable(true);
+                    }
+                    if (needChosen.contains(com.getId())) {
+                        com.setSelected(true);
+                    }
+                    if (!needPlayable.containsObject(com.getId())) continue;
+                    com.setPlayableStats(needPlayable.getStats(com.getId()));
+                }
+            }
+        }
+        for (RevealedView rev : this.lastGameData.game.getCompanion()) {
+            for (Object card : rev.getCards().entrySet()) {
+                if (needSelectable.contains(card.getKey())) {
+                    ((CardView)card.getValue()).setChoosable(true);
+                }
+                if (needChosen.contains(card.getKey())) {
+                    ((CardView)card.getValue()).setSelected(true);
+                }
+                if (!needPlayable.containsObject((UUID)card.getKey())) continue;
+                ((CardView)card.getValue()).setPlayableStats(needPlayable.getStats((UUID)card.getKey()));
+            }
+        }
+        for (RevealedView rev : this.lastGameData.game.getRevealed()) {
+            for (Object card : rev.getCards().entrySet()) {
+                if (needSelectable.contains(card.getKey())) {
+                    ((CardView)card.getValue()).setChoosable(true);
+                }
+                if (needChosen.contains(card.getKey())) {
+                    ((CardView)card.getValue()).setSelected(true);
+                }
+                if (!needPlayable.containsObject((UUID)card.getKey())) continue;
+                ((CardView)card.getValue()).setPlayableStats(needPlayable.getStats((UUID)card.getKey()));
+            }
+        }
+        this.prepareSelectableWindows(this.revealed.values(), needSelectable, needChosen, needPlayable);
+        for (LookedAtView look : this.lastGameData.game.getLookedAt()) {
+            for (Object card : look.getCards().entrySet()) {
+                if (!needPlayable.containsObject((UUID)card.getKey())) continue;
+                ((SimpleCardView)card.getValue()).setPlayableStats(needPlayable.getStats((UUID)card.getKey()));
+            }
+        }
+        this.prepareSelectableWindows(this.lookedAt.values(), needSelectable, needChosen, needPlayable);
+    }
+
+    private void prepareSelectableWindows(Collection<CardInfoWindowDialog> windows, Set<UUID> needSelectable, Set<UUID> needChosen, PlayableObjectsList needPlayable) {
+        for (CardInfoWindowDialog window : windows) {
+            for (MageCard mageCard : window.getMageCardsForUpdate().values()) {
+                CardView cardView = mageCard.getOriginal();
+                cardView.setChoosable(needSelectable.contains(cardView.getId()));
+                cardView.setSelected(needChosen.contains(cardView.getId()));
+                if (needPlayable.containsObject(cardView.getId())) {
+                    cardView.setPlayableStats(needPlayable.getStats(cardView.getId()));
+                } else {
+                    cardView.setPlayableStats(new PlayableObjectStats());
+                }
+                mageCard.update(cardView);
+            }
+        }
+    }
+
+    public void pickTarget(int messageId, GameView gameView, Map<String, Serializable> options, String message, CardsView cardsView, Set<UUID> targets, boolean required) {
+        this.updateGame(messageId, gameView, false, options, targets);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        this.clearPickTargetDialogs();
+        PopUpMenuType popupMenuType = null;
+        if (this.lastGameData.options != null && options.containsKey("queryType")) {
+            PlayerQueryEvent.QueryType needType = (PlayerQueryEvent.QueryType)((Object)this.lastGameData.options.get("queryType"));
+            switch (needType) {
+                case PICK_ABILITY: {
+                    popupMenuType = PopUpMenuType.TRIGGER_ORDER;
+                    break;
+                }
+                case PICK_TARGET: {
+                    break;
+                }
+                default: {
+                    logger.warn((Object)("Unknown query type in pick target: " + (Object)((Object)needType) + " in " + message));
+                }
+            }
+        }
+        HashMap<String, Serializable> options0 = this.lastGameData.options == null ? new HashMap() : this.lastGameData.options;
+        ShowCardsDialog dialog = null;
+        if (cardsView != null && !cardsView.isEmpty()) {
+            dialog = this.prepareCardsDialog(message, cardsView, required, options0, popupMenuType);
+            options0.put("dialog", dialog);
+        }
+        this.feedbackPanel.prepareFeedback(required ? FeedbackPanel.FeedbackMode.INFORM : FeedbackPanel.FeedbackMode.CANCEL, message, "", gameView.getSpecial(), options0, true, gameView.getPhase());
+        if (dialog != null) {
+            this.pickTarget.add(dialog);
+        }
+    }
+
+    public void inform(int messageId, GameView gameView, String information) {
+        this.updateGame(messageId, gameView);
+        this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.INFORM, information, "", gameView.getSpecial(), null, false, gameView.getPhase());
+    }
+
+    public void endMessage(int messageId, GameView gameView, Map<String, Serializable> options, String message) {
+        this.updateGame(messageId, gameView, false, options, null);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.END, message, "", false, null, true, null);
+        ArrowBuilder.getBuilder().removeAllArrows(this.gameId);
+    }
+
+    public void select(int messageId, GameView gameView, Map<String, Serializable> options, String message) {
+        this.updateGame(messageId, gameView, true, options, null);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        this.abilityPicker.setVisible(false);
+        this.holdingPriority = false;
+        this.txtHoldPriority.setVisible(false);
+        this.setMenuStates(PreferencesDialog.getCachedValue("gameManaAutopayment", "true").equals("true"), PreferencesDialog.getCachedValue("gameManaAutopaymentOnlyOne", "true").equals("true"), PreferencesDialog.getCachedValue("useFirstManaAbility", "false").equals("true"), false);
+        boolean controllingPlayer = false;
+        for (PlayerView playerView : gameView.getPlayers()) {
+            if (!playerView.getPlayerId().equals(this.playerId)) continue;
+            boolean bl = controllingPlayer = !gameView.getPriorityPlayerName().equals(playerView.getName());
+            if (playerView.getStatesSavedSize() <= 0 || !gameView.getStack().isEmpty()) break;
+            this.feedbackPanel.allowUndo(playerView.getStatesSavedSize());
+            break;
+        }
+        HashMap<String, Serializable> panelOptions = new HashMap<String, Serializable>();
+        if (this.lastGameData.options != null) {
+            panelOptions.putAll(this.lastGameData.options);
+        }
+        panelOptions.put("your_turn", Boolean.valueOf(true));
+        String activePlayerText = gameView.getActivePlayerId().equals(this.playerId) ? "Your turn" : gameView.getActivePlayerName() + "'s turn";
+        String priorityPlayerText = "";
+        if (controllingPlayer) {
+            priorityPlayerText = " / priority " + gameView.getPriorityPlayerName();
+        }
+        String additionalMessage = activePlayerText + " / " + gameView.getStep().toString() + priorityPlayerText;
+        this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.SELECT, message, additionalMessage, gameView.getSpecial(), panelOptions, true, gameView.getPhase());
+    }
+
+    public void playMana(int messageId, GameView gameView, Map<String, Serializable> options, String message) {
+        this.updateGame(messageId, gameView, true, options, null);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.CANCEL, message, "", gameView.getSpecial(), options, true, gameView.getPhase());
+    }
+
+    public void playXMana(int messageId, GameView gameView, Map<String, Serializable> options, String message) {
+        this.updateGame(messageId, gameView, true, options, null);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.CONFIRM, message, "", gameView.getSpecial(), null, true, gameView.getPhase());
+    }
+
+    public void replayMessage(String message) {
+    }
+
+    public void pickAbility(int messageId, GameView gameView, Map<String, Serializable> options, AbilityPickerView choices) {
+        this.updateGame(messageId, gameView, false, options, null);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        this.abilityPicker.show(choices, MageFrame.getDesktop().getMousePosition());
+    }
+
+    private void hideAll() {
+        this.hidePickDialogs();
+        this.abilityPicker.setVisible(false);
+        ActionCallback callback = Plugins.instance.getActionCallback();
+        ((MageActionCallback)callback).hideGameUpdate(this.gameId);
+    }
+
+    private ShowCardsDialog prepareCardsDialog(String title, CardsView cards, boolean required, Map<String, Serializable> options, PopUpMenuType popupMenuType) {
+        ShowCardsDialog showCards = new ShowCardsDialog();
+        JPopupMenu popupMenu = null;
+        if (PopUpMenuType.TRIGGER_ORDER == popupMenuType) {
+            popupMenu = this.popupMenuTriggerOrder;
+        }
+        showCards.loadCards(title, cards, this.bigCard, this.gameId, required, options, popupMenu, this.getShowCardsEventListener(showCards));
+        return showCards;
+    }
+
+    public void getAmount(int messageId, GameView gameView, Map<String, Serializable> options, int min, int max, String message) {
+        this.updateGame(messageId, gameView, false, options, null);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        this.pickNumber.showDialog(min, max, message, () -> {
+            if (this.pickNumber.isCancel()) {
+                SessionHandler.sendPlayerBoolean(this.gameId, false);
+            } else {
+                SessionHandler.sendPlayerInteger(this.gameId, this.pickNumber.getAmount());
+            }
+        });
+    }
+
+    public void getMultiAmount(int messageId, GameView gameView, List<MultiAmountMessage> messages, Map<String, Serializable> options, int min, int max) {
+        this.updateGame(messageId, gameView, false, options, null);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        this.pickMultiNumber.init(this.gameId, this.bigCard);
+        this.pickMultiNumber.showDialog(messages, min, max, this.lastGameData.options, () -> {
+            if (this.pickMultiNumber.isCancel()) {
+                SessionHandler.sendPlayerBoolean(this.gameId, false);
+            } else {
+                SessionHandler.sendPlayerString(this.gameId, this.pickMultiNumber.getMultiAmount());
+            }
+        });
+    }
+
+    public void getChoice(int messageId, GameView gameView, Map<String, Serializable> options, Choice choice, UUID objectId) {
+        this.updateGame(messageId, gameView, false, options, null);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        PickChoiceDialog pickChoice = new PickChoiceDialog();
+        pickChoice.showDialog(choice, null, objectId, this.choiceWindowState, this.bigCard, () -> {
+            String specialPrefix = choice.isChosenSpecial() ? "#" : "";
+            String valueToSend = choice.isKeyChoice() ? choice.getChoiceKey() : choice.getChoice();
+            SessionHandler.sendPlayerString(this.gameId, valueToSend == null ? null : specialPrefix + valueToSend);
+            this.choiceWindowState = new MageDialogState(pickChoice);
+            pickChoice.removeDialog();
+        });
+    }
+
+    public void pickPile(int messageId, GameView gameView, Map<String, Serializable> options, String message, CardsView pile1, CardsView pile2) {
+        this.updateGame(messageId, gameView, false, options, null);
+        this.hideAll();
+        DialogManager.getManager(this.gameId).fadeOut();
+        this.clearPickPileDialogs();
+        PickPileDialog pickPileDialog = new PickPileDialog();
+        this.pickPile.add(pickPileDialog);
+        pickPileDialog.showDialog(message, pile1, pile2, this.bigCard, this.gameId, () -> {
+            if (pickPileDialog.isPickedOK()) {
+                SessionHandler.sendPlayerBoolean(this.gameId, pickPileDialog.isPickedPile1());
+            }
+        });
+    }
+
+    public Map<UUID, PlayAreaPanel> getPlayers() {
+        return this.players;
+    }
+
+    private void initComponents() {
+        String[] phases;
+        this.abilityPicker = new AbilityPicker(GUISizeHelper.dialogGuiScale);
+        this.pnlHelperHandButtonsStackArea = new JPanel();
+        this.pnlShortCuts = new JPanel();
+        this.lblPhase = new JLabel();
+        this.txtPhase = new JLabel();
+        this.lblStep = new JLabel();
+        this.txtStep = new JLabel();
+        this.lblTurn = new JLabel();
+        this.txtTurn = new JLabel();
+        this.txtActivePlayer = new JLabel();
+        this.lblActivePlayer = new JLabel();
+        this.txtPriority = new JLabel();
+        this.lblPriority = new JLabel();
+        this.feedbackPanel = new FeedbackPanel();
+        this.helper = new HelperPanel();
+        this.feedbackPanel.setHelperPanel(this.helper);
+        this.feedbackPanel.setLayout(new BorderLayout());
+        this.feedbackPanel.add((Component)this.helper, "Center");
+        Border paddingBorder = BorderFactory.createEmptyBorder(4, 4, 4, 4);
+        Border border = BorderFactory.createLineBorder(Color.DARK_GRAY, 2);
+        this.txtHoldPriority = new JLabel();
+        this.txtHoldPriority.setText("Hold");
+        this.txtHoldPriority.setBorder(BorderFactory.createCompoundBorder(border, paddingBorder));
+        this.txtHoldPriority.setBackground(Color.LIGHT_GRAY);
+        this.txtHoldPriority.setOpaque(true);
+        this.txtHoldPriority.setToolTipText("Holding priority after the next spell cast or ability activation");
+        this.txtHoldPriority.setVisible(false);
+        boolean displayButtonText = PreferencesDialog.getCurrentTheme().isShortcutsVisibleForSkipButtons();
+        this.btnToggleMacro = new KeyboundButton("controlToggleMacro", displayButtonText);
+        this.btnCancelSkip = new KeyboundButton("controlCancelSkip", displayButtonText);
+        this.btnSkipToNextTurn = new KeyboundButton("controlNextTurn", displayButtonText);
+        this.btnSkipToEndTurn = new KeyboundButton("controlEndStep", displayButtonText);
+        this.btnSkipToNextMain = new KeyboundButton("controlMainStep", displayButtonText);
+        this.btnSkipStack = new KeyboundButton("controlSkipStack", displayButtonText);
+        this.btnSkipToYourTurn = new KeyboundButton("controlYourTurn", displayButtonText);
+        this.btnSkipToEndStepBeforeYourTurn = new KeyboundButton("controlPriorEnd", displayButtonText);
+        this.btnConcede = new JButton();
+        this.btnSwitchHands = new JButton();
+        this.btnStopWatching = new JButton();
+        this.bigCard = new BigCard();
+        this.pnlReplay = new JPanel();
+        this.btnStopReplay = new JButton();
+        this.btnNextPlay = new JButton();
+        this.btnPlay = new JButton();
+        this.btnSkipForward = new JButton();
+        this.btnPreviousPlay = new JButton();
+        this.pnlBattlefield = new JPanel();
+        this.gameChatPanel = new ChatPanelBasic();
+        this.gameChatPanel.useExtendedView(ChatPanelBasic.VIEW_MODE.GAME);
+        this.userChatPanel = new ChatPanelBasic();
+        this.userChatPanel.setParentChat(this.gameChatPanel);
+        this.userChatPanel.useExtendedView(ChatPanelBasic.VIEW_MODE.CHAT);
+        this.userChatPanel.setChatType(ChatPanelBasic.ChatType.GAME);
+        this.gameChatPanel.setConnectedChat(this.userChatPanel);
+        this.gameChatPanel.disableInput();
+        this.gameChatPanel.setMinimumSize(new Dimension(100, 48));
+        this.handContainer = new HandPanel();
+        this.handCards = new HashMap<String, CardsView>();
+        this.pnlShortCuts.setOpaque(false);
+        this.stackObjects = new Cards();
+        this.stackObjects.setZone(Zone.STACK);
+        this.splitHandAndStack = new JSplitPane();
+        this.splitHandAndStack.setBorder(null);
+        this.splitHandAndStack.setResizeWeight(1.0);
+        this.splitHandAndStack.setOneTouchExpandable(true);
+        this.splitGameAndBigCard = new JSplitPane();
+        this.splitGameAndBigCard.setBorder(null);
+        this.splitGameAndBigCard.setResizeWeight(1.0);
+        this.splitGameAndBigCard.setOneTouchExpandable(true);
+        this.splitChatAndLogs = new JSplitPane();
+        this.splitChatAndLogs.setOrientation(0);
+        this.splitChatAndLogs.setResizeWeight(0.0);
+        this.splitChatAndLogs.setTopComponent(this.userChatPanel);
+        this.splitChatAndLogs.setBottomComponent(this.gameChatPanel);
+        this.splitBattlefieldAndChats = new JSplitPane();
+        this.splitBattlefieldAndChats.setBorder(null);
+        this.splitBattlefieldAndChats.setResizeWeight(1.0);
+        this.splitBattlefieldAndChats.setOneTouchExpandable(true);
+        this.splitBattlefieldAndChats.setLeftComponent(this.pnlHelperHandButtonsStackArea);
+        this.splitBattlefieldAndChats.setRightComponent(this.splitChatAndLogs);
+        this.splitters.put("gamepanelDividerLocationsGameAndBigCard", new MageSplitter(this.splitGameAndBigCard, 0.85));
+        this.splitters.put("gamepanelDividerLocationsBattlefieldAndChats", new MageSplitter(this.splitBattlefieldAndChats, 0.8));
+        this.splitters.put("gamepanelDividerLocationsChatAndLogs", new MageSplitter(this.splitChatAndLogs, 0.4));
+        this.lblPhase.setLabelFor(this.txtPhase);
+        this.lblPhase.setText("Phase:");
+        this.txtPhase.setText("Phase");
+        this.txtPhase.setBorder(new LineBorder(new Color(153, 153, 153), 1, true));
+        this.txtPhase.setMinimumSize(new Dimension(0, 16));
+        this.lblStep.setLabelFor(this.txtStep);
+        this.lblStep.setText("Step:");
+        this.txtStep.setText("Step");
+        this.txtStep.setBorder(new LineBorder(new Color(153, 153, 153), 1, true));
+        this.txtStep.setMinimumSize(new Dimension(0, 16));
+        this.lblTurn.setLabelFor(this.txtTurn);
+        this.lblTurn.setText("Turn:");
+        this.txtTurn.setText("Turn");
+        this.txtTurn.setBorder(new LineBorder(new Color(153, 153, 153), 1, true));
+        this.txtTurn.setMinimumSize(new Dimension(0, 16));
+        this.txtActivePlayer.setText("Active Player");
+        this.txtActivePlayer.setBorder(new LineBorder(new Color(153, 153, 153), 1, true));
+        this.txtActivePlayer.setMinimumSize(new Dimension(0, 16));
+        this.lblActivePlayer.setLabelFor(this.txtActivePlayer);
+        this.lblActivePlayer.setText("Active Player:");
+        this.txtPriority.setText("Priority Player");
+        this.txtPriority.setBorder(new LineBorder(new Color(153, 153, 153), 1, true));
+        this.txtPriority.setMinimumSize(new Dimension(0, 16));
+        this.lblPriority.setLabelFor(this.txtPriority);
+        this.lblPriority.setText("Priority Player:");
+        int c = 2;
+        this.abilityPicker.injectHotkeys(this, "ABILITY_PICKER");
+        this.btnToggleMacro.setContentAreaFilled(false);
+        this.btnToggleMacro.setBorder(new EmptyBorder(2, 2, 2, 2));
+        this.btnToggleMacro.setToolTipText("Toggle Record Macro (" + PreferencesDialog.getCachedKeyText("controlToggleMacro") + ").");
+        this.btnToggleMacro.setFocusable(false);
+        this.btnToggleMacro.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnToggleMacroActionPerformed(null)));
+        KeyStroke kst = PreferencesDialog.getCachedKeystroke("controlToggleMacro");
+        this.getInputMap(c).put(kst, "F8_PRESS");
+        this.getActionMap().put("F8_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                GamePanel.this.btnToggleMacroActionPerformed(actionEvent);
+            }
+        });
+        KeyStroke ks3 = PreferencesDialog.getCachedKeystroke("controlCancelSkip");
+        this.getInputMap(c).put(ks3, "F3_PRESS");
+        this.getActionMap().put("F3_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                GamePanel.this.restorePriorityActionPerformed(actionEvent);
+            }
+        });
+        this.btnCancelSkip.setContentAreaFilled(false);
+        this.btnCancelSkip.setBorder(new EmptyBorder(2, 2, 2, 2));
+        this.btnCancelSkip.setToolTipText("CANCEL all skips");
+        this.btnCancelSkip.setFocusable(false);
+        this.btnCancelSkip.addMouseListener(new FirstButtonMousePressedAction(e -> this.restorePriorityActionPerformed(null)));
+        this.btnSkipToNextTurn.setContentAreaFilled(false);
+        this.btnSkipToNextTurn.setBorder(new EmptyBorder(2, 2, 2, 2));
+        this.btnSkipToNextTurn.setToolTipText("dynamic");
+        this.btnSkipToNextTurn.setFocusable(false);
+        this.btnSkipToNextTurn.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnEndTurnActionPerformed(null)));
+        KeyStroke ks = PreferencesDialog.getCachedKeystroke("controlNextTurn");
+        this.getInputMap(c).put(ks, "F4_PRESS");
+        this.getActionMap().put("F4_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                GamePanel.this.btnEndTurnActionPerformed(actionEvent);
+            }
+        });
+        this.btnSkipToEndTurn.setContentAreaFilled(false);
+        this.btnSkipToEndTurn.setBorder(new EmptyBorder(2, 2, 2, 2));
+        this.btnSkipToEndTurn.setToolTipText("dynamic");
+        this.btnSkipToEndTurn.setFocusable(false);
+        this.btnSkipToEndTurn.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnUntilEndOfTurnActionPerformed(null)));
+        ks = PreferencesDialog.getCachedKeystroke("controlEndStep");
+        this.getInputMap(c).put(ks, "F5_PRESS");
+        this.getActionMap().put("F5_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                GamePanel.this.btnUntilEndOfTurnActionPerformed(actionEvent);
+            }
+        });
+        ks = PreferencesDialog.getCachedKeystroke("controlSkipTurn");
+        this.getInputMap(c).put(ks, "F6_PRESS");
+        this.getActionMap().put("F6_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                GamePanel.this.btnEndTurnSkipStackActionPerformed(actionEvent);
+            }
+        });
+        this.btnSkipToNextMain.setContentAreaFilled(false);
+        this.btnSkipToNextMain.setBorder(new EmptyBorder(2, 2, 2, 2));
+        this.btnSkipToNextMain.setToolTipText("dynamic");
+        this.btnSkipToNextMain.setFocusable(false);
+        this.btnSkipToNextMain.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnUntilNextMainPhaseActionPerformed(null)));
+        ks = PreferencesDialog.getCachedKeystroke("controlMainStep");
+        this.getInputMap(c).put(ks, "F7_PRESS");
+        this.getActionMap().put("F7_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                GamePanel.this.btnUntilNextMainPhaseActionPerformed(actionEvent);
+            }
+        });
+        this.btnSkipToYourTurn.setContentAreaFilled(false);
+        this.btnSkipToYourTurn.setBorder(new EmptyBorder(2, 2, 2, 2));
+        this.btnSkipToYourTurn.setToolTipText("dynamic");
+        this.btnSkipToYourTurn.setFocusable(false);
+        this.btnSkipToYourTurn.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnPassPriorityUntilNextYourTurnActionPerformed(null)));
+        KeyStroke ks9 = PreferencesDialog.getCachedKeystroke("controlYourTurn");
+        this.getInputMap(c).put(ks9, "F9_PRESS");
+        this.getActionMap().put("F9_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                GamePanel.this.btnPassPriorityUntilNextYourTurnActionPerformed(actionEvent);
+            }
+        });
+        this.btnSkipToEndStepBeforeYourTurn.setContentAreaFilled(false);
+        this.btnSkipToEndStepBeforeYourTurn.setBorder(new EmptyBorder(2, 2, 2, 2));
+        this.btnSkipToEndStepBeforeYourTurn.setToolTipText("dynamic");
+        this.btnSkipToEndStepBeforeYourTurn.setFocusable(false);
+        this.btnSkipToEndStepBeforeYourTurn.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnSkipToEndStepBeforeYourTurnActionPerformed(null)));
+        KeyStroke ks11 = PreferencesDialog.getCachedKeystroke("controlPriorEnd");
+        this.getInputMap(c).put(ks11, "F11_PRESS");
+        this.getActionMap().put("F11_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                GamePanel.this.btnSkipToEndStepBeforeYourTurnActionPerformed(actionEvent);
+            }
+        });
+        this.btnSkipStack.setContentAreaFilled(false);
+        this.btnSkipStack.setBorder(new EmptyBorder(2, 2, 2, 2));
+        this.btnSkipStack.setToolTipText("dynamic");
+        this.btnSkipStack.setFocusable(false);
+        this.btnSkipStack.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnPassPriorityUntilStackResolvedActionPerformed(null)));
+        ks = PreferencesDialog.getCachedKeystroke("controlSkipStack");
+        this.getInputMap(c).put(ks, "F10_PRESS");
+        this.getActionMap().put("F10_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                GamePanel.this.btnPassPriorityUntilStackResolvedActionPerformed(actionEvent);
+            }
+        });
+        this.btnConcede.setContentAreaFilled(false);
+        this.btnConcede.setBorder(new EmptyBorder(2, 2, 2, 2));
+        this.btnConcede.setToolTipText("CONCEDE current game");
+        this.btnConcede.setFocusable(false);
+        this.btnConcede.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnConcedeActionPerformed(null)));
+        this.updateSkipButtons();
+        KeyStroke ks2 = PreferencesDialog.getCachedKeystroke("controlConfirm");
+        this.getInputMap(c).put(ks2, "F2_PRESS");
+        this.getActionMap().put("F2_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                if (GamePanel.this.feedbackPanel != null) {
+                    GamePanel.this.feedbackPanel.pressOKYesOrDone();
+                }
+            }
+        });
+        KeyStroke ks12 = PreferencesDialog.getCachedKeystroke("controlSwitchChat");
+        this.getInputMap(c).put(ks12, "F12_PRESS");
+        this.getActionMap().put("F12_PRESS", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isChatInputActive()) {
+                    KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner();
+                } else if (!GamePanel.this.isUserImputActive()) {
+                    GamePanel.this.userChatPanel.getTxtMessageInputComponent().requestFocusInWindow();
+                }
+            }
+        });
+        KeyStroke ksAltE = KeyStroke.getKeyStroke(69, 8);
+        this.getInputMap(c).put(ksAltE, "ENLARGE");
+        this.getActionMap().put("ENLARGE", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                ActionCallback callback = Plugins.instance.getActionCallback();
+                ((MageActionCallback)callback).enlargeCard(EnlargeMode.NORMAL);
+            }
+        });
+        KeyStroke ksAltS = KeyStroke.getKeyStroke(83, 8);
+        this.getInputMap(c).put(ksAltS, "ENLARGE_SOURCE");
+        this.getActionMap().put("ENLARGE_SOURCE", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                ActionCallback callback = Plugins.instance.getActionCallback();
+                ((MageActionCallback)callback).enlargeCard(EnlargeMode.ALTERNATE);
+            }
+        });
+        KeyStroke ksAlt1 = KeyStroke.getKeyStroke(49, 8);
+        this.getInputMap(c).put(ksAlt1, "USEFIRSTMANAABILITY");
+        this.getActionMap().put("USEFIRSTMANAABILITY", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                SessionHandler.sendPlayerAction(PlayerAction.USE_FIRST_MANA_ABILITY_ON, GamePanel.this.gameId, null);
+                GamePanel.this.setMenuStates(PreferencesDialog.getCachedValue("gameManaAutopayment", "true").equals("true"), PreferencesDialog.getCachedValue("gameManaAutopaymentOnlyOne", "true").equals("true"), PreferencesDialog.getCachedValue("useFirstManaAbility", "false").equals("true"), GamePanel.this.holdingPriority);
+            }
+        });
+        KeyStroke ksAltEReleased = KeyStroke.getKeyStroke(69, 8, true);
+        this.getInputMap(c).put(ksAltEReleased, "ENLARGE_RELEASE");
+        KeyStroke ksAltSReleased = KeyStroke.getKeyStroke(83, 8, true);
+        this.getInputMap(c).put(ksAltSReleased, "ENLARGE_RELEASE");
+        this.getActionMap().put("ENLARGE_RELEASE", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                ActionCallback callback = Plugins.instance.getActionCallback();
+                ((MageActionCallback)callback).hideEnlargedCard();
+            }
+        });
+        KeyStroke ksAlt1Released = KeyStroke.getKeyStroke(49, 8, true);
+        this.getInputMap(c).put(ksAlt1Released, "USEFIRSTMANAABILITY_RELEASE");
+        this.getActionMap().put("USEFIRSTMANAABILITY_RELEASE", new AbstractAction(){
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (GamePanel.this.isUserImputActive()) {
+                    return;
+                }
+                SessionHandler.sendPlayerAction(PlayerAction.USE_FIRST_MANA_ABILITY_OFF, GamePanel.this.gameId, null);
+                GamePanel.this.setMenuStates(PreferencesDialog.getCachedValue("gameManaAutopayment", "true").equals("true"), PreferencesDialog.getCachedValue("gameManaAutopaymentOnlyOne", "true").equals("true"), PreferencesDialog.getCachedValue("useFirstManaAbility", "false").equals("true"), GamePanel.this.holdingPriority);
+            }
+        });
+        this.btnSwitchHands.setContentAreaFilled(false);
+        this.btnSwitchHands.setBorder(new EmptyBorder(0, 0, 0, 0));
+        this.btnSwitchHands.setFocusable(false);
+        this.btnSwitchHands.setToolTipText("Switch between your hand cards and hand cards of controlled players.");
+        this.btnSwitchHands.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnSwitchHandActionPerformed(null)));
+        this.btnStopWatching.setContentAreaFilled(false);
+        this.btnStopWatching.setBorder(new EmptyBorder(0, 0, 0, 0));
+        this.btnStopWatching.setFocusable(false);
+        this.btnStopWatching.setToolTipText("Stop watching this game.");
+        this.btnStopWatching.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnStopWatchingActionPerformed(null)));
+        this.stackObjects.setBackgroundColor(new Color(0, 0, 0, 40));
+        this.btnStopReplay.setIcon(new ImageIcon(this.getClass().getResource("/buttons/control_stop.png")));
+        this.btnStopReplay.addActionListener(evt -> this.btnStopReplayActionPerformed(evt));
+        this.btnNextPlay.setIcon(new ImageIcon(this.getClass().getResource("/buttons/control_stop_right.png")));
+        this.btnNextPlay.addActionListener(evt -> this.btnNextPlayActionPerformed(evt));
+        this.btnPlay.setIcon(new ImageIcon(this.getClass().getResource("/buttons/control_right.png")));
+        this.btnPlay.addActionListener(evt -> this.btnPlayActionPerformed(evt));
+        this.btnSkipForward.setIcon(new ImageIcon(this.getClass().getResource("/buttons/control_double_stop_right.png")));
+        this.btnSkipForward.addActionListener(evt -> this.btnSkipForwardActionPerformed(evt));
+        this.btnPreviousPlay.setIcon(new ImageIcon(this.getClass().getResource("/buttons/control_stop_left.png")));
+        this.btnPreviousPlay.addActionListener(evt -> this.btnPreviousPlayActionPerformed(evt));
+        this.initPopupMenuTriggerOrder();
+        this.pnlBattlefield.setLayout(new GridBagLayout());
+        this.jPhases = new JPanel();
+        this.jPhases.setBackground(new Color(0, 0, 0, 0));
+        MouseAdapter phasesMouseAdapter = new MouseAdapter(){
+
+            @Override
+            public void mouseClicked(MouseEvent evt) {
+                GamePanel.this.mouseClickPhaseBar(evt);
+            }
+        };
+        if (DebugUtil.GUI_GAME_DRAW_PHASE_BUTTONS_PANEL_BORDER) {
+            this.jPhases.setBorder(BorderFactory.createLineBorder(Color.red));
+        }
+        for (String name : phases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"}) {
+            this.createPhaseButton(name, phasesMouseAdapter);
+        }
+        this.pnlReplay.setOpaque(false);
+        this.phasesContainer = new JPanel(new BorderLayout());
+        this.phasesContainer.setOpaque(false);
+        this.phasesContainer.setBorder(new EmptyBorder(0, 2, 8, 2));
+        this.phasesContainer.add((Component)this.jPhases, "South");
+        this.bigCardPanel = new JPanel();
+        this.bigCardPanel.setOpaque(false);
+        this.bigCardPanel.setLayout(new BorderLayout());
+        this.bigCardPanel.add((Component)this.bigCard, "North");
+        this.splitGameAndBigCard.setLeftComponent(this.splitBattlefieldAndChats);
+        this.splitGameAndBigCard.setRightComponent(this.bigCardPanel);
+    }
+
+    private void removeListener() {
+        for (MouseListener mouseListener : this.getMouseListeners()) {
+            this.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnToggleMacro.getMouseListeners()) {
+            this.btnToggleMacro.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnCancelSkip.getMouseListeners()) {
+            this.btnCancelSkip.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnConcede.getMouseListeners()) {
+            this.btnConcede.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnSkipToYourTurn.getMouseListeners()) {
+            this.btnSkipToYourTurn.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnSkipStack.getMouseListeners()) {
+            this.btnSkipStack.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnSkipToEndStepBeforeYourTurn.getMouseListeners()) {
+            this.btnSkipToEndStepBeforeYourTurn.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnSkipToEndTurn.getMouseListeners()) {
+            this.btnSkipToEndTurn.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnSkipToNextMain.getMouseListeners()) {
+            this.btnSkipToNextMain.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnSkipToNextTurn.getMouseListeners()) {
+            this.btnSkipToNextTurn.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnSwitchHands.getMouseListeners()) {
+            this.btnSwitchHands.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.btnStopWatching.getMouseListeners()) {
+            this.btnStopWatching.removeMouseListener(mouseListener);
+        }
+        for (MouseListener mouseListener : this.jPhases.getMouseListeners()) {
+            this.jPhases.removeMouseListener(mouseListener);
+        }
+        for (String name : this.phaseButtons.keySet()) {
+            HoverButton hoverButton = this.phaseButtons.get(name);
+            for (MouseListener ml : hoverButton.getMouseListeners()) {
+                hoverButton.removeMouseListener(ml);
+            }
+        }
+        for (ActionListener actionListener : this.btnPlay.getActionListeners()) {
+            this.btnPlay.removeActionListener(actionListener);
+        }
+        for (ActionListener actionListener : this.btnStopReplay.getActionListeners()) {
+            this.btnStopReplay.removeActionListener(actionListener);
+        }
+        for (ActionListener actionListener : this.btnNextPlay.getActionListeners()) {
+            this.btnNextPlay.removeActionListener(actionListener);
+        }
+        for (ActionListener actionListener : this.btnNextPlay.getActionListeners()) {
+            this.btnNextPlay.removeActionListener(actionListener);
+        }
+        for (ActionListener actionListener : this.btnPreviousPlay.getActionListeners()) {
+            this.btnPreviousPlay.removeActionListener(actionListener);
+        }
+        for (ActionListener actionListener : this.btnSkipForward.getActionListeners()) {
+            this.btnSkipForward.removeActionListener(actionListener);
+        }
+        BasicSplitPaneUI myUi = (BasicSplitPaneUI)this.splitGameAndBigCard.getUI();
+        BasicSplitPaneDivider divider = myUi.getDivider();
+        JButton upArrowButton = (JButton)divider.getComponent(0);
+        for (ActionListener al : upArrowButton.getActionListeners()) {
+            upArrowButton.removeActionListener(al);
+        }
+        JButton jButton = (JButton)divider.getComponent(1);
+        for (ActionListener actionListener : jButton.getActionListeners()) {
+            jButton.removeActionListener(actionListener);
+        }
+        for (EventListener eventListener : this.getComponentListeners()) {
+            this.removeComponentListener((ComponentListener)eventListener);
+        }
+        for (EventListener eventListener : this.getKeyListeners()) {
+            this.removeKeyListener((KeyListener)eventListener);
+        }
+    }
+
+    private void btnConcedeActionPerformed(ActionEvent evt) {
+        UserRequestMessage message = new UserRequestMessage("Confirm concede", "Are you sure you want to concede?");
+        message.setButton1("No", null);
+        message.setButton2("Yes", PlayerAction.CLIENT_CONCEDE_GAME);
+        message.setGameId(this.gameId);
+        MageFrame.getInstance().showUserRequestDialog(message);
+    }
+
+    private void btnToggleMacroActionPerformed(ActionEvent evt) {
+        SessionHandler.sendPlayerAction(PlayerAction.TOGGLE_RECORD_MACRO, this.gameId, null);
+        this.skipButtons.activateSkipButton("");
+        AudioManager.playOnSkipButton();
+        if (this.btnToggleMacro.getBorder().equals(BORDER_ACTIVE)) {
+            this.btnToggleMacro.setBorder(BORDER_NON_ACTIVE);
+        } else {
+            this.btnToggleMacro.setBorder(BORDER_ACTIVE);
+        }
+    }
+
+    private void btnEndTurnActionPerformed(ActionEvent evt) {
+        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_NEXT_TURN, this.gameId, null);
+        this.skipButtons.activateSkipButton("controlNextTurn");
+        AudioManager.playOnSkipButton();
+        this.updateSkipButtons();
+    }
+
+    private boolean isChatInputUnderCursor(Point p) {
+        Component c = this.getComponentAt(p);
+        return this.gameChatPanel.getTxtMessageInputComponent().equals(c) || this.userChatPanel.getTxtMessageInputComponent().equals(c);
+    }
+
+    private boolean isChatInputActive() {
+        Component c = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        return this.gameChatPanel.getTxtMessageInputComponent().equals(c) || this.userChatPanel.getTxtMessageInputComponent().equals(c);
+    }
+
+    private boolean isUserImputActive() {
+        return MageDialog.isModalDialogActivated() || this.isChatInputActive();
+    }
+
+    private void btnUntilEndOfTurnActionPerformed(ActionEvent evt) {
+        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_TURN_END_STEP, this.gameId, null);
+        this.skipButtons.activateSkipButton("controlEndStep");
+        AudioManager.playOnSkipButton();
+        this.updateSkipButtons();
+    }
+
+    private void btnEndTurnSkipStackActionPerformed(ActionEvent evt) {
+        logger.error((Object)"Skip action don't used", new Throwable());
+    }
+
+    private void btnUntilNextMainPhaseActionPerformed(ActionEvent evt) {
+        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_NEXT_MAIN_PHASE, this.gameId, null);
+        this.skipButtons.activateSkipButton("controlMainStep");
+        AudioManager.playOnSkipButton();
+        this.updateSkipButtons();
+    }
+
+    private void btnPassPriorityUntilNextYourTurnActionPerformed(ActionEvent evt) {
+        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_MY_NEXT_TURN, this.gameId, null);
+        this.skipButtons.activateSkipButton("controlYourTurn");
+        AudioManager.playOnSkipButton();
+        this.updateSkipButtons();
+    }
+
+    private void btnPassPriorityUntilStackResolvedActionPerformed(ActionEvent evt) {
+        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_STACK_RESOLVED, this.gameId, null);
+        this.skipButtons.activateSkipButton("controlSkipStack");
+        AudioManager.playOnSkipButton();
+        this.updateSkipButtons();
+    }
+
+    private void btnSkipToEndStepBeforeYourTurnActionPerformed(ActionEvent evt) {
+        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_END_STEP_BEFORE_MY_NEXT_TURN, this.gameId, null);
+        this.skipButtons.activateSkipButton("controlPriorEnd");
+        AudioManager.playOnSkipButton();
+        this.updateSkipButtons();
+    }
+
+    private void restorePriorityActionPerformed(ActionEvent evt) {
+        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_CANCEL_ALL_ACTIONS, this.gameId, null);
+        this.skipButtons.activateSkipButton("");
+        AudioManager.playOnSkipButtonCancel();
+        this.updateSkipButtons();
+    }
+
+    private void mouseClickPhaseBar(MouseEvent evt) {
+        if (SwingUtilities.isLeftMouseButton(evt)) {
+            PreferencesDialog.main(new String[]{"Open-Phases-Tab"});
+        }
+    }
+
+    private void btnSwitchHandActionPerformed(ActionEvent evt) {
+        Object[] choices = this.handCards.keySet().toArray(new String[0]);
+        String newChosenHandKey = (String)JOptionPane.showInputDialog(this, "Choose hand to display:", "Switch between hands", -1, null, choices, this.chosenHandKey);
+        if (newChosenHandKey != null && !newChosenHandKey.isEmpty()) {
+            this.chosenHandKey = newChosenHandKey;
+            CardsView cards = this.handCards.get(this.chosenHandKey);
+            this.handContainer.loadCards(cards, this.bigCard, this.gameId);
+        }
+    }
+
+    private void btnStopWatchingActionPerformed(ActionEvent evt) {
+        UserRequestMessage message = new UserRequestMessage("Stop watching", "Are you sure you want to stop watching?");
+        message.setButton1("No", null);
+        message.setButton2("Yes", PlayerAction.CLIENT_STOP_WATCHING);
+        message.setGameId(this.gameId);
+        MageFrame.getInstance().showUserRequestDialog(message);
+    }
+
+    private void btnStopReplayActionPerformed(ActionEvent evt) {
+        if (this.replayTask != null && !this.replayTask.isDone()) {
+            this.replayTask.cancel(true);
+        } else {
+            UserRequestMessage message = new UserRequestMessage("Stop replay", "Are you sure you want to stop replay?");
+            message.setButton1("No", null);
+            message.setButton2("Yes", PlayerAction.CLIENT_REPLAY_ACTION);
+            message.setGameId(this.gameId);
+            MageFrame.getInstance().showUserRequestDialog(message);
+        }
+    }
+
+    private void btnNextPlayActionPerformed(ActionEvent evt) {
+        SessionHandler.nextPlay(this.gameId);
+    }
+
+    private void btnPreviousPlayActionPerformed(ActionEvent evt) {
+        SessionHandler.previousPlay(this.gameId);
+    }
+
+    private void btnPlayActionPerformed(ActionEvent evt) {
+        if (this.replayTask == null || this.replayTask.isDone()) {
+            this.replayTask = new ReplayTask(this.gameId);
+            this.replayTask.execute();
+        }
+    }
+
+    private void btnSkipForwardActionPerformed(ActionEvent evt) {
+        SessionHandler.skipForward(this.gameId, 10);
+    }
+
+    public void setJLayeredPane(JLayeredPane jLayeredPane) {
+        this.jLayeredPane = jLayeredPane;
+    }
+
+    public void installComponents() {
+        this.jLayeredPane.setOpaque(false);
+        this.jLayeredPane.add(DialogManager.getManager(this.gameId), JLayeredPane.MODAL_LAYER, 0);
+        this.installAbilityPicker();
+    }
+
+    private void installAbilityPicker() {
+        this.jLayeredPane.add((Component)((Object)this.abilityPicker), JLayeredPane.MODAL_LAYER);
+        this.abilityPicker.setVisible(false);
+    }
+
+    private void uninstallComponents() {
+        if (this.jLayeredPane != null) {
+            this.jLayeredPane.remove(DialogManager.getManager(this.gameId));
+        }
+        DialogManager.removeGame(this.gameId);
+        this.uninstallAbilityPicker();
+    }
+
+    private void uninstallAbilityPicker() {
+        this.abilityPicker.setVisible(false);
+        if (this.jLayeredPane != null) {
+            this.jLayeredPane.remove((Component)((Object)this.abilityPicker));
+        }
+        this.abilityPicker.cleanUp();
+    }
+
+    private void createPhaseButton(String name, MouseAdapter mouseAdapter) {
+        int buttonSize = GUISizeHelper.gamePhaseButtonSize;
+        Rectangle rect = new Rectangle(buttonSize, buttonSize);
+        HoverButton button = new HoverButton("", ImageManagerImpl.instance.getPhaseImage(name, buttonSize), rect);
+        button.setToolTipText(name.replaceAll("_", " "));
+        button.setPreferredSize(new Dimension(buttonSize, buttonSize));
+        button.addMouseListener(mouseAdapter);
+        this.phaseButtons.put(name, button);
+        this.jPhases.add(button);
+    }
+
+    private Listener<Event> getShowCardsEventListener(ShowCardsDialog dialog) {
+        return event -> {
+            JPopupMenu menu;
+            if (event.getEventType() == ClientEventType.CARD_POPUP_MENU && event.getComponent() != null && event.getComponent() instanceof MageCard && (menu = ((MageCard)event.getComponent()).getPopupMenu()) != null) {
+                this.cardViewPopupMenu = (CardView)event.getSource();
+                menu.show(event.getComponent(), event.getxPos(), event.getyPos());
+            }
+        };
+    }
+
+    public void handleTriggerOrderPopupMenuEvent(ActionEvent e) {
+        UUID abilityId = null;
+        String abilityRuleText = null;
+        if (this.cardViewPopupMenu instanceof CardView && this.cardViewPopupMenu.getAbility() != null) {
+            abilityId = this.cardViewPopupMenu.getAbility().getId();
+            if (!this.cardViewPopupMenu.getAbility().getRules().isEmpty() && !((String)this.cardViewPopupMenu.getAbility().getRules().get(0)).isEmpty()) {
+                abilityRuleText = (String)this.cardViewPopupMenu.getAbility().getRules().get(0);
+                abilityRuleText = abilityRuleText.replace("{this}", this.cardViewPopupMenu.getName());
+            }
+        }
+        switch (e.getActionCommand()) {
+            case "cmdAutoOrderFirst": {
+                SessionHandler.sendPlayerAction(PlayerAction.TRIGGER_AUTO_ORDER_ABILITY_FIRST, this.gameId, abilityId);
+                SessionHandler.sendPlayerUUID(this.gameId, abilityId);
+                break;
+            }
+            case "cmdAutoOrderLast": {
+                SessionHandler.sendPlayerAction(PlayerAction.TRIGGER_AUTO_ORDER_ABILITY_LAST, this.gameId, abilityId);
+                SessionHandler.sendPlayerUUID(this.gameId, null);
+                break;
+            }
+            case "cmdAutoOrderNameFirst": {
+                if (abilityRuleText == null) break;
+                SessionHandler.sendPlayerAction(PlayerAction.TRIGGER_AUTO_ORDER_NAME_FIRST, this.gameId, abilityRuleText);
+                SessionHandler.sendPlayerUUID(this.gameId, abilityId);
+                break;
+            }
+            case "cmdAutoOrderNameLast": {
+                if (abilityRuleText == null) break;
+                SessionHandler.sendPlayerAction(PlayerAction.TRIGGER_AUTO_ORDER_NAME_LAST, this.gameId, abilityRuleText);
+                SessionHandler.sendPlayerUUID(this.gameId, null);
+                break;
+            }
+            case "cmdAutoOrderResetAll": {
+                SessionHandler.sendPlayerAction(PlayerAction.TRIGGER_AUTO_ORDER_RESET_ALL, this.gameId, null);
+                break;
+            }
+        }
+        for (ShowCardsDialog dialog : this.pickTarget) {
+            dialog.removeDialog();
+        }
+        for (PickPileDialog dialog : this.pickPile) {
+            dialog.removeDialog();
+        }
+    }
+
+    private void initPopupMenuTriggerOrder() {
+        ActionListener actionListener = e -> this.handleTriggerOrderPopupMenuEvent(e);
+        this.popupMenuTriggerOrder = new JPopupMenu();
+        JMenuItem menuItem = new JMenuItem("Put this ability always first on the stack");
+        menuItem.setActionCommand(CMD_AUTO_ORDER_FIRST);
+        menuItem.addActionListener(actionListener);
+        this.popupMenuTriggerOrder.add(menuItem);
+        menuItem = new JMenuItem("Put this ability always last on the stack");
+        menuItem.setActionCommand(CMD_AUTO_ORDER_LAST);
+        menuItem.addActionListener(actionListener);
+        this.popupMenuTriggerOrder.add(menuItem);
+        menuItem = new JMenuItem("Put all abilities with that rule text always first on the stack");
+        menuItem.setActionCommand(CMD_AUTO_ORDER_NAME_FIRST);
+        menuItem.addActionListener(actionListener);
+        this.popupMenuTriggerOrder.add(menuItem);
+        menuItem = new JMenuItem("Put all abilities with that rule text always last on the stack");
+        menuItem.setActionCommand(CMD_AUTO_ORDER_NAME_LAST);
+        menuItem.addActionListener(actionListener);
+        this.popupMenuTriggerOrder.add(menuItem);
+        menuItem = new JMenuItem("Reset all order settings for triggered abilities");
+        menuItem.setActionCommand(CMD_AUTO_ORDER_RESET_ALL);
+        menuItem.addActionListener(actionListener);
+        this.popupMenuTriggerOrder.add(menuItem);
+    }
+
+    public String getGameLog() {
+        return this.gameChatPanel.getText();
+    }
+
+    public FeedbackPanel getFeedbackPanel() {
+        return this.feedbackPanel;
+    }
+
+    public void handleEvent(AWTEvent event) {
+        if (event instanceof InputEvent) {
+            InputEvent input;
+            KeyEvent key;
+            int keyCode;
+            int id = event.getID();
+            boolean isActionEvent = false;
+            if (id == 501) {
+                isActionEvent = true;
+                if (event instanceof MouseEvent) {
+                    MouseEvent me = (MouseEvent)event;
+                    if (this.isChatInputActive() && !this.isChatInputUnderCursor(me.getPoint())) {
+                        KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner();
+                    }
+                }
+            } else if (id == 401 && ((keyCode = (key = (KeyEvent)event).getKeyCode()) == 10 || keyCode == 32)) {
+                isActionEvent = true;
+            }
+            if (isActionEvent && ((input = (InputEvent)event).getModifiersEx() & holdPriorityMask) != 0) {
+                this.setMenuStates(PreferencesDialog.getCachedValue("gameManaAutopayment", "true").equals("true"), PreferencesDialog.getCachedValue("gameManaAutopaymentOnlyOne", "true").equals("true"), PreferencesDialog.getCachedValue("useFirstManaAbility", "false").equals("true"), true);
+                this.holdPriority(true);
+            }
+        }
+    }
+
+    public void holdPriority(boolean holdPriority) {
+        if (this.holdingPriority != holdPriority) {
+            this.holdingPriority = holdPriority;
+            this.txtHoldPriority.setVisible(holdPriority);
+            if (holdPriority) {
+                SessionHandler.sendPlayerAction(PlayerAction.HOLD_PRIORITY, this.gameId, null);
+            } else {
+                SessionHandler.sendPlayerAction(PlayerAction.UNHOLD_PRIORITY, this.gameId, null);
+            }
+        }
+    }
+
+    public static class LastGameData {
+        int messageId;
+        GameView game;
+        boolean showPlayable;
+        Map<String, Serializable> options;
+        Set<UUID> targets;
+        Map<UUID, CardView> allCardsIndex = new HashMap<UUID, CardView>();
+
+        private void setNewGame(GameView game) {
+            this.game = game;
+            this.prepareAllCardsIndex();
+        }
+
+        private void prepareAllCardsIndex() {
+            this.allCardsIndex.clear();
+            if (this.game == null) {
+                return;
+            }
+            this.game.getMyHand().values().forEach(c -> this.allCardsIndex.put(c.getId(), (CardView)c));
+            this.game.getMyHelperEmblems().values().forEach(c -> this.allCardsIndex.put(c.getId(), (CardView)c));
+            this.game.getStack().values().forEach(c -> this.allCardsIndex.put(c.getId(), (CardView)c));
+            this.game.getExile().stream().flatMap(s -> s.values().stream()).forEach(c -> this.allCardsIndex.put(c.getId(), (CardView)c));
+            this.game.getLookedAt().stream().flatMap(s -> s.getCards().values().stream()).filter(c -> c instanceof CardView).map(c -> (CardView)c).forEach(c -> this.allCardsIndex.put(c.getId(), (CardView)c));
+            this.game.getRevealed().stream().flatMap(s -> s.getCards().values().stream()).forEach(c -> this.allCardsIndex.put(c.getId(), (CardView)c));
+            this.game.getPlayers().forEach(player -> {
+                player.getBattlefield().values().forEach(c -> this.allCardsIndex.put(c.getId(), (CardView)c));
+                player.getGraveyard().values().forEach(c -> this.allCardsIndex.put(c.getId(), (CardView)c));
+                Optional.ofNullable(player.getTopCard()).ifPresent(c -> this.allCardsIndex.put(c.getId(), (CardView)c));
+                player.getCommandObjectList().forEach(object -> {
+                    if (object instanceof CardView) {
+                        this.allCardsIndex.put(object.getId(), (CardView)object);
+                    } else if (object instanceof DungeonView) {
+                        this.allCardsIndex.put(object.getId(), new CardView((DungeonView)object));
+                    }
+                });
+            });
+        }
+
+        public Set<UUID> getChosenTargets() {
+            if (this.options != null && this.options.containsKey("chosenTargets")) {
+                return (Set)((Object)this.options.get("chosenTargets"));
+            }
+            return Collections.emptySet();
+        }
+
+        public CardView findCard(UUID id) {
+            return this.allCardsIndex.getOrDefault(id, null);
+        }
+    }
+
+    private class skipButtonsList {
+        private final skipButton turn;
+        private final skipButton untilEndOfTurn;
+        private final skipButton untilNextMain;
+        private final skipButton allTurns;
+        private final skipButton untilStackResolved;
+        private final skipButton untilUntilEndStepBeforeMyTurn;
+
+        skipButtonsList() {
+            this.turn = new skipButton("Skip to next turn", "", "", "controlNextTurn");
+            this.untilEndOfTurn = new skipButton("Skip to [EXTRA_TRUE / EXTRA_FALSE] END OF TURN step", "opponent", "next", "controlEndStep");
+            this.untilNextMain = new skipButton("Skip to [EXTRA_TRUE / EXTRA_FALSE] MAIN step", "opponent", "next", "controlMainStep");
+            this.allTurns = new skipButton("Skip to YOUR turn", "", "", "controlYourTurn");
+            this.untilStackResolved = new skipButton("Skip until stack is resolved [EXTRA_TRUE]", "", "or stop on new objects added", "controlSkipStack");
+            this.untilUntilEndStepBeforeMyTurn = new skipButton("Skip to END OF TURN before YOUR", "", "", "controlPriorEnd");
+        }
+
+        private void updateExtraMode(PlayerView player) {
+            this.turn.setExtraMode(false);
+            this.untilEndOfTurn.setExtraMode(player.getUserData().getUserSkipPrioritySteps().isStopOnAllEndPhases());
+            this.untilNextMain.setExtraMode(player.getUserData().getUserSkipPrioritySteps().isStopOnAllMainPhases());
+            this.allTurns.setExtraMode(false);
+            this.untilStackResolved.setExtraMode(player.getUserData().getUserSkipPrioritySteps().isStopOnStackNewObjects());
+            this.untilUntilEndStepBeforeMyTurn.setExtraMode(false);
+        }
+
+        private void updatePressState(PlayerView player) {
+            this.turn.setPressState(player.isPassedTurn());
+            this.untilEndOfTurn.setPressState(player.isPassedUntilEndOfTurn());
+            this.untilNextMain.setPressState(player.isPassedUntilNextMain());
+            this.allTurns.setPressState(player.isPassedAllTurns());
+            this.untilStackResolved.setPressState(player.isPassedUntilStackResolved());
+            this.untilUntilEndStepBeforeMyTurn.setPressState(player.isPassedUntilEndStepBeforeMyTurn());
+        }
+
+        public void updateFromPlayer(PlayerView player) {
+            this.updateExtraMode(player);
+            this.updatePressState(player);
+        }
+
+        private skipButton findButton(String hotkey) {
+            switch (hotkey) {
+                case "controlNextTurn": {
+                    return this.turn;
+                }
+                case "controlEndStep": {
+                    return this.untilEndOfTurn;
+                }
+                case "controlMainStep": {
+                    return this.untilNextMain;
+                }
+                case "controlYourTurn": {
+                    return this.allTurns;
+                }
+                case "controlSkipStack": {
+                    return this.untilStackResolved;
+                }
+                case "controlPriorEnd": {
+                    return this.untilUntilEndStepBeforeMyTurn;
+                }
+            }
+            logger.error((Object)("Unknown hotkey name " + hotkey));
+            return null;
+        }
+
+        public String getTooltip(String hotkey) {
+            skipButton butt = this.findButton(hotkey);
+            return butt != null ? butt.getTooltip() : "";
+        }
+
+        public Border getBorder(String hotkey) {
+            skipButton butt = this.findButton(hotkey);
+            return butt != null ? butt.getBorder() : BORDER_NON_ACTIVE;
+        }
+
+        public void activateSkipButton(String hotkey) {
+            skipButton butt;
+            this.turn.setPressState(false);
+            this.untilEndOfTurn.setPressState(false);
+            this.untilNextMain.setPressState(false);
+            this.allTurns.setPressState(false);
+            this.untilStackResolved.setPressState(false);
+            this.untilUntilEndStepBeforeMyTurn.setPressState(false);
+            if (!hotkey.isEmpty() && (butt = this.findButton(hotkey)) != null) {
+                butt.setPressState(true);
+            }
+        }
+    }
+
+    public static class MageSplitter {
+        JSplitPane splitPane;
+        double defaultProportion;
+
+        MageSplitter(JSplitPane splitPane, double defaultProportion) {
+            this.splitPane = splitPane;
+            this.defaultProportion = defaultProportion;
+        }
+    }
+
     private class skipButton {
-
         private final String text;
         private final String extraFalse;
         private final String extraTrue;
         private final String hotkeyName;
-        private boolean extraMode = false; // extra option enabled from preferences
-        private boolean pressState = false; // activated by user or not
+        private boolean extraMode = false;
+        private boolean pressState = false;
 
         skipButton(String text, String extraFalse, String extraTrue, String hotkeyName) {
             this.text = text;
@@ -1353,14 +3261,7 @@ public final class GamePanel extends javax.swing.JPanel {
         }
 
         public String getTooltip() {
-            // show hotkey and selects current button mode
-
-            // text
-            String res = "<html>"
-                    + "<b>" + getCachedKeyText(this.hotkeyName) + "</b>"
-                    + " - " + text;
-
-            // mode
+            String res = "<html><b>" + PreferencesDialog.getCachedKeyText(this.hotkeyName) + "</b> - " + this.text;
             String mesTrue = this.extraTrue;
             String mesFalse = this.extraFalse;
             if (!this.extraTrue.isEmpty() || !this.extraFalse.isEmpty()) {
@@ -1379,1918 +3280,10 @@ public final class GamePanel extends javax.swing.JPanel {
         public Border getBorder() {
             return this.pressState ? BORDER_ACTIVE : BORDER_NON_ACTIVE;
         }
-
-    }
-
-    private class skipButtonsList {
-
-        private final skipButton turn;
-        private final skipButton untilEndOfTurn;
-        private final skipButton untilNextMain;
-        private final skipButton allTurns;
-        private final skipButton untilStackResolved;
-        private final skipButton untilUntilEndStepBeforeMyTurn;
-
-        skipButtonsList() {
-            this.turn = new skipButton("Skip to next turn", "", "", KEY_CONTROL_NEXT_TURN);
-            this.untilEndOfTurn = new skipButton("Skip to [EXTRA_TRUE / EXTRA_FALSE] END OF TURN step", "opponent", "next", KEY_CONTROL_END_STEP);
-            this.untilNextMain = new skipButton("Skip to [EXTRA_TRUE / EXTRA_FALSE] MAIN step", "opponent", "next", KEY_CONTROL_MAIN_STEP);
-            this.allTurns = new skipButton("Skip to YOUR turn", "", "", KEY_CONTROL_YOUR_TURN);
-            this.untilStackResolved = new skipButton("Skip until stack is resolved [EXTRA_TRUE]", "", "or stop on new objects added", KEY_CONTROL_SKIP_STACK);
-            this.untilUntilEndStepBeforeMyTurn = new skipButton("Skip to END OF TURN before YOUR", "", "", KEY_CONTROL_PRIOR_END);
-        }
-
-        private void updateExtraMode(PlayerView player) {
-            this.turn.setExtraMode(false); // not used
-            this.untilEndOfTurn.setExtraMode(player.getUserData().getUserSkipPrioritySteps().isStopOnAllEndPhases());
-            this.untilNextMain.setExtraMode(player.getUserData().getUserSkipPrioritySteps().isStopOnAllMainPhases());
-            this.allTurns.setExtraMode(false); // not used
-            this.untilStackResolved.setExtraMode(player.getUserData().getUserSkipPrioritySteps().isStopOnStackNewObjects());
-            this.untilUntilEndStepBeforeMyTurn.setExtraMode(false); // not used
-        }
-
-        private void updatePressState(PlayerView player) {
-            this.turn.setPressState(player.isPassedTurn());
-            this.untilEndOfTurn.setPressState(player.isPassedUntilEndOfTurn());
-            this.untilNextMain.setPressState(player.isPassedUntilNextMain());
-            this.allTurns.setPressState(player.isPassedAllTurns());
-            this.untilStackResolved.setPressState(player.isPassedUntilStackResolved());
-            this.untilUntilEndStepBeforeMyTurn.setPressState(player.isPassedUntilEndStepBeforeMyTurn());
-        }
-
-        public void updateFromPlayer(PlayerView player) {
-            updateExtraMode(player);
-            updatePressState(player);
-        }
-
-        private skipButton findButton(String hotkey) {
-            switch (hotkey) {
-                case KEY_CONTROL_NEXT_TURN:
-                    return this.turn;
-                case KEY_CONTROL_END_STEP:
-                    return this.untilEndOfTurn;
-                case KEY_CONTROL_MAIN_STEP:
-                    return this.untilNextMain;
-                case KEY_CONTROL_YOUR_TURN:
-                    return this.allTurns;
-                case KEY_CONTROL_SKIP_STACK:
-                    return this.untilStackResolved;
-                case KEY_CONTROL_PRIOR_END:
-                    return this.untilUntilEndStepBeforeMyTurn;
-                default:
-                    logger.error("Unknown hotkey name " + hotkey);
-                    return null;
-            }
-        }
-
-        public String getTooltip(String hotkey) {
-            skipButton butt = findButton(hotkey);
-            return butt != null ? butt.getTooltip() : "";
-        }
-
-        public Border getBorder(String hotkey) {
-            skipButton butt = findButton(hotkey);
-            return butt != null ? butt.getBorder() : BORDER_NON_ACTIVE;
-        }
-
-        public void activateSkipButton(String hotkey) {
-            // enable ONE button and disable all other (no needs to wait server feedback)
-            this.turn.setPressState(false);
-            this.untilEndOfTurn.setPressState(false);
-            this.untilNextMain.setPressState(false);
-            this.allTurns.setPressState(false);
-            this.untilStackResolved.setPressState(false);
-            this.untilUntilEndStepBeforeMyTurn.setPressState(false);
-
-            if (!hotkey.isEmpty()) {
-                skipButton butt = findButton(hotkey);
-                if (butt != null) butt.setPressState(true);
-            }
-        }
-    }
-
-    private void updateSkipButtons() {
-        // hints
-        btnSkipToNextTurn.setToolTipText(skipButtons.turn.getTooltip());
-        btnSkipToEndTurn.setToolTipText(skipButtons.untilEndOfTurn.getTooltip());
-        btnSkipToNextMain.setToolTipText(skipButtons.untilNextMain.getTooltip());
-        btnSkipStack.setToolTipText(skipButtons.untilStackResolved.getTooltip());
-        btnSkipToYourTurn.setToolTipText(skipButtons.allTurns.getTooltip());
-        btnSkipToEndStepBeforeYourTurn.setToolTipText(skipButtons.untilUntilEndStepBeforeMyTurn.getTooltip());
-
-        // border
-        btnSkipToNextTurn.setBorder(skipButtons.turn.getBorder());
-        btnSkipToEndTurn.setBorder(skipButtons.untilEndOfTurn.getBorder());
-        btnSkipToNextMain.setBorder(skipButtons.untilNextMain.getBorder());
-        btnSkipStack.setBorder(skipButtons.untilStackResolved.getBorder());
-        btnSkipToYourTurn.setBorder(skipButtons.allTurns.getBorder());
-        btnSkipToEndStepBeforeYourTurn.setBorder(skipButtons.untilUntilEndStepBeforeMyTurn.getBorder());
-    }
-
-    /**
-     * Set the same state for menu selections to all player areas.
-     *
-     * @param manaPoolAutomatic
-     * @param manaPoolAutomaticRestricted
-     * @param useFirstManaAbility
-     */
-    public void setMenuStates(boolean manaPoolAutomatic, boolean manaPoolAutomaticRestricted, boolean useFirstManaAbility, boolean holdPriority) {
-        for (PlayAreaPanel playAreaPanel : players.values()) {
-            playAreaPanel.setMenuStates(manaPoolAutomatic, manaPoolAutomaticRestricted, useFirstManaAbility, holdPriority);
-        }
-    }
-
-    private void displayStack(GameView game, BigCard bigCard, FeedbackPanel feedbackPanel, UUID gameId) {
-        this.stackObjects.loadCards(game.getStack(), bigCard, gameId, true);
-    }
-
-    private void updateActivePhase(PhaseStep currentStep) {
-        if (currentStep == null) {
-            return;
-        }
-
-        switch (currentStep) {
-            case UNTAP:
-                updatePhaseButtons("Untap");
-                break;
-            case UPKEEP:
-                updatePhaseButtons("Upkeep");
-                break;
-            case DRAW:
-                updatePhaseButtons("Draw");
-                break;
-            case PRECOMBAT_MAIN:
-                updatePhaseButtons("Main1");
-                break;
-            case BEGIN_COMBAT:
-                updatePhaseButtons("Combat_Start");
-                break;
-            case DECLARE_ATTACKERS:
-                updatePhaseButtons("Combat_Attack");
-                break;
-            case DECLARE_BLOCKERS:
-                updatePhaseButtons("Combat_Block");
-                break;
-            case FIRST_COMBAT_DAMAGE:
-            case COMBAT_DAMAGE:
-                updatePhaseButtons("Combat_Damage");
-                break;
-            case END_COMBAT:
-                updatePhaseButtons("Combat_End");
-                break;
-            case POSTCOMBAT_MAIN:
-                updatePhaseButtons("Main2");
-                break;
-            case END_TURN:
-            case CLEANUP:
-                updatePhaseButtons("Cleanup");
-                break;
-            default:
-                break;
-        }
-    }
-
-    private void updatePhaseButtons(String currentPhaseName) {
-        phaseButtons.forEach((phaseName, phaseButton) -> {
-            if (phaseName.equals(currentPhaseName)) {
-                //phaseButton.setBorder(this.phaseButtonBorderActive);
-                phaseButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-            } else {
-                //phaseButton.setBorder(this.phaseButtonBorderInactive);
-                phaseButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-            }
-        });
-        jPhases.invalidate();
-    }
-
-    public void onDeactivated() {
-        // save current dividers location
-        saveSplitters();
-
-        // hide the non modal windows (because otherwise they are shown on top of the new active pane)
-        // TODO: is it need to hide other dialogs like graveyards (CardsView)?
-        for (CardInfoWindowDialog windowDialog : exiles.values()) {
-            windowDialog.hideDialog();
-        }
-        for (CardInfoWindowDialog windowDialog : revealed.values()) {
-            windowDialog.hideDialog();
-        }
-        for (CardInfoWindowDialog windowDialog : lookedAt.values()) {
-            windowDialog.hideDialog();
-        }
-        for (CardInfoWindowDialog windowDialog : graveyardWindows.values()) {
-            windowDialog.hideDialog();
-        }
-        for (CardInfoWindowDialog windowDialog : companion.values()) {
-            windowDialog.hideDialog();
-        }
-        for (CardInfoWindowDialog windowDialog : sideboardWindows.values()) {
-            windowDialog.hideDialog();
-        }
-        for (CardHintsHelperDialog windowDialog : cardHintsWindows.values()) {
-            windowDialog.hideDialog();
-        }
-    }
-
-    public void onActivated() {
-        // restore divider positions
-        // must be called by swing after all pack and paint done (possible bug: zero size in restored divider)
-        SwingUtilities.invokeLater(this::restoreSplitters);
-
-        // hide the non modal windows (because otherwise they are shown on top of the new active pane)
-        for (CardInfoWindowDialog windowDialog : exiles.values()) {
-            windowDialog.show();
-        }
-        for (CardInfoWindowDialog windowDialog : revealed.values()) {
-            windowDialog.show();
-        }
-        for (CardInfoWindowDialog windowDialog : lookedAt.values()) {
-            windowDialog.show();
-        }
-        for (CardInfoWindowDialog windowDialog : graveyardWindows.values()) {
-            windowDialog.show();
-        }
-        for (CardInfoWindowDialog windowDialog : companion.values()) {
-            windowDialog.show();
-        }
-        for (CardInfoWindowDialog windowDialog : sideboardWindows.values()) {
-            windowDialog.show();
-        }
-        for (CardHintsHelperDialog windowDialog : cardHintsWindows.values()) {
-            windowDialog.show();
-        }
-    }
-
-    public void openGraveyardWindow(String playerName) {
-        if (graveyardWindows.containsKey(playerName)) {
-            CardInfoWindowDialog cardInfoWindowDialog = graveyardWindows.get(playerName);
-            if (cardInfoWindowDialog.isVisible()) {
-                cardInfoWindowDialog.hideDialog();
-            } else {
-                cardInfoWindowDialog.show();
-            }
-            return;
-        }
-        CardInfoWindowDialog newGraveyard = new CardInfoWindowDialog(ShowType.GRAVEYARD, playerName);
-        graveyardWindows.put(playerName, newGraveyard);
-        MageFrame.getDesktop().add(newGraveyard, newGraveyard.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
-        // use graveyards to sync selection (don't use player data here)
-        newGraveyard.loadCardsAndShow(graveyards.get(playerName), bigCard, gameId, false);
-    }
-
-    private void clearClosedCardHintsWindows() {
-        cardHintsWindows.entrySet().removeIf(entry -> entry.getValue().isClosed());
-    }
-
-    public void openCardHintsWindow(String code) {
-        // clear closed
-        clearClosedCardHintsWindows();
-
-        // too many dialogs can cause bad GUI performance, so limit it
-        if (cardHintsWindows.size() >= CardHintsHelperDialog.GUI_MAX_CARD_HINTS_DIALOGS_PER_GAME) {
-            // show last one instead
-            cardHintsWindows.values().stream().reduce((a, b) -> b).ifPresent(CardHintsHelperDialog::show);
-            return;
-        }
-
-        // open new
-        CardHintsHelperDialog newDialog = new CardHintsHelperDialog();
-        newDialog.setSize(GUISizeHelper.dialogGuiScaleSize(newDialog.getSize()));
-        newDialog.setGameData(this.lastGameData.game, this.gameId, this.bigCard);
-        cardHintsWindows.put(code + UUID.randomUUID(), newDialog);
-        MageFrame.getDesktop().add(newDialog, newDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
-        newDialog.loadHints(lastGameData.game);
-    }
-
-    public void openSideboardWindow(UUID playerId) {
-        if (lastGameData == null) {
-            return;
-        }
-
-        PlayerView playerView = lastGameData.game.getPlayers().stream()
-                .filter(p -> p.getPlayerId().equals(playerId))
-                .findFirst()
-                .orElse(null);
-        if (playerView == null) {
-            return;
-        }
-
-        if (sideboardWindows.containsKey(playerView.getName())) {
-            CardInfoWindowDialog windowDialog = sideboardWindows.get(playerView.getName());
-            if (windowDialog.isVisible()) {
-                windowDialog.hideDialog();
-            } else {
-                windowDialog.show();
-            }
-            return;
-        }
-
-        CardInfoWindowDialog windowDialog = new CardInfoWindowDialog(ShowType.SIDEBOARD, playerView.getName());
-        sideboardWindows.put(playerView.getName(), windowDialog);
-        MageFrame.getDesktop().add(windowDialog, windowDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
-        // use sideboards to sync selection (don't use player data here)
-        windowDialog.loadCardsAndShow(sideboards.get(playerView.getName()), bigCard, gameId, false);
-    }
-
-    public void openTopLibraryWindow(String playerName) {
-        String title = playerName + "'s top library card";
-        if (revealed.containsKey(title)) {
-            CardInfoWindowDialog cardInfoWindowDialog = revealed.get(title);
-            if (cardInfoWindowDialog.isVisible()) {
-                cardInfoWindowDialog.hideDialog();
-            } else {
-                cardInfoWindowDialog.show();
-            }
-        }
-    }
-
-    private void showRevealed(GameView game) {
-        for (RevealedView revealView : game.getRevealed()) {
-            handleGameInfoWindow(revealed, ShowType.REVEAL, revealView.getName(), revealView.getCards());
-        }
-        removeClosedCardInfoWindows(revealed);
-    }
-
-    private void showLookedAt(GameView game) {
-        for (LookedAtView lookedAtView : game.getLookedAt()) {
-            handleGameInfoWindow(lookedAt, ShowType.LOOKED_AT, lookedAtView.getName(), lookedAtView.getCards());
-        }
-        removeClosedCardInfoWindows(lookedAt);
-    }
-
-    private void showCompanion(GameView game) {
-        for (RevealedView revealView : game.getCompanion()) {
-            handleGameInfoWindow(companion, ShowType.COMPANION, revealView.getName(), revealView.getCards());
-        }
-        // Close the companion view if not in the game view
-        companion.forEach((name, companionDialog) -> {
-            if (game.getCompanion().stream().noneMatch(revealedView -> revealedView.getName().equals(name))) {
-                try {
-                    companionDialog.setClosed(true);
-                } catch (PropertyVetoException e) {
-                    logger.error("Couldn't close companion dialog", e);
-                }
-            }
-        });
-        removeClosedCardInfoWindows(companion);
-    }
-
-    private void handleGameInfoWindow(Map<String, CardInfoWindowDialog> windowMap, ShowType showType, String name, LinkedHashMap cardsView) {
-        CardInfoWindowDialog cardInfoWindowDialog;
-        if (!windowMap.containsKey(name)) {
-            cardInfoWindowDialog = new CardInfoWindowDialog(showType, name);
-            windowMap.put(name, cardInfoWindowDialog);
-            MageFrame.getDesktop().add(cardInfoWindowDialog, cardInfoWindowDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
-        } else {
-            cardInfoWindowDialog = windowMap.get(name);
-        }
-
-        if (cardInfoWindowDialog != null && !cardInfoWindowDialog.isClosed()) {
-            switch (showType) {
-                case REVEAL:
-                case REVEAL_TOP_LIBRARY:
-                case COMPANION:
-                    cardInfoWindowDialog.loadCardsAndShow((CardsView) cardsView, bigCard, gameId, false);
-                    break;
-                case LOOKED_AT:
-                    cardInfoWindowDialog.loadCardsAndShow(CardsViewUtil.convertSimple((SimpleCardsView) cardsView), bigCard, gameId, false);
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    private void removeClosedCardInfoWindows(Map<String, CardInfoWindowDialog> windowMap) {
-        // Remove closed window objects from the maps
-        windowMap.entrySet().removeIf(entry -> entry.getValue().isClosed());
-    }
-
-    public void ask(int messageId, GameView gameView, String question, Map<String, Serializable> options) {
-        updateGame(messageId, gameView, false, options, null);
-        this.feedbackPanel.prepareFeedback(FeedbackMode.QUESTION, question, "", false, options, true, gameView.getPhase());
-    }
-
-    public boolean isMissGameData() {
-        return lastGameData.game == null || lastGameData.game.getPlayers().isEmpty();
-    }
-
-    private void keepLastGameData(int messageId, GameView game, boolean showPlayable, Map<String, Serializable> options, Set<UUID> targets) {
-        lastGameData.messageId = messageId;
-        lastGameData.setNewGame(game);
-        lastGameData.showPlayable = showPlayable;
-        lastGameData.options = options;
-        lastGameData.targets = targets;
-    }
-
-    private void prepareSelectableView() {
-        // make cards/perm selectable/chooseable/playable update game data updates
-        if (lastGameData.game == null) {
-            return;
-        }
-
-        Zone needZone = Zone.ALL;
-        if (lastGameData.options != null && lastGameData.options.containsKey("targetZone")) {
-            needZone = (Zone) lastGameData.options.get("targetZone");
-        }
-
-        Set<UUID> needChosen = lastGameData.getChosenTargets();
-
-        Set<UUID> needSelectable;
-        if (lastGameData.targets != null) {
-            needSelectable = lastGameData.targets;
-        } else {
-            needSelectable = new HashSet<>();
-        }
-
-        PlayableObjectsList needPlayable;
-        if (lastGameData.showPlayable && lastGameData.game.getCanPlayObjects() != null) {
-            needPlayable = lastGameData.game.getCanPlayObjects();
-        } else {
-            needPlayable = new PlayableObjectsList();
-        }
-
-        if (needChosen.isEmpty() && needSelectable.isEmpty() && needPlayable.isEmpty()) {
-            return;
-        }
-
-        // hand
-        if (needZone == Zone.HAND || needZone == Zone.ALL) {
-            // my hand
-            for (CardView card : lastGameData.game.getMyHand().values()) {
-                if (needSelectable.contains(card.getId())) {
-                    card.setChoosable(true);
-                }
-                if (needChosen.contains(card.getId())) {
-                    card.setSelected(true);
-                }
-                if (needPlayable.containsObject(card.getId())) {
-                    card.setPlayableStats(needPlayable.getStats(card.getId()));
-                }
-            }
-
-            // opponent hands (switching by GUI's button with my hand)
-            List<SimpleCardView> list = lastGameData.game.getOpponentHands().values().stream().flatMap(s -> s.values().stream()).collect(Collectors.toList());
-            for (SimpleCardView card : list) {
-                if (needSelectable.contains(card.getId())) {
-                    card.setChoosable(true);
-                }
-                if (needChosen.contains(card.getId())) {
-                    card.setSelected(true);
-                }
-                if (needPlayable.containsObject(card.getId())) {
-                    card.setPlayableStats(needPlayable.getStats(card.getId()));
-                }
-            }
-
-            // watched hands (switching by GUI's button with my hand)
-            list = lastGameData.game.getWatchedHands().values().stream().flatMap(s -> s.values().stream()).collect(Collectors.toList());
-            for (SimpleCardView card : list) {
-                if (needSelectable.contains(card.getId())) {
-                    card.setChoosable(true);
-                }
-                if (needChosen.contains(card.getId())) {
-                    card.setSelected(true);
-                }
-                if (needPlayable.containsObject(card.getId())) {
-                    card.setPlayableStats(needPlayable.getStats(card.getId()));
-                }
-            }
-        }
-
-        // stack
-        if (needZone == Zone.STACK || needZone == Zone.ALL) {
-            for (Map.Entry<UUID, CardView> card : lastGameData.game.getStack().entrySet()) {
-                if (needSelectable.contains(card.getKey())) {
-                    card.getValue().setChoosable(true);
-                }
-                if (needChosen.contains(card.getKey())) {
-                    card.getValue().setSelected(true);
-                }
-                // users can activate abilities of the spell on the stack (example: Lightning Storm);
-                if (needPlayable.containsObject(card.getKey())) {
-                    card.getValue().setPlayableStats(needPlayable.getStats(card.getKey()));
-                }
-            }
-        }
-
-        // battlefield
-        if (needZone == Zone.BATTLEFIELD || needZone == Zone.ALL) {
-            for (PlayerView player : lastGameData.game.getPlayers()) {
-                for (Map.Entry<UUID, PermanentView> perm : player.getBattlefield().entrySet()) {
-                    if (needSelectable.contains(perm.getKey())) {
-                        perm.getValue().setChoosable(true);
-                    }
-                    if (needChosen.contains(perm.getKey())) {
-                        perm.getValue().setSelected(true);
-                    }
-                    if (needPlayable.containsObject(perm.getKey())) {
-                        perm.getValue().setPlayableStats(needPlayable.getStats(perm.getKey()));
-                    }
-                }
-            }
-        }
-
-        // graveyard
-        if (needZone == Zone.GRAVEYARD || needZone == Zone.ALL) {
-            for (PlayerView player : lastGameData.game.getPlayers()) {
-                for (Map.Entry<UUID, CardView> card : player.getGraveyard().entrySet()) {
-                    if (needSelectable.contains(card.getKey())) {
-                        card.getValue().setChoosable(true);
-                    }
-                    if (needChosen.contains(card.getKey())) {
-                        card.getValue().setSelected(true);
-                    }
-                    if (needPlayable.containsObject(card.getKey())) {
-                        card.getValue().setPlayableStats(needPlayable.getStats(card.getKey()));
-                    }
-                }
-            }
-        }
-
-        // sideboard
-        if (needZone == Zone.OUTSIDE || needZone == Zone.ALL) {
-            for (PlayerView player : lastGameData.game.getPlayers()) {
-                for (Map.Entry<UUID, CardView> card : player.getSideboard().entrySet()) {
-                    if (needSelectable.contains(card.getKey())) {
-                        card.getValue().setChoosable(true);
-                    }
-                    if (needChosen.contains(card.getKey())) {
-                        card.getValue().setSelected(true);
-                    }
-                    if (needPlayable.containsObject(card.getKey())) {
-                        card.getValue().setPlayableStats(needPlayable.getStats(card.getKey()));
-                    }
-                }
-            }
-        }
-        // sideboards (old windows all the time, e.g. unattached from game data)
-        prepareSelectableWindows(sideboardWindows.values(), needSelectable, needChosen, needPlayable);
-
-        // exile
-        if (needZone == Zone.EXILED || needZone == Zone.ALL) {
-            // exile from player panel
-            for (PlayerView player : lastGameData.game.getPlayers()) {
-                for (CardView card : player.getExile().values()) {
-                    if (needSelectable.contains(card.getId())) {
-                        card.setChoosable(true);
-                    }
-                    if (needChosen.contains(card.getId())) {
-                        card.setSelected(true);
-                    }
-                    if (needPlayable.containsObject(card.getId())) {
-                        card.setPlayableStats(needPlayable.getStats(card.getId()));
-                    }
-                }
-            }
-
-            // exile from windows
-            for (ExileView exile : lastGameData.game.getExile()) {
-                for (Map.Entry<UUID, CardView> card : exile.entrySet()) {
-                    if (needSelectable.contains(card.getKey())) {
-                        card.getValue().setChoosable(true);
-                    }
-                    if (needChosen.contains(card.getKey())) {
-                        card.getValue().setSelected(true);
-                    }
-                    if (needPlayable.containsObject(card.getKey())) {
-                        card.getValue().setPlayableStats(needPlayable.getStats(card.getKey()));
-                    }
-                }
-            }
-        }
-
-        // command
-        if (needZone == Zone.COMMAND || needZone == Zone.ALL) {
-            for (PlayerView player : lastGameData.game.getPlayers()) {
-                for (CommandObjectView com : player.getCommandObjectList()) {
-                    if (needSelectable.contains(com.getId())) {
-                        com.setChoosable(true);
-                    }
-                    if (needChosen.contains(com.getId())) {
-                        com.setSelected(true);
-                    }
-                    if (needPlayable.containsObject(com.getId())) {
-                        com.setPlayableStats(needPlayable.getStats(com.getId()));
-                    }
-                }
-            }
-        }
-
-        // companion
-        for (RevealedView rev : lastGameData.game.getCompanion()) {
-            for (Map.Entry<UUID, CardView> card : rev.getCards().entrySet()) {
-                if (needSelectable.contains(card.getKey())) {
-                    card.getValue().setChoosable(true);
-                }
-                if (needChosen.contains(card.getKey())) {
-                    card.getValue().setSelected(true);
-                }
-                if (needPlayable.containsObject(card.getKey())) {
-                    card.getValue().setPlayableStats(needPlayable.getStats(card.getKey()));
-                }
-            }
-        }
-
-        // revealed (current cards)
-        for (RevealedView rev : lastGameData.game.getRevealed()) {
-            for (Map.Entry<UUID, CardView> card : rev.getCards().entrySet()) {
-                if (needSelectable.contains(card.getKey())) {
-                    card.getValue().setChoosable(true);
-                }
-                if (needChosen.contains(card.getKey())) {
-                    card.getValue().setSelected(true);
-                }
-                if (needPlayable.containsObject(card.getKey())) {
-                    card.getValue().setPlayableStats(needPlayable.getStats(card.getKey()));
-                }
-            }
-        }
-        // revealed (old windows)
-        prepareSelectableWindows(revealed.values(), needSelectable, needChosen, needPlayable);
-
-        // looked at (current cards)
-        for (LookedAtView look : lastGameData.game.getLookedAt()) {
-            for (Map.Entry<UUID, SimpleCardView> card : look.getCards().entrySet()) {
-                if (needPlayable.containsObject(card.getKey())) {
-                    card.getValue().setPlayableStats(needPlayable.getStats(card.getKey()));
-                }
-            }
-        }
-        // looked at (old windows)
-        prepareSelectableWindows(lookedAt.values(), needSelectable, needChosen, needPlayable);
-    }
-
-    private void prepareSelectableWindows(
-            Collection<CardInfoWindowDialog> windows,
-            Set<UUID> needSelectable,
-            Set<UUID> needChosen,
-            PlayableObjectsList needPlayable
-    ) {
-        // lookAt or reveals windows clean up on next priority, so users can see dialogs, but xmage can't restore it
-        // so it must be updated manually (it's ok to keep outdated cards in dialog, but not ok to show wrong selections)
-        for (CardInfoWindowDialog window : windows) {
-            for (MageCard mageCard : window.getMageCardsForUpdate().values()) {
-                CardView cardView = mageCard.getOriginal();
-                cardView.setChoosable(needSelectable.contains(cardView.getId()));
-                cardView.setSelected(needChosen.contains(cardView.getId()));
-                if (needPlayable.containsObject(cardView.getId())) {
-                    cardView.setPlayableStats(needPlayable.getStats(cardView.getId()));
-                } else {
-                    cardView.setPlayableStats(new PlayableObjectStats());
-                }
-                // TODO: little bug with toggled night card after update/clicks, but that's ok (can't click on second side)
-                mageCard.update(cardView);
-            }
-        }
-    }
-
-    /**
-     * Shows a pick target dialog and allows the player to pick a target (e.g.
-     * the pick triggered ability)
-     *
-     * @param message
-     * @param cardsView
-     * @param gameView
-     * @param targets
-     * @param required
-     * @param options
-     * @param messageId
-     */
-    public void pickTarget(int messageId, GameView gameView, Map<String, Serializable> options, String message, CardsView cardsView, Set<UUID> targets, boolean required) {
-        updateGame(messageId, gameView, false, options, targets);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-        clearPickTargetDialogs();
-
-        PopUpMenuType popupMenuType = null;
-        if (lastGameData.options != null) {
-            if (options.containsKey("queryType")) {
-                PlayerQueryEvent.QueryType needType = (PlayerQueryEvent.QueryType) lastGameData.options.get("queryType");
-                switch (needType) {
-                    case PICK_ABILITY:
-                        popupMenuType = PopUpMenuType.TRIGGER_ORDER;
-                        break;
-                    case PICK_TARGET:
-                        break;
-                    default:
-                        logger.warn("Unknown query type in pick target: " + needType + " in " + message);
-                        break;
-                }
-            }
-        }
-
-        Map<String, Serializable> options0 = lastGameData.options == null ? new HashMap<>() : lastGameData.options;
-        ShowCardsDialog dialog = null;
-        if (cardsView != null && !cardsView.isEmpty()) {
-            dialog = prepareCardsDialog(message, cardsView, required, options0, popupMenuType);
-            options0.put("dialog", dialog);
-        }
-        this.feedbackPanel.prepareFeedback(required ? FeedbackMode.INFORM : FeedbackMode.CANCEL, message, "", gameView.getSpecial(), options0, true, gameView.getPhase());
-        if (dialog != null) {
-            this.pickTarget.add(dialog);
-        }
-    }
-
-    public void inform(int messageId, GameView gameView, String information) {
-        updateGame(messageId, gameView);
-        this.feedbackPanel.prepareFeedback(FeedbackMode.INFORM, information, "", gameView.getSpecial(), null, false, gameView.getPhase());
-    }
-
-    public void endMessage(int messageId, GameView gameView, Map<String, Serializable> options, String message) {
-        updateGame(messageId, gameView, false, options, null);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-
-        this.feedbackPanel.prepareFeedback(FeedbackMode.END, message, "", false, null, true, null);
-        ArrowBuilder.getBuilder().removeAllArrows(gameId);
-    }
-
-    public void select(int messageId, GameView gameView, Map<String, Serializable> options, String message) {
-        updateGame(messageId, gameView, true, options, null);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-
-        this.abilityPicker.setVisible(false);
-
-        holdingPriority = false;
-        txtHoldPriority.setVisible(false);
-        setMenuStates(
-                PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT, "true").equals("true"),
-                PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT_ONLY_ONE, "true").equals("true"),
-                PreferencesDialog.getCachedValue(KEY_USE_FIRST_MANA_ABILITY, "false").equals("true"),
-                false);
-
-        boolean controllingPlayer = false;
-        for (PlayerView playerView : gameView.getPlayers()) {
-            if (playerView.getPlayerId().equals(playerId)) {
-                // magenoxx: because of uncaught bug with saving state, rolling back and stack
-                // undo is allowed only for empty stack
-                controllingPlayer = !gameView.getPriorityPlayerName().equals(playerView.getName());
-                if (playerView.getStatesSavedSize() > 0 && gameView.getStack().isEmpty()) {
-                    feedbackPanel.allowUndo(playerView.getStatesSavedSize());
-                }
-                break;
-            }
-
-        }
-        Map<String, Serializable> panelOptions = new HashMap<>();
-        if (lastGameData.options != null) {
-            panelOptions.putAll(lastGameData.options);
-        }
-        panelOptions.put("your_turn", true);
-        String activePlayerText;
-        if (gameView.getActivePlayerId().equals(playerId)) {
-            activePlayerText = "Your turn";
-        } else {
-            activePlayerText = gameView.getActivePlayerName() + "'s turn";
-        }
-        String priorityPlayerText = "";
-        if (controllingPlayer) {
-            priorityPlayerText = " / priority " + gameView.getPriorityPlayerName();
-        }
-        String additionalMessage = activePlayerText + " / " + gameView.getStep().toString() + priorityPlayerText;
-        this.feedbackPanel.prepareFeedback(FeedbackMode.SELECT, message, additionalMessage, gameView.getSpecial(), panelOptions, true, gameView.getPhase());
-    }
-
-    public void playMana(int messageId, GameView gameView, Map<String, Serializable> options, String message) {
-        updateGame(messageId, gameView, true, options, null);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-
-        this.feedbackPanel.prepareFeedback(FeedbackMode.CANCEL, message, "", gameView.getSpecial(), options, true, gameView.getPhase());
-    }
-
-    public void playXMana(int messageId, GameView gameView, Map<String, Serializable> options, String message) {
-        updateGame(messageId, gameView, true, options, null);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-
-        this.feedbackPanel.prepareFeedback(FeedbackMode.CONFIRM, message, "", gameView.getSpecial(), null, true, gameView.getPhase());
-    }
-
-    public void replayMessage(String message) {
-        //TODO: implement this
-    }
-
-    public void pickAbility(int messageId, GameView gameView, Map<String, Serializable> options, AbilityPickerView choices) {
-        updateGame(messageId, gameView, false, options, null);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-
-        this.abilityPicker.show(choices, MageFrame.getDesktop().getMousePosition());
-    }
-
-    private void hideAll() {
-        hidePickDialogs();
-        this.abilityPicker.setVisible(false);
-        ActionCallback callback = Plugins.instance.getActionCallback();
-        ((MageActionCallback) callback).hideGameUpdate(gameId);
-    }
-
-    private ShowCardsDialog prepareCardsDialog(String title, CardsView cards, boolean required, Map<String, Serializable> options, PopUpMenuType popupMenuType) {
-        ShowCardsDialog showCards = new ShowCardsDialog();
-        JPopupMenu popupMenu = null;
-        if (PopUpMenuType.TRIGGER_ORDER == popupMenuType) {
-            popupMenu = popupMenuTriggerOrder;
-        }
-        showCards.loadCards(title, cards, bigCard, gameId, required, options, popupMenu, getShowCardsEventListener(showCards));
-        return showCards;
-    }
-
-    public void getAmount(int messageId, GameView gameView, Map<String, Serializable> options, int min, int max, String message) {
-        updateGame(messageId, gameView, false, options, null);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-
-        pickNumber.showDialog(min, max, message, () -> {
-            if (pickNumber.isCancel()) {
-                SessionHandler.sendPlayerBoolean(gameId, false);
-            } else {
-                SessionHandler.sendPlayerInteger(gameId, pickNumber.getAmount());
-            }
-        });
-    }
-
-    public void getMultiAmount(int messageId, GameView gameView, List<MultiAmountMessage> messages, Map<String, Serializable> options,
-                               int min, int max) {
-        updateGame(messageId, gameView, false, options, null);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-
-        pickMultiNumber.init(gameId, bigCard);
-        pickMultiNumber.showDialog(messages, min, max, lastGameData.options, () -> {
-            if (pickMultiNumber.isCancel()) {
-                SessionHandler.sendPlayerBoolean(gameId, false);
-            } else {
-                SessionHandler.sendPlayerString(gameId, pickMultiNumber.getMultiAmount());
-            }
-        });
-    }
-
-    public void getChoice(int messageId, GameView gameView, Map<String, Serializable> options, Choice choice, UUID objectId) {
-        updateGame(messageId, gameView, false, options, null);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-
-        // TODO: remember last choices and search incremental for same events?
-        PickChoiceDialog pickChoice = new PickChoiceDialog();
-        pickChoice.showDialog(choice, null, objectId, choiceWindowState, bigCard, () -> {
-            // special mode adds # to the answer (server side code must process that prefix, see replacementEffectChoice)
-            String specialPrefix = choice.isChosenSpecial() ? "#" : "";
-
-            String valueToSend;
-            if (choice.isKeyChoice()) {
-                valueToSend = choice.getChoiceKey();
-            } else {
-                valueToSend = choice.getChoice();
-            }
-            SessionHandler.sendPlayerString(gameId, valueToSend == null ? null : specialPrefix + valueToSend);
-
-            // keep dialog position
-            choiceWindowState = new MageDialogState(pickChoice);
-
-            pickChoice.removeDialog();
-        });
-    }
-
-    public void pickPile(int messageId, GameView gameView, Map<String, Serializable> options, String message, CardsView pile1, CardsView pile2) {
-        updateGame(messageId, gameView, false, options, null);
-        hideAll();
-        DialogManager.getManager(gameId).fadeOut();
-
-        // remove old dialogs before the new
-        clearPickPileDialogs();
-
-        PickPileDialog pickPileDialog = new PickPileDialog();
-        this.pickPile.add(pickPileDialog);
-
-        pickPileDialog.showDialog(message, pile1, pile2, bigCard, gameId, () -> {
-            if (pickPileDialog.isPickedOK()) {
-                SessionHandler.sendPlayerBoolean(gameId, pickPileDialog.isPickedPile1());
-            }
-        });
-    }
-
-    public Map<UUID, PlayAreaPanel> getPlayers() {
-        return players;
-    }
-
-    @SuppressWarnings("unchecked")
-    private void initComponents() {
-        abilityPicker = new mage.client.components.ability.AbilityPicker(GUISizeHelper.dialogGuiScale);
-        pnlHelperHandButtonsStackArea = new javax.swing.JPanel();
-        pnlShortCuts = new javax.swing.JPanel();
-        lblPhase = new javax.swing.JLabel();
-        txtPhase = new javax.swing.JLabel();
-        lblStep = new javax.swing.JLabel();
-        txtStep = new javax.swing.JLabel();
-        lblTurn = new javax.swing.JLabel();
-        txtTurn = new javax.swing.JLabel();
-        txtActivePlayer = new javax.swing.JLabel();
-        lblActivePlayer = new javax.swing.JLabel();
-        txtPriority = new javax.swing.JLabel();
-        lblPriority = new javax.swing.JLabel();
-
-        feedbackPanel = new mage.client.game.FeedbackPanel();
-        helper = new HelperPanel();
-        feedbackPanel.setHelperPanel(helper);
-        feedbackPanel.setLayout(new BorderLayout());
-        feedbackPanel.add(helper, BorderLayout.CENTER);
-
-        Border paddingBorder = BorderFactory.createEmptyBorder(4, 4, 4, 4);
-        Border border = BorderFactory.createLineBorder(Color.DARK_GRAY, 2);
-        txtHoldPriority = new javax.swing.JLabel();
-        txtHoldPriority.setText("Hold");
-        txtHoldPriority.setBorder(BorderFactory.createCompoundBorder(border, paddingBorder));
-        txtHoldPriority.setBackground(Color.LIGHT_GRAY);
-        txtHoldPriority.setOpaque(true);
-        txtHoldPriority.setToolTipText("Holding priority after the next spell cast or ability activation");
-        txtHoldPriority.setVisible(false);
-
-        boolean displayButtonText = PreferencesDialog.getCurrentTheme().isShortcutsVisibleForSkipButtons();
-        btnToggleMacro = new KeyboundButton(KEY_CONTROL_TOGGLE_MACRO, displayButtonText);
-        btnCancelSkip = new KeyboundButton(KEY_CONTROL_CANCEL_SKIP, displayButtonText); // F3
-        btnSkipToNextTurn = new KeyboundButton(KEY_CONTROL_NEXT_TURN, displayButtonText); // F4
-        btnSkipToEndTurn = new KeyboundButton(KEY_CONTROL_END_STEP, displayButtonText); // F5
-        btnSkipToNextMain = new KeyboundButton(KEY_CONTROL_MAIN_STEP, displayButtonText); // F7
-        btnSkipStack = new KeyboundButton(KEY_CONTROL_SKIP_STACK, displayButtonText); // F10
-        btnSkipToYourTurn = new KeyboundButton(KEY_CONTROL_YOUR_TURN, displayButtonText); // F9
-        btnSkipToEndStepBeforeYourTurn = new KeyboundButton(KEY_CONTROL_PRIOR_END, displayButtonText); // F11
-
-        btnConcede = new javax.swing.JButton();
-        btnSwitchHands = new javax.swing.JButton();
-        btnStopWatching = new javax.swing.JButton();
-
-        bigCard = new mage.client.cards.BigCard();
-        pnlReplay = new javax.swing.JPanel();
-        btnStopReplay = new javax.swing.JButton();
-        btnNextPlay = new javax.swing.JButton();
-        btnPlay = new javax.swing.JButton();
-        btnSkipForward = new javax.swing.JButton();
-        btnPreviousPlay = new javax.swing.JButton();
-        pnlBattlefield = new javax.swing.JPanel();
-        gameChatPanel = new mage.client.chat.ChatPanelBasic();
-        gameChatPanel.useExtendedView(ChatPanelBasic.VIEW_MODE.GAME);
-        userChatPanel = new mage.client.chat.ChatPanelBasic();
-        userChatPanel.setParentChat(gameChatPanel);
-        userChatPanel.useExtendedView(ChatPanelBasic.VIEW_MODE.CHAT);
-        userChatPanel.setChatType(ChatPanelBasic.ChatType.GAME);
-        gameChatPanel.setConnectedChat(userChatPanel);
-        gameChatPanel.disableInput();
-        gameChatPanel.setMinimumSize(new java.awt.Dimension(100, 48));
-        handContainer = new HandPanel();
-        handCards = new HashMap<>();
-
-        pnlShortCuts.setOpaque(false);
-        //pnlShortCuts.setPreferredSize(new Dimension(410, 72));
-
-        stackObjects = new mage.client.cards.Cards();
-
-        // split: [hand] <|> [stack]
-        splitHandAndStack = new javax.swing.JSplitPane();
-        splitHandAndStack.setBorder(null);
-        splitHandAndStack.setResizeWeight(DIVIDER_KEEP_RIGHT_COMPONENT);
-        splitHandAndStack.setOneTouchExpandable(true);
-
-        // split: [game + chats] <|> [big card]
-        splitGameAndBigCard = new javax.swing.JSplitPane();
-        splitGameAndBigCard.setBorder(null);
-        splitGameAndBigCard.setResizeWeight(DIVIDER_KEEP_RIGHT_COMPONENT);
-        splitGameAndBigCard.setOneTouchExpandable(true);
-
-        // split: chat <|> game logs
-        splitChatAndLogs = new javax.swing.JSplitPane();
-        splitChatAndLogs.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
-        splitChatAndLogs.setResizeWeight(DIVIDER_KEEP_LEFT_COMPONENT);
-        splitChatAndLogs.setTopComponent(userChatPanel);
-        splitChatAndLogs.setBottomComponent(gameChatPanel);
-
-        // split: [battlefield + hand + stack] <|> [chats]
-        splitBattlefieldAndChats = new javax.swing.JSplitPane();
-        splitBattlefieldAndChats.setBorder(null);
-        splitBattlefieldAndChats.setResizeWeight(DIVIDER_KEEP_RIGHT_COMPONENT);
-        splitBattlefieldAndChats.setOneTouchExpandable(true);
-        splitBattlefieldAndChats.setLeftComponent(pnlHelperHandButtonsStackArea);
-        splitBattlefieldAndChats.setRightComponent(splitChatAndLogs);
-
-        // warning, it's important to store/restore splitters in same order as real life GUI
-        // from outer to inner (otherwise panels will be hidden or weird)
-        // also it must be restored by thread queue
-        this.splitters.put(PreferencesDialog.KEY_GAMEPANEL_DIVIDER_LOCATIONS_GAME_AND_BIG_CARD, new MageSplitter(splitGameAndBigCard, 0.85));
-        this.splitters.put(PreferencesDialog.KEY_GAMEPANEL_DIVIDER_LOCATIONS_BATTLEFIELD_AND_CHATS, new MageSplitter(splitBattlefieldAndChats, 0.80));
-        this.splitters.put(PreferencesDialog.KEY_GAMEPANEL_DIVIDER_LOCATIONS_HAND_STACK, new MageSplitter(splitHandAndStack, 0.70));
-        this.splitters.put(PreferencesDialog.KEY_GAMEPANEL_DIVIDER_LOCATIONS_CHAT_AND_LOGS, new MageSplitter(splitChatAndLogs, 0.40));
-
-        lblPhase.setLabelFor(txtPhase);
-        lblPhase.setText("Phase:");
-
-        txtPhase.setText("Phase");
-        txtPhase.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(153, 153, 153), 1, true));
-        txtPhase.setMinimumSize(new java.awt.Dimension(0, 16));
-
-        lblStep.setLabelFor(txtStep);
-        lblStep.setText("Step:");
-
-        txtStep.setText("Step");
-        txtStep.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(153, 153, 153), 1, true));
-        txtStep.setMinimumSize(new java.awt.Dimension(0, 16));
-
-        lblTurn.setLabelFor(txtTurn);
-        lblTurn.setText("Turn:");
-
-        txtTurn.setText("Turn");
-        txtTurn.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(153, 153, 153), 1, true));
-        txtTurn.setMinimumSize(new java.awt.Dimension(0, 16));
-
-        txtActivePlayer.setText("Active Player");
-        txtActivePlayer.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(153, 153, 153), 1, true));
-        txtActivePlayer.setMinimumSize(new java.awt.Dimension(0, 16));
-
-        lblActivePlayer.setLabelFor(txtActivePlayer);
-        lblActivePlayer.setText("Active Player:");
-
-        txtPriority.setText("Priority Player");
-        txtPriority.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(153, 153, 153), 1, true));
-        txtPriority.setMinimumSize(new java.awt.Dimension(0, 16));
-
-        lblPriority.setLabelFor(txtPriority);
-        lblPriority.setText("Priority Player:");
-
-        // CHATS and HINTS support
-
-        // HOTKEYS
-
-        int c = JComponent.WHEN_IN_FOCUSED_WINDOW;
-
-        // special hotkeys for custom rendered dialogs without focus
-        // call it before any user defined hotkeys
-        this.abilityPicker.injectHotkeys(this, "ABILITY_PICKER");
-
-        btnToggleMacro.setContentAreaFilled(false);
-        btnToggleMacro.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
-        btnToggleMacro.setToolTipText("Toggle Record Macro ("
-                + getCachedKeyText(KEY_CONTROL_TOGGLE_MACRO) + ").");
-        btnToggleMacro.setFocusable(false);
-        btnToggleMacro.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnToggleMacroActionPerformed(null)));
-
-        KeyStroke kst = getCachedKeystroke(KEY_CONTROL_TOGGLE_MACRO);
-        this.getInputMap(c).put(kst, "F8_PRESS");
-        this.getActionMap().put("F8_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                btnToggleMacroActionPerformed(actionEvent);
-            }
-        });
-
-        KeyStroke ks3 = getCachedKeystroke(KEY_CONTROL_CANCEL_SKIP);
-        this.getInputMap(c).put(ks3, "F3_PRESS");
-        this.getActionMap().put("F3_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                restorePriorityActionPerformed(actionEvent);
-            }
-        });
-
-        // SKIP BUTTONS (button's hint/state is dynamic)
-        // button icons setup in setGUISize
-
-        btnCancelSkip.setContentAreaFilled(false);
-        btnCancelSkip.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
-        btnCancelSkip.setToolTipText("CANCEL all skips");
-        btnCancelSkip.setFocusable(false);
-        btnCancelSkip.addMouseListener(new FirstButtonMousePressedAction(e ->
-                restorePriorityActionPerformed(null)));
-
-        btnSkipToNextTurn.setContentAreaFilled(false);
-        btnSkipToNextTurn.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
-        btnSkipToNextTurn.setToolTipText("dynamic");
-        btnSkipToNextTurn.setFocusable(false);
-        btnSkipToNextTurn.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnEndTurnActionPerformed(null)));
-
-        KeyStroke ks = getCachedKeystroke(KEY_CONTROL_NEXT_TURN);
-        this.getInputMap(c).put(ks, "F4_PRESS");
-        this.getActionMap().put("F4_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                btnEndTurnActionPerformed(actionEvent);
-            }
-        });
-
-        btnSkipToEndTurn.setContentAreaFilled(false);
-        btnSkipToEndTurn.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
-        btnSkipToEndTurn.setToolTipText("dynamic");
-        btnSkipToEndTurn.setFocusable(false);
-        btnSkipToEndTurn.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnUntilEndOfTurnActionPerformed(null)));
-
-        ks = getCachedKeystroke(KEY_CONTROL_END_STEP);
-        this.getInputMap(c).put(ks, "F5_PRESS");
-        this.getActionMap().put("F5_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                btnUntilEndOfTurnActionPerformed(actionEvent);
-            }
-        });
-
-        ks = getCachedKeystroke(KEY_CONTROL_SKIP_STEP);
-        this.getInputMap(c).put(ks, "F6_PRESS");
-        this.getActionMap().put("F6_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                btnEndTurnSkipStackActionPerformed(actionEvent);
-            }
-        });
-
-        btnSkipToNextMain.setContentAreaFilled(false);
-        btnSkipToNextMain.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
-        btnSkipToNextMain.setToolTipText("dynamic");
-        btnSkipToNextMain.setFocusable(false);
-        btnSkipToNextMain.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnUntilNextMainPhaseActionPerformed(null)));
-
-        ks = getCachedKeystroke(KEY_CONTROL_MAIN_STEP);
-        this.getInputMap(c).put(ks, "F7_PRESS");
-        this.getActionMap().put("F7_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                btnUntilNextMainPhaseActionPerformed(actionEvent);
-            }
-        });
-
-        btnSkipToYourTurn.setContentAreaFilled(false);
-        btnSkipToYourTurn.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
-        btnSkipToYourTurn.setToolTipText("dynamic");
-        btnSkipToYourTurn.setFocusable(false);
-        btnSkipToYourTurn.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnPassPriorityUntilNextYourTurnActionPerformed(null)));
-
-        KeyStroke ks9 = getCachedKeystroke(KEY_CONTROL_YOUR_TURN);
-        this.getInputMap(c).put(ks9, "F9_PRESS");
-        this.getActionMap().put("F9_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                btnPassPriorityUntilNextYourTurnActionPerformed(actionEvent);
-            }
-        });
-
-        btnSkipToEndStepBeforeYourTurn.setContentAreaFilled(false);
-        btnSkipToEndStepBeforeYourTurn.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
-        btnSkipToEndStepBeforeYourTurn.setToolTipText("dynamic");
-        btnSkipToEndStepBeforeYourTurn.setFocusable(false);
-        btnSkipToEndStepBeforeYourTurn.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnSkipToEndStepBeforeYourTurnActionPerformed(null)));
-
-        KeyStroke ks11 = getCachedKeystroke(KEY_CONTROL_PRIOR_END);
-        this.getInputMap(c).put(ks11, "F11_PRESS");
-        this.getActionMap().put("F11_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                btnSkipToEndStepBeforeYourTurnActionPerformed(actionEvent);
-            }
-        });
-
-        btnSkipStack.setContentAreaFilled(false);
-        btnSkipStack.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
-        btnSkipStack.setToolTipText("dynamic");
-        btnSkipStack.setFocusable(false);
-        btnSkipStack.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnPassPriorityUntilStackResolvedActionPerformed(null)));
-
-        ks = getCachedKeystroke(KEY_CONTROL_SKIP_STACK);
-        this.getInputMap(c).put(ks, "F10_PRESS");
-        this.getActionMap().put("F10_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                btnPassPriorityUntilStackResolvedActionPerformed(actionEvent);
-            }
-        });
-
-        btnConcede.setContentAreaFilled(false);
-        btnConcede.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
-        btnConcede.setToolTipText("CONCEDE current game");
-        btnConcede.setFocusable(false);
-        btnConcede.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnConcedeActionPerformed(null)));
-
-        // update button hint/states to default values
-        updateSkipButtons();
-
-        // HOTKEYS
-
-        KeyStroke ks2 = getCachedKeystroke(KEY_CONTROL_CONFIRM);
-        this.getInputMap(c).put(ks2, "F2_PRESS");
-        this.getActionMap().put("F2_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                if (feedbackPanel != null) {
-                    feedbackPanel.pressOKYesOrDone();
-                }
-            }
-        });
-
-        KeyStroke ks12 = getCachedKeystroke(KEY_CONTROL_SWITCH_CHAT);
-        this.getInputMap(c).put(ks12, "F12_PRESS");
-        this.getActionMap().put("F12_PRESS", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                // switch in/out to chat, must triggers in chat input too
-                //if (isUserImputActive()) return;
-                if (isChatInputActive()) {
-                    KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner();
-                } else if (!isUserImputActive()) {
-                    userChatPanel.getTxtMessageInputComponent().requestFocusInWindow();
-                }
-            }
-        });
-
-        KeyStroke ksAltE = KeyStroke.getKeyStroke(KeyEvent.VK_E, InputEvent.ALT_MASK);
-        this.getInputMap(c).put(ksAltE, "ENLARGE");
-        this.getActionMap().put("ENLARGE", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                ActionCallback callback = Plugins.instance.getActionCallback();
-                ((MageActionCallback) callback).enlargeCard(EnlargeMode.NORMAL);
-            }
-        });
-
-        KeyStroke ksAltS = KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.ALT_MASK);
-        this.getInputMap(c).put(ksAltS, "ENLARGE_SOURCE");
-        this.getActionMap().put("ENLARGE_SOURCE", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                // TODO: doesn't work? 26.11.2023, delete as useless
-                if (isUserImputActive()) return;
-                ActionCallback callback = Plugins.instance.getActionCallback();
-                ((MageActionCallback) callback).enlargeCard(EnlargeMode.ALTERNATE);
-            }
-        });
-
-        KeyStroke ksAlt1 = KeyStroke.getKeyStroke(KeyEvent.VK_1, InputEvent.ALT_MASK);
-        this.getInputMap(c).put(ksAlt1, "USEFIRSTMANAABILITY");
-        this.getActionMap().put("USEFIRSTMANAABILITY", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                SessionHandler.sendPlayerAction(PlayerAction.USE_FIRST_MANA_ABILITY_ON, gameId, null);
-                setMenuStates(
-                        PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT, "true").equals("true"),
-                        PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT_ONLY_ONE, "true").equals("true"),
-                        PreferencesDialog.getCachedValue(KEY_USE_FIRST_MANA_ABILITY, "false").equals("true"),
-                        holdingPriority);
-            }
-        });
-
-        // TODO: delete as useless
-        KeyStroke ksAltEReleased = KeyStroke.getKeyStroke(KeyEvent.VK_E, InputEvent.ALT_MASK, true);
-        this.getInputMap(c).put(ksAltEReleased, "ENLARGE_RELEASE");
-        KeyStroke ksAltSReleased = KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.ALT_MASK, true);
-        this.getInputMap(c).put(ksAltSReleased, "ENLARGE_RELEASE");
-        this.getActionMap().put("ENLARGE_RELEASE", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                ActionCallback callback = Plugins.instance.getActionCallback();
-                ((MageActionCallback) callback).hideEnlargedCard();
-            }
-        });
-
-        KeyStroke ksAlt1Released = KeyStroke.getKeyStroke(KeyEvent.VK_1, InputEvent.ALT_MASK, true);
-        this.getInputMap(c).put(ksAlt1Released, "USEFIRSTMANAABILITY_RELEASE");
-        this.getActionMap().put("USEFIRSTMANAABILITY_RELEASE", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                if (isUserImputActive()) return;
-                SessionHandler.sendPlayerAction(PlayerAction.USE_FIRST_MANA_ABILITY_OFF, gameId, null);
-                setMenuStates(
-                        PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT, "true").equals("true"),
-                        PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT_ONLY_ONE, "true").equals("true"),
-                        PreferencesDialog.getCachedValue(KEY_USE_FIRST_MANA_ABILITY, "false").equals("true"),
-                        holdingPriority);
-            }
-        });
-
-        btnSwitchHands.setContentAreaFilled(false);
-        btnSwitchHands.setBorder(new EmptyBorder(0, 0, 0, 0));
-        btnSwitchHands.setFocusable(false);
-        btnSwitchHands.setToolTipText("Switch between your hand cards and hand cards of controlled players.");
-        btnSwitchHands.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnSwitchHandActionPerformed(null)));
-
-        btnStopWatching.setContentAreaFilled(false);
-        btnStopWatching.setBorder(new EmptyBorder(0, 0, 0, 0));
-        btnStopWatching.setFocusable(false);
-        btnStopWatching.setToolTipText("Stop watching this game.");
-        btnStopWatching.addMouseListener(new FirstButtonMousePressedAction(e ->
-                btnStopWatchingActionPerformed(null)));
-
-        stackObjects.setBackgroundColor(new Color(0, 0, 0, 40));
-
-        btnStopReplay.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/control_stop.png")));
-        btnStopReplay.addActionListener(evt -> btnStopReplayActionPerformed(evt));
-
-        btnNextPlay.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/control_stop_right.png")));
-        btnNextPlay.addActionListener(evt -> btnNextPlayActionPerformed(evt));
-
-        btnPlay.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/control_right.png")));
-        btnPlay.addActionListener(evt -> btnPlayActionPerformed(evt));
-
-        btnSkipForward.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/control_double_stop_right.png")));
-        btnSkipForward.addActionListener(evt -> btnSkipForwardActionPerformed(evt));
-
-        btnPreviousPlay.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/control_stop_left.png")));
-        btnPreviousPlay.addActionListener(evt -> btnPreviousPlayActionPerformed(evt));
-
-        initPopupMenuTriggerOrder();
-
-        pnlBattlefield.setLayout(new java.awt.GridBagLayout());
-
-        jPhases = new JPanel();
-        jPhases.setBackground(new Color(0, 0, 0, 0));
-        // layout on gui size
-
-        MouseAdapter phasesMouseAdapter = new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent evt) {
-                mouseClickPhaseBar(evt);
-            }
-        };
-
-        /// phase buttons
-        if (DebugUtil.GUI_GAME_DRAW_PHASE_BUTTONS_PANEL_BORDER) {
-            jPhases.setBorder(BorderFactory.createLineBorder(Color.red));
-        }
-        String[] phases = {"Untap", "Upkeep", "Draw", "Main1",
-                "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End",
-                "Main2", "Cleanup", "Next_Turn"};
-        for (String name : phases) {
-            createPhaseButton(name, phasesMouseAdapter);
-        }
-
-        pnlReplay.setOpaque(false);
-
-        // phases buttons
-        phasesContainer = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        phasesContainer.setOpaque(false);
-        phasesContainer.add(jPhases);
-
-        // card hint panel
-        bigCardPanel = new javax.swing.JPanel();
-        bigCardPanel.setOpaque(false);
-        bigCardPanel.setLayout(new BorderLayout());
-        bigCardPanel.add(bigCard, BorderLayout.NORTH);
-
-        // split: game <|> chat/log
-        splitGameAndBigCard.setLeftComponent(splitBattlefieldAndChats);
-        splitGameAndBigCard.setRightComponent(bigCardPanel);
-    }
-
-    private void removeListener() {
-        for (MouseListener ml : this.getMouseListeners()) {
-            this.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnToggleMacro.getMouseListeners()) {
-            this.btnToggleMacro.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnCancelSkip.getMouseListeners()) {
-            this.btnCancelSkip.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnConcede.getMouseListeners()) {
-            this.btnConcede.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnSkipToYourTurn.getMouseListeners()) {
-            this.btnSkipToYourTurn.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnSkipStack.getMouseListeners()) {
-            this.btnSkipStack.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnSkipToEndStepBeforeYourTurn.getMouseListeners()) {
-            this.btnSkipToEndStepBeforeYourTurn.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnSkipToEndTurn.getMouseListeners()) {
-            this.btnSkipToEndTurn.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnSkipToNextMain.getMouseListeners()) {
-            this.btnSkipToNextMain.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnSkipToNextTurn.getMouseListeners()) {
-            this.btnSkipToNextTurn.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnSwitchHands.getMouseListeners()) {
-            this.btnSwitchHands.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.btnStopWatching.getMouseListeners()) {
-            this.btnStopWatching.removeMouseListener(ml);
-        }
-        for (MouseListener ml : this.jPhases.getMouseListeners()) {
-            this.jPhases.removeMouseListener(ml);
-        }
-        for (String name : phaseButtons.keySet()) {
-            HoverButton hoverButton = phaseButtons.get(name);
-            for (MouseListener ml : hoverButton.getMouseListeners()) {
-                hoverButton.removeMouseListener(ml);
-            }
-        }
-        for (ActionListener al : this.btnPlay.getActionListeners()) {
-            this.btnPlay.removeActionListener(al);
-        }
-        for (ActionListener al : this.btnStopReplay.getActionListeners()) {
-            this.btnStopReplay.removeActionListener(al);
-        }
-        for (ActionListener al : this.btnNextPlay.getActionListeners()) {
-            this.btnNextPlay.removeActionListener(al);
-        }
-        for (ActionListener al : this.btnNextPlay.getActionListeners()) {
-            this.btnNextPlay.removeActionListener(al);
-        }
-        for (ActionListener al : this.btnPreviousPlay.getActionListeners()) {
-            this.btnPreviousPlay.removeActionListener(al);
-        }
-        for (ActionListener al : this.btnSkipForward.getActionListeners()) {
-            this.btnSkipForward.removeActionListener(al);
-        }
-
-        final BasicSplitPaneUI myUi = (BasicSplitPaneUI) splitGameAndBigCard.getUI();
-        final BasicSplitPaneDivider divider = myUi.getDivider();
-        final JButton upArrowButton = (JButton) divider.getComponent(0);
-        for (ActionListener al : upArrowButton.getActionListeners()) {
-            upArrowButton.removeActionListener(al);
-        }
-        final JButton downArrowButton = (JButton) divider.getComponent(1);
-        for (ActionListener al : downArrowButton.getActionListeners()) {
-            downArrowButton.removeActionListener(al);
-        }
-
-        for (ComponentListener cl : this.getComponentListeners()) {
-            this.removeComponentListener(cl);
-        }
-
-        for (KeyListener kl : this.getKeyListeners()) {
-            this.removeKeyListener(kl);
-        }
-    }
-
-    private void btnConcedeActionPerformed(java.awt.event.ActionEvent evt) {
-        UserRequestMessage message = new UserRequestMessage("Confirm concede", "Are you sure you want to concede?");
-        message.setButton1("No", null);
-        message.setButton2("Yes", PlayerAction.CLIENT_CONCEDE_GAME);
-        message.setGameId(gameId);
-        MageFrame.getInstance().showUserRequestDialog(message);
-    }
-
-    private void btnToggleMacroActionPerformed(java.awt.event.ActionEvent evt) {
-        SessionHandler.sendPlayerAction(PlayerAction.TOGGLE_RECORD_MACRO, gameId, null);
-        skipButtons.activateSkipButton("");
-
-        AudioManager.playOnSkipButton();
-        if (btnToggleMacro.getBorder().equals(BORDER_ACTIVE)) {
-            btnToggleMacro.setBorder(BORDER_NON_ACTIVE);
-        } else {
-            btnToggleMacro.setBorder(BORDER_ACTIVE);
-        }
-    }
-
-    private void btnEndTurnActionPerformed(java.awt.event.ActionEvent evt) {
-        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_NEXT_TURN, gameId, null);
-        skipButtons.activateSkipButton(KEY_CONTROL_NEXT_TURN);
-
-        AudioManager.playOnSkipButton();
-        updateSkipButtons();
-    }
-
-    private boolean isChatInputUnderCursor(Point p) {
-        Component c = this.getComponentAt(p);
-        return gameChatPanel.getTxtMessageInputComponent().equals(c) || userChatPanel.getTxtMessageInputComponent().equals(c);
-    }
-
-    private boolean isChatInputActive() {
-        Component c = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-        return gameChatPanel.getTxtMessageInputComponent().equals(c) || userChatPanel.getTxtMessageInputComponent().equals(c);
-    }
-
-    private boolean isUserImputActive() {
-        // any imput or choose dialog active (need to disable skip buttons in dialogs and chat)
-        return MageDialog.isModalDialogActivated() || isChatInputActive();
-    }
-
-    private void btnUntilEndOfTurnActionPerformed(java.awt.event.ActionEvent evt) {
-        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_TURN_END_STEP, gameId, null);
-        skipButtons.activateSkipButton(KEY_CONTROL_END_STEP);
-
-        AudioManager.playOnSkipButton();
-        updateSkipButtons();
-    }
-
-    private void btnEndTurnSkipStackActionPerformed(java.awt.event.ActionEvent evt) {
-        logger.error("Skip action don't used", new Throwable());
-        /*
-        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_NEXT_TURN_SKIP_STACK, gameId, null);
-        AudioManager.playOnSkipButton();
-        updateSkipButtons(true, false, false, false, true, false);
-        */
-    }
-
-    private void btnUntilNextMainPhaseActionPerformed(java.awt.event.ActionEvent evt) {
-        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_NEXT_MAIN_PHASE, gameId, null);
-        skipButtons.activateSkipButton(KEY_CONTROL_MAIN_STEP);
-
-        AudioManager.playOnSkipButton();
-        updateSkipButtons();
-    }
-
-    private void btnPassPriorityUntilNextYourTurnActionPerformed(java.awt.event.ActionEvent evt) {
-        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_MY_NEXT_TURN, gameId, null);
-        skipButtons.activateSkipButton(KEY_CONTROL_YOUR_TURN);
-
-        AudioManager.playOnSkipButton();
-        updateSkipButtons();
-    }
-
-    private void btnPassPriorityUntilStackResolvedActionPerformed(java.awt.event.ActionEvent evt) {
-        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_STACK_RESOLVED, gameId, null);
-        skipButtons.activateSkipButton(KEY_CONTROL_SKIP_STACK);
-
-        AudioManager.playOnSkipButton();
-        updateSkipButtons();
-    }
-
-    private void btnSkipToEndStepBeforeYourTurnActionPerformed(java.awt.event.ActionEvent evt) {
-        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_UNTIL_END_STEP_BEFORE_MY_NEXT_TURN, gameId, null);
-        skipButtons.activateSkipButton(KEY_CONTROL_PRIOR_END);
-
-        AudioManager.playOnSkipButton();
-        updateSkipButtons();
-    }
-
-    private void restorePriorityActionPerformed(java.awt.event.ActionEvent evt) {
-        SessionHandler.sendPlayerAction(PlayerAction.PASS_PRIORITY_CANCEL_ALL_ACTIONS, gameId, null);
-        skipButtons.activateSkipButton("");
-
-        AudioManager.playOnSkipButtonCancel();
-        updateSkipButtons();
-    }
-
-    private void mouseClickPhaseBar(MouseEvent evt) {
-        if (SwingUtilities.isLeftMouseButton(evt)) {
-            PreferencesDialog.main(new String[]{PreferencesDialog.OPEN_PHASES_TAB});
-            // TODO: add event handler on preferences closed and refresh game data from server
-        }
-    }
-
-    private void btnSwitchHandActionPerformed(java.awt.event.ActionEvent evt) {
-        String[] choices = handCards.keySet().toArray(new String[0]);
-
-        String newChosenHandKey = (String) JOptionPane.showInputDialog(
-                this,
-                "Choose hand to display:", "Switch between hands",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                choices,
-                this.chosenHandKey);
-
-        if (newChosenHandKey != null && !newChosenHandKey.isEmpty()) {
-            this.chosenHandKey = newChosenHandKey;
-            CardsView cards = handCards.get(chosenHandKey);
-            handContainer.loadCards(cards, bigCard, gameId);
-        }
-    }
-
-    private void btnStopWatchingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopWatchingActionPerformed
-        UserRequestMessage message = new UserRequestMessage("Stop watching", "Are you sure you want to stop watching?");
-        message.setButton1("No", null);
-        message.setButton2("Yes", PlayerAction.CLIENT_STOP_WATCHING);
-        message.setGameId(gameId);
-        MageFrame.getInstance().showUserRequestDialog(message);
-    }//GEN-LAST:event_btnStopWatchingActionPerformed
-
-    private void btnStopReplayActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopReplayActionPerformed
-        if (replayTask != null && !replayTask.isDone()) {
-            replayTask.cancel(true);
-        } else {
-            UserRequestMessage message = new UserRequestMessage("Stop replay", "Are you sure you want to stop replay?");
-            message.setButton1("No", null);
-            message.setButton2("Yes", PlayerAction.CLIENT_REPLAY_ACTION);
-            message.setGameId(gameId);
-            MageFrame.getInstance().showUserRequestDialog(message);
-        }
-    }//GEN-LAST:event_btnStopReplayActionPerformed
-
-    private void btnNextPlayActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNextPlayActionPerformed
-        SessionHandler.nextPlay(gameId);
-    }//GEN-LAST:event_btnNextPlayActionPerformed
-
-    private void btnPreviousPlayActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPreviousPlayActionPerformed
-        SessionHandler.previousPlay(gameId);
-    }//GEN-LAST:event_btnPreviousPlayActionPerformed
-
-    private void btnPlayActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPlayActionPerformed
-        if (replayTask == null || replayTask.isDone()) {
-            replayTask = new ReplayTask(gameId);
-            replayTask.execute();
-        }
-    }//GEN-LAST:event_btnPlayActionPerformed
-
-    private void btnSkipForwardActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSkipForwardActionPerformed
-        SessionHandler.skipForward(gameId, 10);
-    }//GEN-LAST:event_btnSkipForwardActionPerformed
-
-    public void setJLayeredPane(JLayeredPane jLayeredPane) {
-        this.jLayeredPane = jLayeredPane;
-    }
-
-    public void installComponents() {
-        jLayeredPane.setOpaque(false);
-        jLayeredPane.add(DialogManager.getManager(gameId), JLayeredPane.MODAL_LAYER, 0);
-        installAbilityPicker();
-    }
-
-    private void installAbilityPicker() {
-        jLayeredPane.add(abilityPicker, JLayeredPane.MODAL_LAYER);
-        abilityPicker.setVisible(false);
-    }
-
-    private void uninstallComponents() {
-        if (jLayeredPane != null) {
-            jLayeredPane.remove(DialogManager.getManager(gameId));
-        }
-        DialogManager.removeGame(gameId);
-        uninstallAbilityPicker();
-    }
-
-    private void uninstallAbilityPicker() {
-        abilityPicker.setVisible(false);
-        if (jLayeredPane != null) {
-            jLayeredPane.remove(abilityPicker);
-        }
-        this.abilityPicker.cleanUp();
-    }
-
-    private void createPhaseButton(String name, MouseAdapter mouseAdapter) {
-        int buttonSize = GUISizeHelper.gamePhaseButtonSize;
-        Rectangle rect = new Rectangle(buttonSize, buttonSize);
-        HoverButton button = new HoverButton("", ImageManagerImpl.instance.getPhaseImage(name, buttonSize), rect);
-        button.setToolTipText(name.replaceAll("_", " "));
-        button.setPreferredSize(new Dimension(buttonSize, buttonSize));
-        button.addMouseListener(mouseAdapter);
-        phaseButtons.put(name, button);
-        jPhases.add(button);
-    }
-
-    // Event listener for the ShowCardsDialog
-    private Listener<Event> getShowCardsEventListener(final ShowCardsDialog dialog) {
-        return event -> {
-            if (event.getEventType() == ClientEventType.CARD_POPUP_MENU) {
-                if (event.getComponent() != null && event.getComponent() instanceof MageCard) {
-                    JPopupMenu menu = ((MageCard) event.getComponent()).getPopupMenu();
-                    if (menu != null) {
-                        cardViewPopupMenu = ((CardView) event.getSource());
-                        menu.show(event.getComponent(), event.getxPos(), event.getyPos());
-                    }
-                }
-            }
-        };
-    }
-
-    public void handleTriggerOrderPopupMenuEvent(ActionEvent e) {
-        UUID abilityId = null;
-        String abilityRuleText = null;
-        if (cardViewPopupMenu instanceof CardView && cardViewPopupMenu.getAbility() != null) {
-            abilityId = cardViewPopupMenu.getAbility().getId();
-            if (!cardViewPopupMenu.getAbility().getRules().isEmpty()
-                    && !cardViewPopupMenu.getAbility().getRules().get(0).isEmpty()) {
-                abilityRuleText = cardViewPopupMenu.getAbility().getRules().get(0);
-                abilityRuleText = abilityRuleText.replace("{this}", cardViewPopupMenu.getName());
-            }
-        }
-        switch (e.getActionCommand()) {
-            case CMD_AUTO_ORDER_FIRST:
-                SessionHandler.sendPlayerAction(TRIGGER_AUTO_ORDER_ABILITY_FIRST, gameId, abilityId);
-                SessionHandler.sendPlayerUUID(gameId, abilityId);
-                break;
-            case CMD_AUTO_ORDER_LAST:
-                SessionHandler.sendPlayerAction(TRIGGER_AUTO_ORDER_ABILITY_LAST, gameId, abilityId);
-                SessionHandler.sendPlayerUUID(gameId, null); // Don't use this but refresh the displayed abilities
-                break;
-            case CMD_AUTO_ORDER_NAME_FIRST:
-                if (abilityRuleText != null) {
-                    SessionHandler.sendPlayerAction(TRIGGER_AUTO_ORDER_NAME_FIRST, gameId, abilityRuleText);
-                    SessionHandler.sendPlayerUUID(gameId, abilityId);
-                }
-                break;
-            case CMD_AUTO_ORDER_NAME_LAST:
-                if (abilityRuleText != null) {
-                    SessionHandler.sendPlayerAction(TRIGGER_AUTO_ORDER_NAME_LAST, gameId, abilityRuleText);
-                    SessionHandler.sendPlayerUUID(gameId, null); // Don't use this but refresh the displayed abilities
-                }
-                break;
-            case CMD_AUTO_ORDER_RESET_ALL:
-                SessionHandler.sendPlayerAction(TRIGGER_AUTO_ORDER_RESET_ALL, gameId, null);
-                break;
-            default:
-                break;
-        }
-
-        // TODO: 2021-01-23 why it here? Can be removed?
-        for (ShowCardsDialog dialog : pickTarget) {
-            dialog.removeDialog();
-        }
-        for (PickPileDialog dialog : pickPile) {
-            dialog.removeDialog();
-        }
-    }
-
-    private void initPopupMenuTriggerOrder() {
-
-        ActionListener actionListener = e -> handleTriggerOrderPopupMenuEvent(e);
-
-        popupMenuTriggerOrder = new JPopupMenu();
-
-        // String tooltipText = "";
-        JMenuItem menuItem;
-        menuItem = new JMenuItem("Put this ability always first on the stack");
-        menuItem.setActionCommand(CMD_AUTO_ORDER_FIRST);
-        menuItem.addActionListener(actionListener);
-        popupMenuTriggerOrder.add(menuItem);
-
-        menuItem = new JMenuItem("Put this ability always last on the stack");
-        menuItem.setActionCommand(CMD_AUTO_ORDER_LAST);
-        menuItem.addActionListener(actionListener);
-        popupMenuTriggerOrder.add(menuItem);
-
-        menuItem = new JMenuItem("Put all abilities with that rule text always first on the stack");
-        menuItem.setActionCommand(CMD_AUTO_ORDER_NAME_FIRST);
-        menuItem.addActionListener(actionListener);
-        popupMenuTriggerOrder.add(menuItem);
-
-        menuItem = new JMenuItem("Put all abilities with that rule text always last on the stack");
-        menuItem.setActionCommand(CMD_AUTO_ORDER_NAME_LAST);
-        menuItem.addActionListener(actionListener);
-        popupMenuTriggerOrder.add(menuItem);
-
-        menuItem = new JMenuItem("Reset all order settings for triggered abilities");
-        menuItem.setActionCommand(CMD_AUTO_ORDER_RESET_ALL);
-        menuItem.addActionListener(actionListener);
-        popupMenuTriggerOrder.add(menuItem);
-    }
-
-    public String getGameLog() {
-        return gameChatPanel.getText();
-    }
-
-    public FeedbackPanel getFeedbackPanel() {
-        return feedbackPanel;
-    }
-
-    // Use Cmd on OSX since Ctrl+click is already used to simulate right click
-    private static final int holdPriorityMask = System.getProperty("os.name").contains("Mac OS X") ? InputEvent.META_DOWN_MASK : InputEvent.CTRL_DOWN_MASK;
-
-    public void handleEvent(AWTEvent event) {
-        if (event instanceof InputEvent) {
-            int id = event.getID();
-            boolean isActionEvent = false;
-            if (id == MouseEvent.MOUSE_PRESSED) {
-                isActionEvent = true;
-                // clear chat focus on click
-                if (event instanceof MouseEvent) {
-                    MouseEvent me = (MouseEvent) event;
-                    if (isChatInputActive() && !isChatInputUnderCursor(me.getPoint())) {
-                        KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner();
-                    }
-                }
-            } else if (id == KeyEvent.KEY_PRESSED) {
-                KeyEvent key = (KeyEvent) event;
-                int keyCode = key.getKeyCode();
-                if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
-                    isActionEvent = true;
-                }
-            }
-            if (isActionEvent) {
-                InputEvent input = (InputEvent) event;
-                if ((input.getModifiersEx() & holdPriorityMask) != 0) {
-                    setMenuStates(
-                            PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT, "true").equals("true"),
-                            PreferencesDialog.getCachedValue(KEY_GAME_MANA_AUTOPAYMENT_ONLY_ONE, "true").equals("true"),
-                            PreferencesDialog.getCachedValue(KEY_USE_FIRST_MANA_ABILITY, "false").equals("true"),
-                            true);
-                    holdPriority(true);
-                }
-            }
-        }
-    }
-
-    public void holdPriority(boolean holdPriority) {
-        if (holdingPriority != holdPriority) {
-            holdingPriority = holdPriority;
-            txtHoldPriority.setVisible(holdPriority);
-            if (holdPriority) {
-                SessionHandler.sendPlayerAction(PlayerAction.HOLD_PRIORITY, gameId, null);
-            } else {
-                SessionHandler.sendPlayerAction(PlayerAction.UNHOLD_PRIORITY, gameId, null);
-            }
-        }
-    }
-
-    private boolean holdingPriority;
-    private mage.client.components.ability.AbilityPicker abilityPicker;
-    private mage.client.cards.BigCard bigCard;
-
-    private KeyboundButton btnToggleMacro;
-    private KeyboundButton btnCancelSkip;
-    private KeyboundButton btnSkipToNextTurn; // F4
-    private KeyboundButton btnSkipToEndTurn; // F5
-    private KeyboundButton btnSkipToNextMain; // F7
-    private KeyboundButton btnSkipStack; // F8
-    private KeyboundButton btnSkipToYourTurn; // F9
-    private KeyboundButton btnSkipToEndStepBeforeYourTurn; // F11
-
-    private javax.swing.JButton btnConcede;
-    private javax.swing.JButton btnSwitchHands;
-
-    private javax.swing.JButton btnNextPlay;
-    private javax.swing.JButton btnPlay;
-    private javax.swing.JButton btnPreviousPlay;
-    private javax.swing.JButton btnSkipForward;
-    private javax.swing.JButton btnStopReplay;
-
-    private javax.swing.JButton btnStopWatching;
-
-    private mage.client.chat.ChatPanelBasic gameChatPanel;
-    private mage.client.game.FeedbackPanel feedbackPanel;
-    private HelperPanel helper;
-    private mage.client.chat.ChatPanelBasic userChatPanel;
-    private javax.swing.JPanel bigCardPanel;
-    private javax.swing.JPanel pnlHelperHandButtonsStackArea;
-    private javax.swing.JSplitPane splitGameAndBigCard;
-    private javax.swing.JSplitPane splitBattlefieldAndChats;
-    private javax.swing.JSplitPane splitChatAndLogs;
-    private javax.swing.JSplitPane splitHandAndStack;
-    private javax.swing.JLabel lblActivePlayer;
-    private javax.swing.JLabel lblPhase;
-    private javax.swing.JLabel lblPriority;
-    private javax.swing.JLabel lblStep;
-    private javax.swing.JLabel lblTurn;
-    private javax.swing.JPanel pnlBattlefield;
-    private javax.swing.JPanel pnlShortCuts;
-    private javax.swing.JPanel pnlReplay;
-    private javax.swing.JLabel txtActivePlayer;
-    private javax.swing.JLabel txtPhase;
-    private javax.swing.JLabel txtPriority;
-    private javax.swing.JLabel txtStep;
-    private javax.swing.JLabel txtTurn;
-
-    private Map<String, CardsView> handCards;
-
-    private mage.client.cards.Cards stackObjects;
-    private HandPanel handContainer;
-
-    private JPanel jPhases;
-    private JPanel phasesContainer;
-    private javax.swing.JLabel txtHoldPriority;
-
-    private boolean imagePanelState;
-
-}
-
-class ReplayTask extends SwingWorker<Void, Collection<MatchView>> {
-
-    // replay without table - just single game
-    private final UUID gameId;
-
-    private static final Logger logger = Logger.getLogger(ReplayTask.class);
-
-    ReplayTask(UUID gameId) {
-        this.gameId = gameId;
     }
 
-    @Override
-    protected Void doInBackground() throws Exception {
-        while (!isCancelled()) {
-            SessionHandler.nextPlay(gameId);
-            TimeUnit.SECONDS.sleep(1);
-        }
-        return null;
-    }
+    private static enum PopUpMenuType {
+        TRIGGER_ORDER;
 
-    @Override
-    protected void done() {
-        try {
-            get();
-        } catch (InterruptedException | ExecutionException ex) {
-            logger.fatal("Replay Match Task error", ex);
-        } catch (CancellationException ex) {
-        }
     }
 }

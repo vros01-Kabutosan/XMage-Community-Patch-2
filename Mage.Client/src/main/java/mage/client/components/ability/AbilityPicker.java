@@ -31,7 +31,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
 
     // TODO: add gui scale support (form file lost, so it's ok for scale, see PlayerPanelExt)
 
-    private static final String DEFAULT_MESSAGE = "Choose spell or ability to play (single-click)";
+    private static final String DEFAULT_MESSAGE = "Choose spell or ability";
     private static final int DIALOG_WIDTH = 440;
     private static final int DIALOG_HEIGHT = 260;
     private static final String CHOICE_PREFIX = "<html>";
@@ -152,7 +152,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         setBackgroundPainter(mwPanelPainter);
 
         title = new ColorPane();
-        title.setFont(new Font("Times New Roman", Font.BOLD, sizeMod(15)));
+        title.setFont(new Font("SansSerif", Font.BOLD, sizeMod(15)));
         title.setEditable(false);
         title.setFocusCycleRoot(false);
         title.setOpaque(false);
@@ -170,6 +170,9 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         rightImageHovered = ImageHelper.loadImage(IMAGE_RIGHT_HOVERED_PATH);
 
         setOpaque(false);
+        setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(110, 120, 140, 190), 1, true),
+                BorderFactory.createEmptyBorder(sizeMod(6), sizeMod(6), sizeMod(6), sizeMod(6))));
 
         rows = new JList();
 
@@ -177,6 +180,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         rows.setCellRenderer(new ImageRenderer());
         rows.ensureIndexIsVisible(rows.getModel().getSize());
         rows.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        rows.setFixedCellHeight(sizeMod(34));
         rows.setLayoutOrientation(JList.VERTICAL);
         rows.setMaximumSize(new Dimension(32767, 32767));
         rows.setMinimumSize(new Dimension(sizeMod(67), sizeMod(16)));
@@ -193,7 +197,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         });
 
         rows.setSelectedIndex(0);
-        rows.setFont(new Font("Times New Roman", 1, sizeMod(17)));
+        rows.setFont(new Font("SansSerif", Font.PLAIN, sizeMod(15)));
         rows.setBorder(BorderFactory.createEmptyBorder());
         rows.addMouseWheelListener(this);
 
@@ -252,6 +256,47 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         action.actionPerformed(null);
     }
 
+    private static final class CheckmarkIcon implements Icon {
+        private final boolean checked;
+        private final int size;
+
+        private CheckmarkIcon(boolean checked, int size) {
+            this.checked = checked;
+            this.size = size;
+        }
+
+        @Override
+        public int getIconWidth() {
+            return size;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return size;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(checked ? new Color(54, 155, 225) : new Color(70, 78, 92));
+                g2.fillRoundRect(x, y, size - 1, size - 1, 4, 4);
+                g2.setColor(new Color(205, 220, 235));
+                g2.drawRoundRect(x, y, size - 1, size - 1, 4, 4);
+                if (checked) {
+                    g2.setColor(Color.WHITE);
+                    g2.setStroke(new BasicStroke(Math.max(2f, size / 7f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                    int mid = y + size / 2;
+                    g2.drawLine(x + size / 5, mid, x + size / 2 - 1, y + size - size / 4);
+                    g2.drawLine(x + size / 2 - 1, y + size - size / 4, x + size - size / 5, y + size / 4);
+                }
+            } finally {
+                g2.dispose();
+            }
+        }
+    }
+
     class ImageRenderer extends DefaultListCellRenderer {
 
         @Override
@@ -271,13 +316,16 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
             String name = object.toString();
             label.setText(name);
 
-            if (isSelected) {
-                label.setIcon(new ImageIcon(rightImageHovered));
-                label.setForeground(SELECTED_COLOR);
-                label.setBorder(BorderFactory.createEmptyBorder());
-            } else {
-                label.setIcon(new ImageIcon(rightImage));
-            }
+            label.setIcon(new CheckmarkIcon(isSelected, sizeMod(18)));
+            label.setIconTextGap(sizeMod(8));
+            label.setForeground(isSelected ? new Color(235, 245, 255) : new Color(225, 230, 238));
+            label.setBorder(BorderFactory.createCompoundBorder(
+                    isSelected
+                            ? BorderFactory.createLineBorder(new Color(86, 170, 235), 1, true)
+                            : BorderFactory.createEmptyBorder(1, 1, 1, 1),
+                    BorderFactory.createEmptyBorder(sizeMod(3), sizeMod(7), sizeMod(3), sizeMod(7))));
+            label.setBackground(isSelected ? new Color(42, 68, 92, 210) : new Color(24, 28, 36, 160));
+            label.setOpaque(true);
 
             return label;
         }

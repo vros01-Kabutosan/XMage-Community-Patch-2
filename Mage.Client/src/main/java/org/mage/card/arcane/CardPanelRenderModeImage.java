@@ -43,6 +43,7 @@ import mage.constants.SubType;
 import mage.constants.Zone;
 import mage.view.CardView;
 import mage.view.CounterView;
+import mage.view.PermanentView;
 import org.jdesktop.swingx.graphics.GraphicsUtilities;
 import org.mage.card.arcane.CardPanel;
 import org.mage.card.arcane.CardRendererUtils;
@@ -71,6 +72,8 @@ extends CardPanel {
     private ImagePanel overlayPanel;
     private JPanel typeIconPanel;
     private JButton typeIconButton;
+    private JPanel triggerIndicatorPanel;
+    private JButton triggerIndicatorButton;
     private final JPanel ptPanel;
     private JPanel counterPanel;
     private JLabel loyaltyCounterLabel;
@@ -202,6 +205,7 @@ extends CardPanel {
         if (this.getGameCard().isToken()) {
             this.setTypeIcon(ImageManagerImpl.instance.getTokenIconImage(), "Token Permanent");
         }
+        this.updateTriggerIndicator(newGameCard);
         this.displayTitleAnyway = PreferencesDialog.getCachedValue("showCardNames", "true").equals("true");
         this.displayFullImagePath = PreferencesDialog.getCachedValue("showFullImagePath", "false").equals("true");
         this.titleText = new GlowText();
@@ -379,6 +383,10 @@ extends CardPanel {
         if (this.typeIconPanel != null) {
             this.typeIconPanel.setLocation(realCardSize.x, realCardSize.y);
             this.typeIconPanel.setSize(realCardSize.width, realCardSize.height);
+        }
+        if (this.triggerIndicatorPanel != null) {
+            this.triggerIndicatorPanel.setLocation(realCardSize.x, realCardSize.y);
+            this.triggerIndicatorPanel.setSize(realCardSize.width, realCardSize.height);
         }
         if (this.counterPanel != null) {
             this.counterPanel.setLocation(realCardSize.x, realCardSize.y);
@@ -566,6 +574,7 @@ extends CardPanel {
         if (this.counterPanel != null) {
             this.updateCounters(card);
         }
+        this.updateTriggerIndicator(card);
         this.repaint();
     }
 
@@ -645,6 +654,48 @@ extends CardPanel {
 
     private void setTitle(CardView card) {
         this.titleText.setText(!this.displayTitleAnyway && this.hasImage ? "" : card.getDisplayName());
+    }
+
+    private static BufferedImage createTriggerIndicator() {
+        BufferedImage image = new BufferedImage(25, 25, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = image.createGraphics();
+        try {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setColor(new Color(35, 12, 12, 235));
+            g.fillOval(0, 0, 25, 25);
+            g.setColor(new Color(220, 55, 45, 245));
+            g.fillOval(2, 2, 21, 21);
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("SansSerif", Font.BOLD, 17));
+            FontMetrics fm = g.getFontMetrics();
+            String text = "T";
+            g.drawString(text, (25 - fm.stringWidth(text)) / 2,
+                    (25 - fm.getHeight()) / 2 + fm.getAscent());
+        } finally {
+            g.dispose();
+        }
+        return image;
+    }
+
+    private void updateTriggerIndicator(CardView card) {
+        boolean active = card instanceof PermanentView && ((PermanentView) card).hasActiveTrigger();
+        if (active && this.triggerIndicatorPanel == null) {
+            this.triggerIndicatorPanel = new JPanel(null);
+            this.triggerIndicatorPanel.setOpaque(false);
+            this.triggerIndicatorButton = new JButton(new ImageIcon(createTriggerIndicator()));
+            this.triggerIndicatorButton.setBorder(BorderFactory.createEmptyBorder());
+            this.triggerIndicatorButton.setContentAreaFilled(false);
+            this.triggerIndicatorButton.setFocusPainted(false);
+            this.triggerIndicatorButton.setToolTipText("Triggered ability waiting on the stack");
+            this.triggerIndicatorPanel.add(this.triggerIndicatorButton);
+            this.add(this.triggerIndicatorPanel);
+        }
+        if (this.triggerIndicatorPanel != null) {
+            this.triggerIndicatorPanel.setVisible(active && this.isPermanent());
+            if (active) {
+                this.triggerIndicatorButton.setBounds(2, 2, 25, 25);
+            }
+        }
     }
 
     private void setTypeIcon(BufferedImage bufferedImage, String toolTipText) {

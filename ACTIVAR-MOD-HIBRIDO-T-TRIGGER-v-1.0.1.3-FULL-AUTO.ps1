@@ -8,7 +8,7 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
-$Version = "v-1.0.1.1"
+$Version = "v-1.0.1.3"
 $RepoUrl = "https://github.com/vros01-Kabutosan/XMage-Community-Patch-2.git"
 $Branch = "work/importacion-instalacion-v-1.0.0"
 $Active = "J:\MTG\xmage"
@@ -292,6 +292,62 @@ function Test-ValidSource {
     return $false
 }
 
+function Update-CleanSourceFastForward {
+    param(
+        [string]$Candidate,
+        [string]$ExpectedRemoteSha
+    )
+    if (-not (Test-Path -Path (Join-Path $Candidate ".git"))) {
+        return $false
+    }
+    if (-not (Test-Path -Path (Join-Path $Candidate "pom.xml"))) {
+        return $false
+    }
+
+    try {
+        $remoteOutput = Invoke-NativeLogged -FilePath $Git -Arguments @("-C", $Candidate, "config", "--get", "remote.origin.url") -Label "GIT_UPDATE_REMOTE"
+        $branchOutput = Invoke-NativeLogged -FilePath $Git -Arguments @("-C", $Candidate, "branch", "--show-current") -Label "GIT_UPDATE_BRANCH"
+        $headOutput = Invoke-NativeLogged -FilePath $Git -Arguments @("-C", $Candidate, "rev-parse", "HEAD") -Label "GIT_UPDATE_HEAD"
+        $statusOutput = Invoke-NativeLogged -FilePath $Git -Arguments @("-C", $Candidate, "status", "--short") -Label "GIT_UPDATE_STATUS"
+
+        $remote = ([string](@($remoteOutput)[0])).Trim().TrimEnd("/")
+        $expectedRemote = $RepoUrl.TrimEnd("/")
+        $branch = ([string](@($branchOutput)[0])).Trim()
+        $head = ([string](@($headOutput)[0])).Trim()
+        $status = (@($statusOutput) -join "").Trim()
+
+        if ($remote -ine $expectedRemote) {
+            Write-Log "SOURCE_FAST_FORWARD=SKIP;PATH=$Candidate;REASON=REMOTE_MISMATCH"
+            return $false
+        }
+        if ($branch -ne $Branch) {
+            Write-Log "SOURCE_FAST_FORWARD=SKIP;PATH=$Candidate;REASON=BRANCH_MISMATCH;BRANCH=$branch"
+            return $false
+        }
+        if ($status.Length -ne 0) {
+            Write-Log "SOURCE_FAST_FORWARD=SKIP;PATH=$Candidate;REASON=WORKTREE_NOT_CLEAN;STATUS_BYTES=$($status.Length)"
+            return $false
+        }
+        if ($head -eq $ExpectedRemoteSha) {
+            return $true
+        }
+
+        Write-Log "SOURCE_FAST_FORWARD=BEGIN;PATH=$Candidate;FROM=$head;TO=$ExpectedRemoteSha"
+        $null = Invoke-NativeLogged -FilePath $Git -Arguments @("-C", $Candidate, "fetch", "--no-tags", "origin", ("refs/heads/" + $Branch)) -Label "GIT_SOURCE_FETCH"
+        $null = Invoke-NativeLogged -FilePath $Git -Arguments @("-C", $Candidate, "merge", "--ff-only", $ExpectedRemoteSha) -Label "GIT_SOURCE_FAST_FORWARD"
+
+        if (-not (Test-ValidSource -Candidate $Candidate -ExpectedRemoteSha $ExpectedRemoteSha)) {
+            throw "La fuente no coincide con el HEAD remoto después del avance rápido."
+        }
+        Write-Log "SOURCE_FAST_FORWARD=PASS;PATH=$Candidate;HEAD=$ExpectedRemoteSha"
+        return $true
+    }
+    catch {
+        Write-Log "SOURCE_FAST_FORWARD=FAIL;PATH=$Candidate;ERROR=$($_.Exception.Message)"
+        return $false
+    }
+}
+
 function Find-Java17 {
     $homes = @()
     if ($env:JAVA_HOME) {
@@ -305,8 +361,8 @@ function Find-Java17 {
         $homes += @(Get-ChildItem -Path $javaParent -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "jdk-17*" } | ForEach-Object { $_.FullName })
     }
 
-    foreach ($home in @($homes | Where-Object { $_ } | Select-Object -Unique)) {
-        $exe = Join-Path $home "bin\java.exe"
+    foreach ($javaHomeCandidate in @($homes | Where-Object { $_ } | Select-Object -Unique)) {
+        $exe = Join-Path $javaHomeCandidate "bin\java.exe"
         if (-not (Test-Path -Path $exe -PathType Leaf)) {
             continue
         }
@@ -314,11 +370,11 @@ function Find-Java17 {
             $versionOutput = Invoke-NativeLogged -FilePath $exe -Arguments @("-version") -Label "JAVA_VERSION"
             $version = (@($versionOutput) -join " ")
             if ($version -match 'version "17\.') {
-                return [PSCustomObject]@{ Home = $home; Exe = $exe }
+                return [PSCustomObject]@{ Home = $javaHomeCandidate; Exe = $exe }
             }
         }
         catch {
-            Write-Log "JAVA_CANDIDATE_REJECTED=$home;ERROR=$($_.Exception.Message)"
+            Write-Log "JAVA_CANDIDATE_REJECTED=$javaHomeCandidate;ERROR=$($_.Exception.Message)"
         }
     }
     throw "No se encontró un JDK 17 ejecutable para compilar."
@@ -492,28 +548,39 @@ try {
     Write-Log "REMOTE_HEAD=$RemoteHead"
 
     $sourceCandidate = Join-Path $ProjectRoot "01-FUENTE"
-    $cloneCandidate = Join-Path $ProjectRoot "03-BUILD\SOURCE-FINAL"
-    if (Test-ValidSource -Candidate $sourceCandidate -ExpectedRemoteSha $RemoteHead) {
-        $Source = $sourceCandidate
-        Write-Log "SOURCE_SELECTED=$Source;MODE=EXISTING_VALID_CLONE"
-    }
-    elseif (Test-Path -Path $cloneCandidate) {
-        if (Test-ValidSource -Candidate $cloneCandidate -ExpectedRemoteSha $RemoteHead) {
-            $Source = $cloneCandidate
+    $legacyCloneCandidate = Join-Path $ProjectRoot "03-BUILD\SOURCE-FINAL"
+    $candidatePaths = @($sourceCandidate, $legacyCloneCandidate)
+    foreach ($candidatePath in $candidatePaths) {
+        if (Test-ValidSource -Candidate $candidatePath -ExpectedRemoteSha $RemoteHead) {
+            $Source = $candidatePath
             Write-Log "SOURCE_SELECTED=$Source;MODE=EXISTING_VALID_CLONE"
+            break
+        }
+        if (Update-CleanSourceFastForward -Candidate $candidatePath -ExpectedRemoteSha $RemoteHead) {
+            $Source = $candidatePath
+            Write-Log "SOURCE_SELECTED=$Source;MODE=EXISTING_FAST_FORWARDED_CLONE"
+            break
+        }
+    }
+
+    if ($null -eq $Source) {
+        $cloneCandidate = Join-Path $ProjectRoot ("03-BUILD\SOURCE-FINAL-" + $RemoteHead.Substring(0, 12))
+        if (Test-Path -Path $cloneCandidate) {
+            if (-not (Test-ValidSource -Candidate $cloneCandidate -ExpectedRemoteSha $RemoteHead)) {
+                throw "Existe una fuente aislada no válida o modificada en $cloneCandidate; se conserva y no se sobrescribe."
+            }
+            $Source = $cloneCandidate
+            Write-Log "SOURCE_SELECTED=$Source;MODE=EXISTING_SHA_CLONE"
         }
         else {
-            throw "Existe una fuente no válida o modificada en $cloneCandidate; se conserva y no se sobrescribe."
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $cloneCandidate) | Out-Null
+            $null = Invoke-NativeLogged -FilePath $Git -Arguments @("clone", "--single-branch", "--branch", $Branch, $RepoUrl, $cloneCandidate) -Label "GIT_CLONE_FINAL_SOURCE"
+            if (-not (Test-ValidSource -Candidate $cloneCandidate -ExpectedRemoteSha $RemoteHead)) {
+                throw "El clon final no coincide con el HEAD remoto o está sucio."
+            }
+            $Source = $cloneCandidate
+            Write-Log "SOURCE_SELECTED=$Source;MODE=NEW_SHA_CLONE"
         }
-    }
-    else {
-        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $cloneCandidate) | Out-Null
-        $null = Invoke-NativeLogged -FilePath $Git -Arguments @("clone", "--single-branch", "--branch", $Branch, $RepoUrl, $cloneCandidate) -Label "GIT_CLONE_FINAL_SOURCE"
-        if (-not (Test-ValidSource -Candidate $cloneCandidate -ExpectedRemoteSha $RemoteHead)) {
-            throw "El clon final no coincide con el HEAD remoto o está sucio."
-        }
-        $Source = $cloneCandidate
-        Write-Log "SOURCE_SELECTED=$Source;MODE=NEW_CLONE"
     }
 
     $requiredFiles = @(
@@ -732,7 +799,10 @@ try {
             }
             $serverPath = [string]$serverLauncher[0]
             Write-Log "SERVER_LAUNCHER=$serverPath"
-            $null = Start-ExistingLauncher -Path $serverPath -Label "SERVER"
+            $serverProcess = Start-ExistingLauncher -Path $serverPath -Label "SERVER"
+            $StartedLauncherPids += [int]$serverProcess.Id
+            $LaunchCleanupArmed = $true
+            Write-Log "LAUNCH_TRACK=SERVER;PID=$($serverProcess.Id)"
 
             $serverReady = $false
             for ($attempt = 0; $attempt -lt 60; $attempt++) {
@@ -766,18 +836,25 @@ try {
             }
             $clientPath = [string]$clientLauncher[0]
             Write-Log "CLIENT_LAUNCHER=$clientPath"
-            $null = Start-ExistingLauncher -Path $clientPath -Label "CLIENT"
+            $clientProcess = Start-ExistingLauncher -Path $clientPath -Label "CLIENT"
+            $StartedLauncherPids += [int]$clientProcess.Id
+            Write-Log "LAUNCH_TRACK=CLIENT;PID=$($clientProcess.Id)"
             Write-Log "LAUNCH=PASS;SERVER_AND_CLIENT=STARTED"
         }
     }
 }
 catch {
     Write-Log "ERROR=$($_.Exception.Message)"
-    if ($Launch -and $Activate) {
+    if ($LaunchCleanupArmed -and ($StartedLauncherPids.Count -gt 0)) {
+        Write-Log "LAUNCH_ROLLBACK_SCAN=ARMED;TRACKED_PIDS=$($StartedLauncherPids -join ',')"
+        $trackedIds = @($StartedLauncherPids)
         $launched = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $processId = [int]$_.ProcessId
             $exe = [string]$_.ExecutablePath
             $cmd = [string]$_.CommandLine
-            $exe.StartsWith($Active, [System.StringComparison]::OrdinalIgnoreCase) -or ($cmd.IndexOf($Active, [System.StringComparison]::OrdinalIgnoreCase) -ge 0)
+            $tracked = $trackedIds -contains $processId
+            $inActive = $exe.StartsWith($Active, [System.StringComparison]::OrdinalIgnoreCase) -or ($cmd.IndexOf($Active, [System.StringComparison]::OrdinalIgnoreCase) -ge 0)
+            $tracked -or $inActive
         })
         foreach ($process in $launched) {
             try {

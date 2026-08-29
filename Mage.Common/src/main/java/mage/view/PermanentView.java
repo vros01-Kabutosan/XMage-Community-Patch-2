@@ -267,5 +267,4 @@ public class PermanentView extends CardView {
     public boolean hasActiveTrigger() {
         return activeTrigger;
     }
-
 }

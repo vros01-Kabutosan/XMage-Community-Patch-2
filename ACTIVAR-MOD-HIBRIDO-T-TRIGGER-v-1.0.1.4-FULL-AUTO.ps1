@@ -8,7 +8,7 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
-$Version = "v-1.0.1.3"
+$Version = "v-1.0.1.4"
 $RepoUrl = "https://github.com/vros01-Kabutosan/XMage-Community-Patch-2.git"
 $Branch = "work/importacion-instalacion-v-1.0.0"
 $Active = "J:\MTG\xmage"
@@ -46,6 +46,7 @@ $BackupRoot = $null
 $BackupItems = @()
 $OverlayPlans = @()
 $ReplacedPlans = @()
+$ReplacementBackupItems = @()
 $Git = $null
 $Maven = $null
 $BuildJavaHome = $null
@@ -754,9 +755,14 @@ try {
         }
 
         foreach ($plan in $OverlayPlans) {
-            [IO.File]::Replace($plan.Temp, $plan.Active, $null)
+            $replacementBackupPath = Join-Path $BackupRoot ("ATOMIC-REPLACE-" + ($ReplacementBackupItems.Count + 1).ToString("00") + ".before.tmp.jar")
+            if (Test-Path -Path $replacementBackupPath -PathType Leaf) {
+                throw "Ya existe el backup temporal de reemplazo: $replacementBackupPath"
+            }
+            [IO.File]::Replace($plan.Temp, $plan.Active, $replacementBackupPath)
+            $ReplacementBackupItems += [PSCustomObject]@{ Path = $replacementBackupPath; Active = $plan.Active }
             $ReplacedPlans += $plan
-            Write-Log "ATOMIC_REPLACE=PASS;ACTIVE=$($plan.Active)"
+            Write-Log "ATOMIC_REPLACE=PASS;ACTIVE=$($plan.Active);REPLACEMENT_BACKUP=$replacementBackupPath"
         }
 
         foreach ($plan in $OverlayPlans) {
@@ -766,6 +772,12 @@ try {
 
         foreach ($plan in $OverlayPlans) {
             Write-Log "ACTIVE_ONLY_AND_NON_TARGET_ENTRIES=PRESERVED;JAR=$($plan.Active)"
+        }
+        foreach ($replacementBackup in $ReplacementBackupItems) {
+            if (Test-Path -Path $replacementBackup.Path -PathType Leaf) {
+                Remove-Item -Path $replacementBackup.Path -Force
+                Write-Log "ATOMIC_REPLACE_BACKUP_CLEAN=PASS;PATH=$($replacementBackup.Path)"
+            }
         }
         Write-Log "SERVER_JAR=NOT_MODIFIED"
         Write-Log "MAGE_SETS_JAR=NOT_MODIFIED"
@@ -878,6 +890,17 @@ catch {
             }
             catch {
                 Write-Log "ROLLBACK=FAIL;ACTIVE=$($backup.Active);ERROR=$($_.Exception.Message)"
+            }
+        }
+    }
+    foreach ($replacementBackup in $ReplacementBackupItems) {
+        if (Test-Path -Path $replacementBackup.Path -PathType Leaf) {
+            try {
+                Remove-Item -Path $replacementBackup.Path -Force -ErrorAction Stop
+                Write-Log "ATOMIC_REPLACE_BACKUP_CLEAN_AFTER_ABORT=PASS;PATH=$($replacementBackup.Path)"
+            }
+            catch {
+                Write-Log "ATOMIC_REPLACE_BACKUP_CLEAN_AFTER_ABORT=FAIL;PATH=$($replacementBackup.Path);ERROR=$($_.Exception.Message)"
             }
         }
     }

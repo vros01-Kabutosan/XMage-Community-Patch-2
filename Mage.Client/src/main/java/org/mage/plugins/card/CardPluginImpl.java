@@ -146,12 +146,6 @@ implements CardPlugin {
         block0: for (MageCard card : cards.values()) {
             MagePermanent perm = (MagePermanent)card.getMainPanel();
             if (!rowType.isType(perm) || perm.getOriginalPermanent().isAttachedToPermanent() || perm.isCreature() && !rowType.equals((Object)RowType.creature)) continue;
-            if (!perm.isLand() && !perm.isToken() || perm.isCreature() && !perm.isToken()) {
-                Stack newStack = new Stack();
-                newStack.add(perm);
-                workingRow.add(newStack);
-                continue;
-            }
             int insertIndex = -1;
             int cardPower = perm.getOriginal().getOriginalPower() != null ? perm.getOriginal().getOriginalPower().getValue() : 0;
             int cardToughness = perm.getOriginal().getOriginalToughness() != null ? perm.getOriginalPermanent().getOriginalToughness().getValue() : 0;
@@ -171,7 +165,7 @@ implements CardPlugin {
                         insertIndex = i;
                         break;
                     }
-                    if (!this.empty(perm.getOriginalPermanent().getAttachments()) || stack.size() == 5) {
+                    if (!this.empty(perm.getOriginalPermanent().getAttachments()) || stack.size() == cardStackMax) {
                         insertIndex = i + 1;
                         continue;
                     }

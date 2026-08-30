@@ -32,8 +32,8 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
     // TODO: add gui scale support (form file lost, so it's ok for scale, see PlayerPanelExt)
 
     private static final String DEFAULT_MESSAGE = "Choose spell or ability";
-    private static final int DIALOG_WIDTH = 440;
-    private static final int DIALOG_HEIGHT = 260;
+    private static final int DIALOG_WIDTH = 500;
+    private static final int DIALOG_HEIGHT = 255;
     private static final String CHOICE_PREFIX = "<html>";
 
     private static final Logger log = Logger.getLogger(AbilityPicker.class);
@@ -165,7 +165,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         title.setText(message);
 
         jScrollPane2.setBorder(null);
-        jScrollPane2.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        jScrollPane2.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         jScrollPane2.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 
         rightImage = ImageHelper.loadImage(IMAGE_RIGHT_PATH);
@@ -182,7 +182,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         rows.setCellRenderer(new ImageRenderer());
         rows.ensureIndexIsVisible(rows.getModel().getSize());
         rows.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        rows.setFixedCellHeight(sizeMod(34));
+        rows.setFixedCellHeight(-1);
         rows.setLayoutOrientation(JList.VERTICAL);
         rows.setMaximumSize(new Dimension(32767, 32767));
         rows.setMinimumSize(new Dimension(sizeMod(67), sizeMod(16)));
@@ -229,7 +229,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         layout.setVerticalGroup(layout.createParallelGroup(GroupLayout.LEADING).add(
                 layout.createSequentialGroup().add(
                                 layout.createParallelGroup(GroupLayout.LEADING).add(
-                                        layout.createSequentialGroup().add(title, GroupLayout.PREFERRED_SIZE, sizeMod(72), GroupLayout.PREFERRED_SIZE)
+                                        layout.createSequentialGroup().add(title, GroupLayout.PREFERRED_SIZE, sizeMod(62), GroupLayout.PREFERRED_SIZE)
                                                 .add(sizeMod(5), sizeMod(5), sizeMod(5))
                                                 .add(
                                                         layout.createParallelGroup(GroupLayout.BASELINE)
@@ -237,7 +237,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
                                 ).add(layout.createSequentialGroup().add(sizeMod(8), sizeMod(8), sizeMod(8))))
                         .addPreferredGap(LayoutStyle.RELATED).add(layout.createParallelGroup(GroupLayout.BASELINE)).addPreferredGap(LayoutStyle.RELATED).add(
                                 layout.createParallelGroup(GroupLayout.BASELINE)).addPreferredGap(LayoutStyle.RELATED).add(layout.createParallelGroup(GroupLayout.LEADING)).addPreferredGap(
-                                LayoutStyle.RELATED).add(jScrollPane2, GroupLayout.PREFERRED_SIZE, sizeMod(180), GroupLayout.PREFERRED_SIZE).addContainerGap(sizeMod(23), Short.MAX_VALUE)));
+                                LayoutStyle.RELATED).add(jScrollPane2, GroupLayout.PREFERRED_SIZE, sizeMod(175), GroupLayout.PREFERRED_SIZE).addContainerGap(sizeMod(23), Short.MAX_VALUE)));
     }
 
     private void installDragSupport(Component dragSource) {
@@ -345,16 +345,17 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
 
             Object object = choices.get(index);
             String name = object.toString();
-            label.setText(name);
+            String rendererText = name.startsWith(CHOICE_PREFIX) ? name.substring(CHOICE_PREFIX.length()) : name;
+            label.setText(CHOICE_PREFIX + "<div style=\"width:" + sizeMod(455) + "px\">" + rendererText + "</div></html>");
 
-            label.setIcon(new CheckmarkIcon(isSelected, sizeMod(18)));
+            label.setIcon(new CheckmarkIcon(isSelected, sizeMod(16)));
             label.setIconTextGap(sizeMod(8));
             label.setForeground(isSelected ? new Color(235, 245, 255) : new Color(225, 230, 238));
             label.setBorder(BorderFactory.createCompoundBorder(
                     isSelected
                             ? BorderFactory.createLineBorder(new Color(86, 170, 235), 1, true)
                             : BorderFactory.createEmptyBorder(1, 1, 1, 1),
-                    BorderFactory.createEmptyBorder(sizeMod(3), sizeMod(7), sizeMod(3), sizeMod(7))));
+                    BorderFactory.createEmptyBorder(sizeMod(2), sizeMod(6), sizeMod(2), sizeMod(6))));
             label.setBackground(isSelected ? new Color(42, 68, 92, 210) : new Color(24, 28, 36, 160));
             label.setOpaque(true);
 

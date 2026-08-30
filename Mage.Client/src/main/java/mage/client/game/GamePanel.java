@@ -177,6 +177,7 @@ extends JPanel {
     private final Map<UUID, CardInfoWindowDialog> exiles = new HashMap<UUID, CardInfoWindowDialog>();
     private final Map<String, CardInfoWindowDialog> revealed = new HashMap<String, CardInfoWindowDialog>();
     private final Map<String, CardInfoWindowDialog> lookedAt = new HashMap<String, CardInfoWindowDialog>();
+    private final Map<String, CardsView> retainedReveals = new HashMap<String, CardsView>();
     private final Map<String, Timer> pendingCardInfoWindowClosures = new HashMap<String, Timer>();
     private static final int CARD_INFO_WINDOW_CLOSE_DELAY_MS = 250;
     private final Map<String, CardsView> graveyards = new HashMap<String, CardsView>();
@@ -491,6 +492,7 @@ extends JPanel {
         this.removeListener();
         this.pendingCardInfoWindowClosures.values().forEach(Timer::stop);
         this.pendingCardInfoWindowClosures.clear();
+        this.retainedReveals.clear();
         this.handContainer.cleanUp();
         this.disposeFloatingStackWindow();
         this.stackObjects.cleanUp();
@@ -1846,13 +1848,40 @@ extends JPanel {
 
     private void showRevealed(GameView game) {
         Set<String> activeWindows = new HashSet<>();
+        Set<UUID> publicCardIds = collectPublicCardIds(game);
+
         for (RevealedView revealView : game.getRevealed()) {
-            this.cancelPendingCardInfoWindowClosure(this.revealed, revealView.getName());
-            activeWindows.add(revealView.getName());
-            this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, revealView.getName(), (LinkedHashMap)revealView.getCards());
+            String name = revealView.getName();
+            this.retainedReveals.put(name, new CardsView(new ArrayList<CardView>(revealView.getCards().values())));
         }
+
+        for (Map.Entry<String, CardsView> entry : this.retainedReveals.entrySet()) {
+            CardsView knownCards = entry.getValue();
+            knownCards.keySet().removeAll(publicCardIds);
+            if (knownCards.isEmpty()) {
+                continue;
+            }
+            this.cancelPendingCardInfoWindowClosure(this.revealed, entry.getKey());
+            activeWindows.add(entry.getKey());
+            this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, entry.getKey(), (LinkedHashMap) knownCards);
+        }
+
         this.closeMissingCardInfoWindows(this.revealed, activeWindows);
         this.removeClosedCardInfoWindows(this.revealed);
+    }
+
+    private Set<UUID> collectPublicCardIds(GameView game) {
+        Set<UUID> publicCardIds = new HashSet<>();
+        publicCardIds.addAll(game.getStack().keySet());
+        for (ExileView exileView : game.getExile()) {
+            publicCardIds.addAll(exileView.keySet());
+        }
+        for (PlayerView player : game.getPlayers()) {
+            publicCardIds.addAll(player.getGraveyard().keySet());
+            publicCardIds.addAll(player.getExile().keySet());
+            publicCardIds.addAll(player.getBattlefield().keySet());
+        }
+        return publicCardIds;
     }
 
     private void showLookedAt(GameView game) {

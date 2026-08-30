@@ -1,365 +1,235 @@
+/*
+ * Decompiled with CFR.
+ */
 package org.mage.card.arcane;
 
-import mage.abilities.hint.HintUtils;
-import mage.client.dialog.PreferencesDialog;
-import mage.constants.AbilityType;
-import mage.constants.CardType;
-import mage.constants.SubType;
-import mage.constants.SuperType;
-import mage.view.CardView;
-import mage.view.CounterView;
-import mage.view.PermanentView;
-
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Paint;
+import java.awt.Polygon;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.RasterFormatException;
 import java.util.ArrayList;
 import java.util.List;
+import mage.client.dialog.PreferencesDialog;
+import mage.constants.AbilityType;
+import mage.constants.CardType;
+import mage.constants.MageObjectType;
+import mage.constants.SubType;
+import mage.constants.SuperType;
+import mage.view.CardView;
+import mage.view.CounterView;
+import mage.view.PermanentView;
+import org.mage.card.arcane.CardPanelAttributes;
+import org.mage.card.arcane.CardRendererUtils;
+import org.mage.card.arcane.ManaSymbols;
+import org.mage.card.arcane.TextboxRule;
+import org.mage.card.arcane.TextboxRuleParser;
+import org.mage.card.arcane.TextboxRuleType;
 
-/**
- * @author stravant@gmail.com
- * <p>
- * Common base class for card renderers for each card frame / card type.
- * <p>
- * Follows the template method pattern to implement a new renderer, implement
- * the following methods (they are called in the following order):
- * <p>
- * * drawBorder() Draws the outermost border of the card, white border or black
- * border
- * <p>
- * * drawBackground() Draws the background texture / color of the card
- * <p>
- * * drawArt() Draws the card's art
- * <p>
- * * drawFrame() Draws the card frame (over the art and background)
- * <p>
- * * drawOverlays() Draws summoning sickness and possible other overlays
- * <p>
- * * drawCounters() Draws counters on the card, such as +1/+1 and -1/-1
- * counters
- * <p>
- * Predefined methods that the implementations can use:
- * <p>
- * * drawRules(font, bounding box)
- * <p>
- * * drawNameLine(font, bounding box)
- * <p>
- * * drawTypeLine(font, bounding box)
- */
 public abstract class CardRenderer {
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Common layout metrics between all cards
-    // The card to be rendered
     protected final CardView cardView;
-
-    // The card image
-    protected BufferedImage artImage; // TODO: make sure it changed/reset on face down/up change
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Common layout metrics between all cards
-    // Polygons for counters
-    private static final Polygon PLUS_COUNTER_POLY = new Polygon(new int[]{
-            0, 5, 10, 10, 5, 0
-    }, new int[]{
-            3, 0, 3, 10, 9, 10
-    }, 6);
-    private static final Polygon MINUS_COUNTER_POLY = new Polygon(new int[]{
-            0, 5, 10, 10, 5, 0
-    }, new int[]{
-            0, 1, 0, 7, 10, 7
-    }, 6);
-    private static final Polygon TIME_COUNTER_POLY = new Polygon(new int[]{
-            0, 10, 8, 10, 0, 2
-    }, new int[]{
-            0, 0, 5, 10, 10, 5
-    }, 6);
-    private static final Polygon OTHER_COUNTER_POLY = new Polygon(new int[]{
-            1, 9, 9, 1
-    }, new int[]{
-            1, 1, 9, 9
-    }, 4);
-
-    // Paint for a card back
+    protected BufferedImage artImage;
+    private static final Polygon PLUS_COUNTER_POLY = new Polygon(new int[]{0, 5, 10, 10, 5, 0}, new int[]{3, 0, 3, 10, 9, 10}, 6);
+    private static final Polygon MINUS_COUNTER_POLY = new Polygon(new int[]{0, 5, 10, 10, 5, 0}, new int[]{0, 1, 0, 7, 10, 7}, 6);
+    private static final Polygon TIME_COUNTER_POLY = new Polygon(new int[]{0, 10, 8, 10, 0, 2}, new int[]{0, 0, 5, 10, 10, 5}, 6);
+    private static final Polygon OTHER_COUNTER_POLY = new Polygon(new int[]{1, 9, 9, 1}, new int[]{1, 1, 9, 9}, 4);
     public static final Paint BG_TEXTURE_CARDBACK = new Color(153, 102, 51);
-
-    // The size of the card
     protected int cardWidth;
     protected int cardHeight;
-
-    // Is it selectable / selected
     protected boolean isChoosable;
     protected boolean isSelected;
-
-    // Radius of the corners of the cards
-    protected static final float CORNER_RADIUS_FRAC = 0.1f; //x cardWidth
+    protected static final float CORNER_RADIUS_FRAC = 0.1f;
     protected static final int CORNER_RADIUS_MIN = 3;
     protected int cornerRadius;
-
-    // The inset of the actual card from the black / white border around it
-    protected static final float BORDER_WIDTH_FRAC = 0.03f; //x cardWidth
-    protected static final float BORDER_WIDTH_MIN = 2;
+    protected static final float BORDER_WIDTH_FRAC = 0.03f;
+    protected static final float BORDER_WIDTH_MIN = 2.0f;
     protected int borderWidth;
+    protected ArrayList<TextboxRule> textboxRules = new ArrayList();
+    protected ArrayList<TextboxRule> textboxKeywords = new ArrayList();
+    private boolean lessOpaqueRulesTextBox = false;
 
-    // The parsed text of the card
-    protected ArrayList<TextboxRule> textboxRules = new ArrayList<>();
-    protected ArrayList<TextboxRule> textboxKeywords = new ArrayList<>();
-
-    // The Construtor
-    // The constructor should prepare all of the things that it can
-    // without knowing the dimensions that the card will be rendered at.
-    // Then, the CardRenderer can be called on multiple times to render the
-    // card at various sizes (for instance, during animation)
     public CardRenderer(CardView card) {
-        // Set base parameters
         this.cardView = card;
-        parseRules(card.getRules(), textboxKeywords, textboxRules);
+        this.parseRules(card.getRules(), this.textboxKeywords, this.textboxRules);
     }
 
     protected void parseRules(List<String> stringRules, List<TextboxRule> keywords, List<TextboxRule> rules) {
-        // Translate the textbox text and remove card hints
         for (String rule : stringRules) {
-            // remove all card hints
-            if (rule.equals(HintUtils.HINT_START_MARK)) {
-                break;
-            }
-
-            // workaround to use real split card names
-            String realCardName = cardView.getDisplayName();
-            if (cardView.isSplitCard()) {
-                for (String partRule : cardView.getLeftSplitRules()) {
-                    if (partRule.equals(rule)) {
-                        realCardName = cardView.getLeftSplitName();
-                        break;
-                    }
+            if (rule.equals("<br/><hintstart/>")) break;
+            String realCardName = this.cardView.getDisplayName();
+            if (this.cardView.isSplitCard()) {
+                for (String partRule : this.cardView.getLeftSplitRules()) {
+                    if (!partRule.equals(rule)) continue;
+                    realCardName = this.cardView.getLeftSplitName();
+                    break;
                 }
-                for (String partRule : cardView.getRightSplitRules()) {
-                    if (partRule.equals(rule)) {
-                        realCardName = cardView.getRightSplitName();
-                        break;
-                    }
+                for (String partRule : this.cardView.getRightSplitRules()) {
+                    if (!partRule.equals(rule)) continue;
+                    realCardName = this.cardView.getRightSplitName();
+                    break;
                 }
             }
-
-            // Kill reminder text
-            if (PreferencesDialog.getCachedValue(PreferencesDialog.KEY_CARD_RENDERING_REMINDER_TEXT, "false").equals("false")) {
+            if (PreferencesDialog.getCachedValue("cardRenderingReminderText", "false").equals("false")) {
                 rule = CardRendererUtils.killReminderText(rule).trim();
             }
-
-            if (!rule.isEmpty()) {
-                TextboxRule tbRule = TextboxRuleParser.parse(cardView, rule, realCardName);
-                if (tbRule.type == TextboxRuleType.SIMPLE_KEYWORD) {
-                    keywords.add(tbRule);
-                } else if (tbRule.text.isEmpty()) {
-                    // Nothing to do, rule is empty
-                } else {
-                    rules.add(tbRule);
-                }
+            if (rule.isEmpty()) continue;
+            TextboxRule tbRule = TextboxRuleParser.parse(this.cardView, rule, realCardName);
+            if (tbRule.type == TextboxRuleType.SIMPLE_KEYWORD) {
+                keywords.add(tbRule);
+                continue;
             }
+            if (tbRule.text.isEmpty()) continue;
+            rules.add(tbRule);
         }
     }
 
     private static int getBorderWidth(int cardWidth) {
-        return (int) Math.max(
-                BORDER_WIDTH_MIN,
-                BORDER_WIDTH_FRAC * cardWidth);
+        return (int)Math.max(2.0f, 0.03f * (float)cardWidth);
     }
 
-    // Layout operation
-    // Calculate common layout metrics that will be used by several
-    // of the operations in the template method.
     protected void layout(int cardWidth, int cardHeight) {
-        // Store the dimensions for the template methods to use
         this.cardWidth = cardWidth;
         this.cardHeight = cardHeight;
-
-        // Corner radius and border width
-        cornerRadius = (int) Math.max(
-                CORNER_RADIUS_MIN,
-                CORNER_RADIUS_FRAC * cardWidth);
-
-        borderWidth = getBorderWidth(cardWidth);
+        this.cornerRadius = (int)Math.max(3.0f, 0.1f * (float)cardWidth);
+        this.borderWidth = CardRenderer.getBorderWidth(cardWidth);
     }
 
-    /**
-     * How far does a card have to be spaced down from a rendered card to show
-     * it's entire name line? This function is a bit of a hack, as different
-     * card faces need slightly different spacing, but we need it in a static
-     * context so that spacing is consistent in GY / deck views etc.
-     *
-     * @param cardWidth
-     * @return
-     */
     public static int getCardTopHeight(int cardWidth) {
-        // Constants copied over from ModernCardRenderer and tweaked
-        float BOX_HEIGHT_FRAC = 0.065f; // x cardHeight
+        float BOX_HEIGHT_FRAC = 0.065f;
         int BOX_HEIGHT_MIN = 16;
-        int boxHeight = (int) Math.max(
-                BOX_HEIGHT_MIN,
-                BOX_HEIGHT_FRAC * cardWidth * 1.4f);
-        int borderWidth = getBorderWidth(cardWidth);
+        int boxHeight = (int)Math.max((float)BOX_HEIGHT_MIN, BOX_HEIGHT_FRAC * (float)cardWidth * 1.4f);
+        int borderWidth = CardRenderer.getBorderWidth(cardWidth);
         return 2 * borderWidth + boxHeight;
     }
 
-    // The Draw Method
-    // The draw method takes the information calculated by the constructor
-    // and uses it to draw to a concrete size of card and graphics.
     public void draw(Graphics2D g, CardPanelAttributes attribs, BufferedImage image) {
-
-        // Pre template method layout, to calculate shared layout info
-        layout(attribs.cardWidth, attribs.cardHeight);
-        isSelected = attribs.isSelected;
-        isChoosable = attribs.isChoosable;
-
-        // Call the template methods
-        drawBorder(g);
-        drawBackground(g);
-        lessOpaqueRulesTextBox = false;
-        drawArt(g);
-        drawFrame(g, attribs, image, lessOpaqueRulesTextBox);
-        if (!cardView.isAbility()) {
-            drawOverlays(g);
-            drawCounters(g);
+        this.layout(attribs.cardWidth, attribs.cardHeight);
+        this.isSelected = attribs.isSelected;
+        this.isChoosable = attribs.isChoosable;
+        this.drawBorder(g);
+        this.drawBackground(g);
+        this.lessOpaqueRulesTextBox = false;
+        this.drawArt(g);
+        this.drawFrame(g, attribs, image, this.lessOpaqueRulesTextBox);
+        if (!this.cardView.isAbility()) {
+            this.drawOverlays(g);
+            this.drawCounters(g);
         }
     }
 
-    // Template methods to be implemented by sub classes
-    // For instance, for the Modern vs Old border card frames
-    protected abstract void drawBorder(Graphics2D g);
+    protected abstract void drawBorder(Graphics2D var1);
 
-    protected abstract void drawBackground(Graphics2D g);
+    protected abstract void drawBackground(Graphics2D var1);
 
-    protected abstract void drawArt(Graphics2D g);
+    protected abstract void drawArt(Graphics2D var1);
 
-    protected abstract void drawFrame(Graphics2D g, CardPanelAttributes attribs, BufferedImage image, boolean lessOpaqueRulesTextBox);
+    protected abstract void drawFrame(Graphics2D var1, CardPanelAttributes var2, BufferedImage var3, boolean var4);
 
-    // Template methods that are possible to override, but unlikely to be
-    // overridden.
-    // Draw the card back
     protected void drawCardBackTexture(Graphics2D g) {
         g.setPaint(BG_TEXTURE_CARDBACK);
-        g.fillRect(borderWidth, borderWidth,
-                cardWidth - 2 * borderWidth, cardHeight - 2 * borderWidth);
+        g.fillRect(this.borderWidth, this.borderWidth, this.cardWidth - 2 * this.borderWidth, this.cardHeight - 2 * this.borderWidth);
     }
 
-    // Draw summoning sickness overlay, and possibly other overlays
     protected void drawOverlays(Graphics2D g) {
-        if (cardView.isCreature() && cardView instanceof PermanentView) {
-            if (((PermanentView) cardView).hasSummoningSickness()) {
-                int x1 = (int) (0.2 * cardWidth);
-                int x2 = (int) (0.8 * cardWidth);
-                int y1 = (int) (0.2 * cardHeight);
-                int y2 = (int) (0.8 * cardHeight);
-                int[] xPoints = {
-                        x1, x2, x1, x2
-                };
-                int[] yPoints = {
-                        y1, y1, y2, y2
-                };
-                g.setColor(new Color(255, 255, 255, 200));
-                g.setStroke(new BasicStroke(7));
-                g.drawPolygon(xPoints, yPoints, 4);
-                g.setColor(new Color(0, 0, 0, 200));
-                g.setStroke(new BasicStroke(5));
-                g.drawPolygon(xPoints, yPoints, 4);
-                g.setStroke(new BasicStroke(1));
-                int[] xPoints2 = {
-                        x1, x2, cardWidth / 2
-                };
-                int[] yPoints2 = {
-                        y1, y1, cardHeight / 2
-                };
-                g.setColor(new Color(0, 0, 0, 100));
-                g.fillPolygon(xPoints2, yPoints2, 3);
-            }
+        if (this.cardView.isCreature() && this.cardView instanceof PermanentView && ((PermanentView)this.cardView).hasSummoningSickness()) {
+            int x1 = (int)(0.2 * (double)this.cardWidth);
+            int x2 = (int)(0.8 * (double)this.cardWidth);
+            int y1 = (int)(0.2 * (double)this.cardHeight);
+            int y2 = (int)(0.8 * (double)this.cardHeight);
+            int[] xPoints = new int[]{x1, x2, x1, x2};
+            int[] yPoints = new int[]{y1, y1, y2, y2};
+            g.setColor(new Color(255, 255, 255, 200));
+            g.setStroke(new BasicStroke(7.0f));
+            g.drawPolygon(xPoints, yPoints, 4);
+            g.setColor(new Color(0, 0, 0, 200));
+            g.setStroke(new BasicStroke(5.0f));
+            g.drawPolygon(xPoints, yPoints, 4);
+            g.setStroke(new BasicStroke(1.0f));
+            int[] xPoints2 = new int[]{x1, x2, this.cardWidth / 2};
+            int[] yPoints2 = new int[]{y1, y1, this.cardHeight / 2};
+            g.setColor(new Color(0, 0, 0, 100));
+            g.fillPolygon(xPoints2, yPoints2, 3);
         }
     }
 
     protected void drawArtIntoRect(Graphics2D g, int x, int y, int w, int h, Rectangle2D artRect, boolean shouldPreserveAspect) {
-        // Perform a process to make sure that the art is scaled uniformly to fill the frame, cutting
-        // off the minimum amount necessary to make it completely fill the frame without "squashing" it.
-        double fullCardImgWidth = artImage.getWidth();
-        double fullCardImgHeight = artImage.getHeight();
+        double fullCardImgWidth = this.artImage.getWidth();
+        double fullCardImgHeight = this.artImage.getHeight();
         double artWidth = artRect.getWidth() * fullCardImgWidth;
         double artHeight = artRect.getHeight() * fullCardImgHeight;
         double targetWidth = w;
         double targetHeight = h;
         double targetAspect = targetWidth / targetHeight;
-        if (!shouldPreserveAspect) {
-            // No adjustment to art
-        } else if (targetAspect * artHeight < artWidth) {
-            // Trim off some width
-            artWidth = targetAspect * artHeight;
-        } else {
-            // Trim off some height
-            artHeight = artWidth / targetAspect;
+        if (shouldPreserveAspect) {
+            if (targetAspect * artHeight < artWidth) {
+                artWidth = targetAspect * artHeight;
+            } else {
+                artHeight = artWidth / targetAspect;
+            }
         }
         try {
-            BufferedImage subImg
-                    = artImage.getSubimage(
-                    (int) (artRect.getX() * fullCardImgWidth), (int) (artRect.getY() * fullCardImgHeight),
-                    (int) artWidth, (int) artHeight);
-            g.drawImage(subImg,
-                    x, y,
-                    (int) targetWidth, (int) targetHeight,
-                    null);
-        } catch (RasterFormatException e) {
-            // At very small card sizes we may encounter a problem with rounding error making the rect not fit
+            BufferedImage subImg = this.artImage.getSubimage((int)(artRect.getX() * fullCardImgWidth), (int)(artRect.getY() * fullCardImgHeight), (int)artWidth, (int)artHeight);
+            g.drawImage(subImg, x, y, (int)targetWidth, (int)targetHeight, null);
+        }
+        catch (RasterFormatException rasterFormatException) {
+            // empty catch block
         }
     }
 
-    private boolean lessOpaqueRulesTextBox = false;
-
-    // Draw +1/+1 and other counters
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
     protected void drawCounters(Graphics2D g) {
-        int xPos = (int) (0.65 * cardWidth);
-        int yPos = (int) (0.15 * cardHeight);
-        if (cardView.getCounters() != null) {
-            for (CounterView v : cardView.getCounters()) {
-                // Don't render loyalty, we do that in the bottom corner
-                if (!v.getName().equals("loyalty")) {
-                    Polygon p;
-                    switch (v.getName()) {
-                        case "+1/+1":
-                            p = PLUS_COUNTER_POLY;
-                            break;
-                        case "-1/-1":
-                            p = MINUS_COUNTER_POLY;
-                            break;
-                        case "time":
-                            p = TIME_COUNTER_POLY;
-                            break;
-                        default:
-                            p = OTHER_COUNTER_POLY;
-                            break;
+        int xPos = (int)(0.65 * (double)this.cardWidth);
+        int yPos = (int)(0.15 * (double)this.cardHeight);
+        if (this.cardView.getCounters() != null) {
+            for (CounterView v : this.cardView.getCounters()) {
+                Polygon p;
+                if (v.getName().equals("loyalty")) continue;
+                switch (v.getName()) {
+                    case "+1/+1": {
+                        p = PLUS_COUNTER_POLY;
+                        break;
                     }
-                    double scale = (0.1 * 0.25 * cardWidth);
-
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    try {
-                        g2.translate(xPos, yPos);
-                        g2.scale(scale, scale);
-                        g2.setColor(Color.white);
-                        g2.fillPolygon(p);
-                        g2.setColor(Color.black);
-                        g2.drawPolygon(p);
-                        g2.setFont(new Font("Arial", Font.BOLD, 7));
-                        String cstr = String.valueOf(v.getCount());
-                        int strW = g2.getFontMetrics().stringWidth(cstr);
-                        g2.drawString(cstr, 5 - strW / 2, 8);
-                    } finally {
-                        g2.dispose();
+                    case "-1/-1": {
+                        p = MINUS_COUNTER_POLY;
+                        break;
                     }
-
-                    yPos += ((int) (0.30 * cardWidth));
+                    case "time": {
+                        p = TIME_COUNTER_POLY;
+                        break;
+                    }
+                    default: {
+                        p = OTHER_COUNTER_POLY;
+                    }
                 }
+                double scale = 0.025 * (double)this.cardWidth;
+                Graphics2D g2 = (Graphics2D)g.create();
+                try {
+                    g2.translate(xPos, yPos);
+                    g2.scale(scale, scale);
+                    g2.setColor(Color.white);
+                    g2.fillPolygon(p);
+                    g2.setColor(Color.black);
+                    g2.drawPolygon(p);
+                    g2.setFont(new Font("Arial", 1, 7));
+                    String cstr = String.valueOf(v.getCount());
+                    int strW = g2.getFontMetrics().stringWidth(cstr);
+                    g2.drawString(cstr, 5 - strW / 2, 8);
+                }
+                finally {
+                    g2.dispose();
+                }
+                yPos += (int)(0.3 * (double)this.cardWidth);
             }
         }
     }
 
-    // Draw an expansion symbol, right justified, in a given region
-    // Return the width of the drawn symbol
     protected int drawExpansionSymbol(Graphics2D g, int x, int y, int w, int h) {
         // Draw the expansion symbol
         Image setSymbol = ManaSymbols.getSetSymbolImage(cardView.getExpansionSetCode(), cardView.getRarity());
@@ -405,69 +275,73 @@ public abstract class CardRenderer {
     }
 
     private Color getRarityColor() {
-        if (cardView.getRarity() != null) {
-            switch (cardView.getRarity()) {
-                case RARE:
+        if (this.cardView.getRarity() != null) {
+            switch (this.cardView.getRarity()) {
+                case RARE: {
                     return new Color(255, 191, 0);
-                case UNCOMMON:
+                }
+                case UNCOMMON: {
                     return new Color(192, 192, 192);
-                case MYTHIC:
+                }
+                case MYTHIC: {
                     return new Color(213, 51, 11);
-                case SPECIAL:
+                }
+                case SPECIAL: {
                     return new Color(204, 0, 255);
-                case BONUS:
+                }
+                case BONUS: {
                     return new Color(129, 228, 228);
-                case COMMON:
-                default:
-                    return Color.black;
-            }
-        } else {
-            // tokens
-            return Color.black;
-        }
-    }
-
-    // Get a string representing the type line
-    protected String getCardTypeLine() {
-        if (cardView.isAbility()) {
-            if (cardView.getAbilityType() == AbilityType.TRIGGERED_NONMANA) {
-                return "Triggered Ability";
-            } else if (cardView.getAbilityType() == AbilityType.ACTIVATED_NONMANA) {
-                return "Activated Ability";
-            } else if (cardView.getAbilityType() == null) {
-                // TODO: Triggered abilities waiting to be put onto the stack have abilityType = null. Figure out why
-                return "Triggered Ability";
-            } else {
-                return "??? Ability";
-            }
-        } else {
-            StringBuilder sbType = new StringBuilder();
-            String spType = getCardSuperTypeLine();
-            String subType = getCardSubTypeLine();
-            if (spType.equalsIgnoreCase("")) {
-                sbType.append(subType);
-            } else {
-                sbType.append(spType);
-                if (!subType.equalsIgnoreCase("")) {
-                    sbType.append("- ");
-                    sbType.append(subType);
                 }
             }
-
-            return sbType.toString();
+            return Color.black;
         }
+        return Color.black;
+    }
+
+    protected String getCardTypeLine() {
+        if (this.cardView.isAbility()) {
+            AbilityType abilityType = this.cardView.getAbilityType();
+            if (abilityType == null || abilityType.isTriggeredAbility()) {
+                return "Triggered Ability";
+            }
+            if (abilityType.isActivatedAbility()) {
+                return "Activated Ability";
+            }
+            if (abilityType == AbilityType.STATIC) {
+                return "Static Ability";
+            }
+            if (abilityType == AbilityType.SPECIAL_ACTION) {
+                return "Special Action";
+            }
+            return abilityType.toString() + " Ability";
+        }
+        if (this.cardView.getMageObjectType() == MageObjectType.SPELL) {
+            return "Spell";
+        }
+        StringBuilder sbType = new StringBuilder();
+        String spType = this.getCardSuperTypeLine();
+        String subType = this.getCardSubTypeLine();
+        if (spType.equalsIgnoreCase("")) {
+            sbType.append(subType);
+        } else {
+            sbType.append(spType);
+            if (!subType.equalsIgnoreCase("")) {
+                sbType.append("- ");
+                sbType.append(subType);
+            }
+        }
+        return sbType.toString();
     }
 
     protected String getCardSuperTypeLine() {
         StringBuilder spType = new StringBuilder();
-        if (cardView.isToken()) {
-            // "Token" is shown on the type line. As recent printing of tokens do.
+        if (this.cardView.isToken()) {
             spType.append("Token ");
         }
-        for (SuperType superType : cardView.getSuperTypes()) {
-            spType.append(superType).append(' ');
+        for (SuperType superType : this.cardView.getSuperTypes()) {
+            spType.append((Object)superType).append(' ');
         }
-        for (CardType cardType : cardView.getCardTypes()) {
+        for (CardType cardType : this.cardView.getCardTypes()) {
             spType.append(cardType.toString()).append(' ');
         }
         return spType.toString();
@@ -475,18 +349,15 @@ public abstract class CardRenderer {
 
     protected String getCardSubTypeLine() {
         StringBuilder subType = new StringBuilder();
-
-        if (!cardView.getSubTypes().isEmpty()) {
-            for (SubType sType : cardView.getSubTypes()) {
-                subType.append(sType).append(' ');
+        if (!this.cardView.getSubTypes().isEmpty()) {
+            for (SubType sType : this.cardView.getSubTypes()) {
+                subType.append((Object)sType).append(' ');
             }
         }
         return subType.toString();
     }
 
-    // Set the card art image (CardPanel will give it to us when it
-    // is loaded and ready)
     public void setArtImage(Image image) {
-        artImage = CardRendererUtils.toBufferedImage(image);
+        this.artImage = CardRendererUtils.toBufferedImage(image);
     }
 }

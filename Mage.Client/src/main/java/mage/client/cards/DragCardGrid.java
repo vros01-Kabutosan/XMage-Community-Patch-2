@@ -1,21 +1,104 @@
+/*
+ * Decompiled with CFR.
+ */
 package mage.client.cards;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
+import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JSlider;
+import javax.swing.JTextField;
+import javax.swing.JToggleButton;
+import javax.swing.SwingUtilities;
+import javax.swing.ToolTipManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import mage.abilities.icon.CardIconRenderSettings;
 import mage.cards.Card;
+import mage.cards.ExpansionSet;
 import mage.cards.MageCard;
+import mage.cards.Sets;
 import mage.cards.decks.DeckCardInfo;
 import mage.cards.decks.DeckCardLayout;
 import mage.cards.repository.CardCriteria;
 import mage.cards.repository.CardInfo;
 import mage.cards.repository.CardRepository;
+import mage.client.cards.BigCard;
+import mage.client.cards.CardDraggerGlassPane;
+import mage.client.cards.CardEventProducer;
+import mage.client.cards.CardEventSource;
+import mage.client.cards.DragCardSource;
+import mage.client.cards.DragCardTarget;
+import mage.client.cards.ManaBarChart;
+import mage.client.cards.ManaPieChart;
+import mage.client.cards.SelectionBox;
 import mage.client.constants.Constants;
 import mage.client.dialog.PreferencesDialog;
 import mage.client.plugins.impl.Plugins;
-import mage.client.util.ClientEventType;
 import mage.client.util.Event;
 import mage.client.util.GUISizeHelper;
 import mage.client.util.Listener;
-import mage.client.util.comparators.*;
+import mage.client.util.comparators.CardViewCardTypeComparator;
+import mage.client.util.comparators.CardViewColorComparator;
+import mage.client.util.comparators.CardViewColorIdentityComparator;
+import mage.client.util.comparators.CardViewComparator;
+import mage.client.util.comparators.CardViewCostComparator;
+import mage.client.util.comparators.CardViewEDHPowerLevelComparator;
+import mage.client.util.comparators.CardViewNameComparator;
+import mage.client.util.comparators.CardViewNoneComparator;
+import mage.client.util.comparators.CardViewRarityComparator;
 import mage.constants.CardType;
 import mage.constants.Rarity;
 import mage.constants.SubType;
@@ -24,581 +107,94 @@ import mage.util.DebugUtil;
 import mage.util.RandomUtil;
 import mage.view.CardView;
 import mage.view.CardsView;
+import mage.view.SimpleCardView;
 import org.apache.log4j.Logger;
 import org.mage.card.arcane.CardRenderer;
 import org.mage.card.arcane.ManaSymbols;
+import org.mage.plugins.card.images.ImageCache;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.List;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-/**
- * @author StravantUser, JayDi85
- */
-public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarget, CardEventProducer {
-
+public class DragCardGrid
+extends JPanel
+implements DragCardSource,
+DragCardTarget,
+CardEventProducer {
     private static final Logger logger = Logger.getLogger(DragCardGrid.class);
     private static final String DOUBLE_CLICK_MODE_INFO = "<html>Double click mode: <b>%s</b>";
-
     private Constants.DeckEditorMode mode;
     Listener<Event> cardListener;
-    MouseListener countLabelListener; // clicks on the count label
+    MouseListener countLabelListener;
+    private final CardTypeCounter creatureCounter = new CardTypeCounter(){
 
-    @Override
-    public Collection<CardView> dragCardList() {
-        return allCards.stream().filter(CardView::isSelected).collect(Collectors.toCollection(ArrayList::new));
-    }
-
-    @Override
-    public void dragCardBegin() {
-
-    }
-
-    @Override
-    public void dragCardEnd(DragCardTarget target) {
-        if (target == this) {
-            // Already handled by dragged onto handler
-        } else if (target == null) {
-            // Don't remove the cards, no target
-        } else {
-            // Remove dragged cards
-            removeSelectedCards();
-        }
-    }
-
-    @Override
-    public void dragCardEnter(MouseEvent e) {
-        insertArrow.setVisible(true);
-    }
-
-    @Override
-    public void dragCardMove(MouseEvent e) {
-        e = SwingUtilities.convertMouseEvent(this, e, cardContent);
-        showDropPosition(e.getX(), e.getY());
-    }
-
-    @Override
-    public CardEventSource getCardEventSource() {
-        return this.eventSource;
-    }
-
-    private void showDropPosition(int x, int y) {
-        // Clamp to region
-        if (x < 0) {
-            x = 0;
-        }
-        if (y < 0) {
-            y = 0;
-        }
-
-        // Determine column
-        int cardWidth = getCardWidth();
-        int cardHeight = getCardHeight();
-        int cardTopHeight = CardRenderer.getCardTopHeight(cardWidth);
-        int dx = x % (cardWidth + getGridPadding());
-        int col = x / (cardWidth + getGridPadding());
-        int gridWidth = cardGrid.isEmpty() ? 0 : cardGrid.get(0).size();
-
-        int countLabelHeight = getCountLabelHeight();
-        if (dx < getGridPadding() && col < gridWidth) {
-            // Which row to add to?
-            int curY = countLabelHeight;
-            int rowIndex = 0;
-            for (int i = 0; i < cardGrid.size(); ++i) {
-                int maxStack = maxStackSize.get(i);
-                int rowHeight = cardTopHeight * (maxStack - 1) + cardHeight;
-                int rowBottom = curY + rowHeight + countLabelHeight;
-
-                // Break out if we're in that row
-                if (y < rowBottom) {
-                    // Set the row
-                    rowIndex = i;
-                    break;
-                } else {
-                    rowIndex = i + 1;
-                    curY = rowBottom;
-                }
-            }
-
-            // Insert between two columns
-            insertArrow.setIcon(INSERT_COL_ICON);
-            insertArrow.setSize(64, 64);
-            insertArrow.setLocation((cardWidth + getGridPadding()) * col + getGridPadding() / 2 - 32, curY);
-        } else {
-            // Clamp to a new col one after the current last one
-            col = Math.min(col, gridWidth);
-
-            // Determine place in the col
-            int curY = countLabelHeight;
-            int rowIndex = 0;
-            int offsetIntoStack = 0;
-            for (int i = 0; i < cardGrid.size(); ++i) {
-                int maxStack = maxStackSize.get(i);
-                int rowHeight = cardTopHeight * (maxStack - 1) + cardHeight;
-                int rowBottom = curY + rowHeight + countLabelHeight;
-
-                // Break out if we're in that row
-                if (y < rowBottom) {
-                    // Set the row
-                    rowIndex = i;
-                    offsetIntoStack = y - curY;
-                    break;
-                } else {
-                    rowIndex = i + 1;
-                    offsetIntoStack = y - rowBottom;
-                    curY = rowBottom;
-                }
-            }
-
-            // Get the appropirate stack
-            List<CardView> stack;
-            if (rowIndex < cardGrid.size() && col < cardGrid.get(0).size()) {
-                stack = cardGrid.get(rowIndex).get(col);
-            } else {
-                stack = new ArrayList<>();
-            }
-
-            // Figure out position in the stack based on the offsetIntoRow
-            int stackInsertIndex = (offsetIntoStack + cardTopHeight / 2) / cardTopHeight;
-            stackInsertIndex = Math.max(0, Math.min(stackInsertIndex, stack.size()));
-
-            // Position arrow
-            insertArrow.setIcon(INSERT_ROW_ICON);
-            insertArrow.setSize(64, 32);
-            insertArrow.setLocation((cardWidth + getGridPadding()) * col + getGridPadding() + cardWidth / 2 - 32, curY + stackInsertIndex * cardTopHeight - 32);
-        }
-    }
-
-    @Override
-    public void dragCardExit(MouseEvent e) {
-        insertArrow.setVisible(false);
-    }
-
-    @Override
-    public void dragCardDrop(MouseEvent e, DragCardSource source, Collection<CardView> cards) {
-        e = SwingUtilities.convertMouseEvent(this, e, cardContent);
-        int x = e.getX();
-        int y = e.getY();
-
-        // Clamp to region
-        if (x < 0) {
-            x = 0;
-        }
-        if (y < 0) {
-            y = 0;
-        }
-
-        // If we're dragging onto ourself, erase the old cards (just null them out, we will
-        // compact the grid removing the null gaps / empty rows & cols later)
-        if (source == this) {
-            for (List<List<CardView>> gridRow : cardGrid) {
-                for (List<CardView> stack : gridRow) {
-                    for (int i = 0; i < stack.size(); ++i) {
-                        if (cards.contains(stack.get(i))) {
-                            stack.set(i, null);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Determine column
-        int cardWidth = getCardWidth();
-        int cardHeight = getCardHeight();
-        int cardTopHeight = CardRenderer.getCardTopHeight(cardWidth);
-        int dx = x % (cardWidth + getGridPadding());
-        int col = x / (cardWidth + getGridPadding());
-        int gridWidth = cardGrid.isEmpty() ? 0 : cardGrid.get(0).size();
-
-        int countLabelHeight = getCountLabelHeight();
-        if (dx < getGridPadding() && col < gridWidth) {
-            // Which row to add to?
-            int curY = countLabelHeight;
-            int rowIndex = 0;
-            for (int i = 0; i < cardGrid.size(); ++i) {
-                int maxStack = maxStackSize.get(i);
-                int rowHeight = cardTopHeight * (maxStack - 1) + cardHeight;
-                int rowBottom = curY + rowHeight + countLabelHeight;
-
-                // Break out if we're in that row
-                if (y < rowBottom) {
-                    // Set the row
-                    rowIndex = i;
-                    break;
-                } else {
-                    rowIndex = i + 1;
-                    curY = rowBottom;
-                }
-            }
-
-            // Add a new row if needed
-            if (rowIndex >= cardGrid.size()) {
-                List<List<CardView>> newRow = new ArrayList<>();
-                if (!cardGrid.isEmpty()) {
-                    for (int colIndex = 0; colIndex < cardGrid.get(0).size(); ++colIndex) {
-                        newRow.add(new ArrayList<>());
-                    }
-                }
-                cardGrid.add(newRow);
-                maxStackSize.add(0);
-            }
-
-            // Insert the new column to add to
-            for (int i = 0; i < cardGrid.size(); ++i) {
-                cardGrid.get(i).add(col, new ArrayList<>());
-            }
-
-            // Add the cards
-            cardGrid.get(rowIndex).get(col).addAll(cards);
-        } else {
-            // Clamp to a new col one after the current last one
-            col = Math.min(col, gridWidth);
-
-            // Determine place in the col
-            int curY = countLabelHeight;
-            int rowIndex = 0;
-            int offsetIntoStack = 0;
-            for (int i = 0; i < cardGrid.size(); ++i) {
-                int maxStack = maxStackSize.get(i);
-                int rowHeight = cardTopHeight * (maxStack - 1) + cardHeight;
-                int rowBottom = curY + rowHeight + countLabelHeight;
-
-                // Break out if we're in that row
-                if (y < rowBottom) {
-                    // Set the row
-                    rowIndex = i;
-                    offsetIntoStack = y - curY;
-                    break;
-                } else {
-                    rowIndex = i + 1;
-                    offsetIntoStack = y - rowBottom;
-                    curY = rowBottom;
-                }
-            }
-
-            // Add a new row if needed
-            if (rowIndex >= cardGrid.size()) {
-                List<List<CardView>> newRow = new ArrayList<>();
-                if (!cardGrid.isEmpty()) {
-                    for (int colIndex = 0; colIndex < cardGrid.get(0).size(); ++colIndex) {
-                        newRow.add(new ArrayList<>());
-                    }
-                }
-                cardGrid.add(newRow);
-                maxStackSize.add(0);
-            }
-
-            // Add a new col if needed
-            if (col >= cardGrid.get(0).size()) {
-                for (int i = 0; i < cardGrid.size(); ++i) {
-                    cardGrid.get(i).add(new ArrayList<>());
-                }
-            }
-
-            // Get the appropirate stack
-            List<CardView> stack = cardGrid.get(rowIndex).get(col);
-
-            // Figure out position in the stack based on the offsetIntoRow
-            int stackInsertIndex = (offsetIntoStack + cardTopHeight / 2) / cardTopHeight;
-            stackInsertIndex = Math.max(0, Math.min(stackInsertIndex, stack.size()));
-
-            // Insert the cards
-            stack.addAll(stackInsertIndex, cards);
-        }
-
-        if (source == this) {
-            // Remove empty rows / cols / spaces in stacks
-            trimGrid();
-            layoutGrid();
-            repaintGrid();
-        } else {
-            // Add new cards to grid
-            for (CardView card : cards) {
-                card.setSelected(true);
-                addCardView(card);
-                eventSource.fireEventDeckCardAdded(card, null); // TODO: move event inside addCardView
-            }
-            layoutGrid();
-            repaintGrid();
-        }
-    }
-
-    public void changeGUISize() {
-        Font countLabelFont = DragCardGrid.getCountLabelFont();
-        stackCountLabels.stream().flatMap(Collection::stream).forEach(label -> {
-            label.setFont(countLabelFont);
-        });
-
-        layoutGrid();
-        cardScroll.getVerticalScrollBar().setUnitIncrement(CardRenderer.getCardTopHeight(getCardWidth()));
-        repaintGrid();
-    }
-
-    public void cleanUp() {
-        // Remove all of the cards from us
-        for (MageCard cardView : cardViews.values()) {
-            cardContent.remove(cardView);
-        }
-
-        // Clear out our tracking of stuff
-        cardGrid.clear();
-        maxStackSize.clear();
-        allCards.clear();
-        lastBigCard = null;
-        clearCardEventListeners();
-    }
-
-    public void addCardEventListener(Listener<mage.client.util.Event> listener) {
-        eventSource.addListener(listener);
-    }
-
-    public void clearCardEventListeners() {
-        eventSource.clearListeners();
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-        if (role == Role.SIDEBOARD) {
-            creatureCountLabel.setVisible(false);
-            landCountLabel.setVisible(false);
-            cardSizeSliderLabel.setVisible(false);
-            mouseDoubleClickMode.setVisible(false);
-        } else {
-            creatureCountLabel.setVisible(true);
-            landCountLabel.setVisible(true);
-            cardSizeSliderLabel.setVisible(true);
-            mouseDoubleClickMode.setVisible(true);
-        }
-        updateCounts();
-    }
-
-    private void updateMouseDoubleClicksInfo(boolean isHotKeyPressed) {
-        boolean gameMode = isHotKeyPressed
-                || mode != Constants.DeckEditorMode.FREE_BUILDING;
-        String oldText = mouseDoubleClickMode.getText();
-        String newText = String.format(DOUBLE_CLICK_MODE_INFO, gameMode ? "MOVE" : "DELETE");
-        if (!oldText.equals(newText)) {
-            mouseDoubleClickMode.setText(newText);
-        }
-    }
-
-    public void removeSelectedCards() {
-        List<CardView> cardsToRemove = allCards.stream()
-            .filter(CardView::isSelected)
-            .collect(Collectors.toList());
-        removeCards(cardsToRemove);
-    }
-
-    private void removeCards(List<CardView> cardsToRemove) {
-        cardsToRemove.forEach(cardToRemove -> {
-            for (List<List<CardView>> gridRow : cardGrid) {
-                for (List<CardView> stack : gridRow) {
-                    for (int i = 0; i < stack.size(); ++i) {
-                        CardView card = stack.get(i);
-                        if (card != null && card.equals(cardToRemove)) {
-                            eventSource.fireEventDeckCardRemoved(card);
-                            stack.set(i, null); // trimGrid must remove all empty spaces 
-                            removeCardView(card);
-                            break;
-                        }
-                    }
-                }
-            }
-        });
-        
-        trimGrid();
-        layoutGrid();
-        repaintGrid();
-    }
-
-    public DeckCardLayout getCardLayout() {
-        // 2D Array to put entries into
-        List<List<List<DeckCardInfo>>> info = new ArrayList<>();
-        for (List<List<CardView>> gridRow : cardGrid) {
-            List<List<DeckCardInfo>> row = new ArrayList<>();
-            info.add(row);
-            for (List<CardView> stack : gridRow) {
-                row.add(stack.stream()
-                        .map(card -> new DeckCardInfo(card.getName(), card.getCardNumber(), card.getExpansionSetCode()))
-                        .collect(Collectors.toList()));
-            }
-        }
-
-        // Store layout and settings then return them
-        return new DeckCardLayout(info, saveSettings().toString());
-    }
-
-    public void setDeckEditorMode(Constants.DeckEditorMode mode) {
-        this.mode = mode;
-        updateMouseDoubleClicksInfo(false);
-    }
-
-    public enum Sort {
-        NONE("No Sort", new CardViewNoneComparator()),
-        CARD_TYPE("Card Type", new CardViewCardTypeComparator()),
-        CMC("Mana Value", new CardViewCostComparator()),
-        COLOR("Color", new CardViewColorComparator()),
-        COLOR_IDENTITY("Color Identity", new CardViewColorIdentityComparator()),
-        RARITY("Rarity", new CardViewRarityComparator()),
-        EDH_POWER_LEVEL("EDH Power Level", new CardViewEDHPowerLevelComparator());
-
-        Sort(String text, CardViewComparator comparator) {
-            this.comparator = comparator;
-            this.text = text;
-        }
-
-        public CardViewComparator getComparator() {
-            return comparator;
-        }
-
-        public String getText() {
-            return text;
-        }
-
-        private final CardViewComparator comparator;
-        private final String text;
-    }
-
-    private class NewCardInfo {
-
-        private final Card newCard;
-        private final CardView newView;
-
-        public NewCardInfo(Card newCard, CardView newView) {
-            this.newCard = newCard;
-            this.newView = newView;
-        }
-    }
-
-    private abstract class CardTypeCounter {
-
-        protected abstract boolean is(CardView card);
-
-        int get() {
-            return count;
-        }
-
-        void add(CardView card) {
-            if (is(card)) {
-                ++count;
-            }
-        }
-
-        void remove(CardView card) {
-            if (is(card)) {
-                --count;
-            }
-        }
-
-        private int count = 0;
-    }
-
-    // Counters we use
-    private final CardTypeCounter creatureCounter = new CardTypeCounter() {
         @Override
         protected boolean is(CardView card) {
             return card.isCreature();
         }
     };
-    private final CardTypeCounter landCounter = new CardTypeCounter() {
+    private final CardTypeCounter landCounter = new CardTypeCounter(){
+
         @Override
         protected boolean is(CardView card) {
             return card.isLand();
         }
     };
+    private final CardTypeCounter artifactCounter = new CardTypeCounter(){
 
-    private final CardTypeCounter artifactCounter = new CardTypeCounter() {
         @Override
         protected boolean is(CardView card) {
             return card.isArtifact();
         }
     };
-    private final CardTypeCounter enchantmentCounter = new CardTypeCounter() {
+    private final CardTypeCounter enchantmentCounter = new CardTypeCounter(){
+
         @Override
         protected boolean is(CardView card) {
             return card.isEnchantment();
         }
     };
-    private final CardTypeCounter instantCounter = new CardTypeCounter() {
+    private final CardTypeCounter instantCounter = new CardTypeCounter(){
+
         @Override
         protected boolean is(CardView card) {
             return card.isInstant();
         }
     };
-    private final CardTypeCounter sorceryCounter = new CardTypeCounter() {
+    private final CardTypeCounter sorceryCounter = new CardTypeCounter(){
+
         @Override
         protected boolean is(CardView card) {
             return card.isSorcery();
         }
     };
-    private final CardTypeCounter planeswalkerCounter = new CardTypeCounter() {
+    private final CardTypeCounter planeswalkerCounter = new CardTypeCounter(){
+
         @Override
         protected boolean is(CardView card) {
             return card.isPlaneswalker();
         }
     };
-    private final CardTypeCounter battleCounter = new CardTypeCounter() {
+    private final CardTypeCounter battleCounter = new CardTypeCounter(){
+
         @Override
         protected boolean is(CardView card) {
             return card.isBattle();
         }
     };
-    private final CardTypeCounter kindredCounter = new CardTypeCounter() {
+    private final CardTypeCounter kindredCounter = new CardTypeCounter(){
+
         @Override
         protected boolean is(CardView card) {
             return card.isKindred();
         }
     };
-
-    private final CardTypeCounter[] allCounters = {
-            creatureCounter,
-            landCounter,
-            artifactCounter,
-            enchantmentCounter,
-            instantCounter,
-            planeswalkerCounter,
-            sorceryCounter,
-            battleCounter,
-            kindredCounter
-    };
-
-    // Listener
-    public interface DragCardGridListener {
-
-        void cardsSelected();
-
-        void hideCards(Collection<CardView> card);
-
-        void duplicateCards(Collection<CardView> cards);
-
-        void invertCardSelection(Collection<CardView> cards);
-
-        void showAll();
-    }
-
-    // Constants
-    private static final int DEFAULT_COUNT_LABEL_HEIGHT = 40; // can contain 1 or 2 lines
+    private final CardTypeCounter[] allCounters = new CardTypeCounter[]{this.creatureCounter, this.landCounter, this.artifactCounter, this.enchantmentCounter, this.instantCounter, this.planeswalkerCounter, this.sorceryCounter, this.battleCounter, this.kindredCounter};
+    private static final int DEFAULT_COUNT_LABEL_HEIGHT = 40;
     public static final int GRID_PADDING = 12;
-
     private static final ImageIcon INSERT_ROW_ICON = new ImageIcon(DragCardGrid.class.getClassLoader().getResource("editor_insert_row.png"));
     private static final ImageIcon INSERT_COL_ICON = new ImageIcon(DragCardGrid.class.getClassLoader().getResource("editor_insert_col.png"));
-
-    // All of the current card views
-    private final Map<UUID, MageCard> cardViews = new LinkedHashMap<>();
-    private final List<CardView> allCards = new ArrayList<>();
-
-    // card listeners
+    private final Map<UUID, MageCard> cardViews = new LinkedHashMap<UUID, MageCard>();
+    private final List<CardView> allCards = new ArrayList<CardView>();
     private final CardEventSource eventSource = new CardEventSource();
-
-    // Last big card
     BigCard lastBigCard = null;
-
-    // Top bar with dropdowns for sort / filter / etc
     JButton sortButton;
     JButton filterButton;
     JButton visibilityButton;
@@ -607,199 +203,412 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
     JButton blingButton;
     JButton oldVersionButton;
     JLabel mouseDoubleClickMode;
-
-    // Popup for toolbar
     final JPopupMenu filterPopup;
     JPopupMenu selectByTypePopup;
-
     final JPopupMenu sortPopup;
     final JPopupMenu selectByPopup;
     final JCheckBox separateCreaturesCb;
     final JTextField searchByTextField;
     JToggleButton multiplesButton;
-
     final JSlider cardSizeSlider;
     final JLabel cardSizeSliderLabel;
-
-    final Map<Sort, AbstractButton> sortButtons = new EnumMap<>(Sort.class);
-    final Map<CardType, AbstractButton> selectByTypeButtons = new EnumMap<>(CardType.class);
-
+    final Map<Sort, AbstractButton> sortButtons = new EnumMap<Sort, AbstractButton>(Sort.class);
+    final Map<CardType, AbstractButton> selectByTypeButtons = new EnumMap<CardType, AbstractButton>(CardType.class);
     final JLabel deckNameAndCountLabel;
     final JLabel landCountLabel;
     final JLabel creatureCountLabel;
-
-    // Main two controls holding the scrollable card grid
     final JScrollPane cardScroll;
     JLayeredPane cardContent;
-
-    // Drag onto insert arrow
     final JLabel insertArrow;
-
-    // Card area selection panel
     final SelectionBox selectionPanel;
     Set<CardView> selectionDragStartCards;
     int selectionDragStartX;
     int selectionDragStartY;
-
-    // Card size mod
     float cardSizeMod = 1.0f;
-
-    // The role (maindeck or sideboard)
     Role role = Role.MAINDECK;
-
-    // Dragging
     private final CardDraggerGlassPane dragger = new CardDraggerGlassPane(this);
-
-    // The grid of cards
-    // The outermost array contains multiple rows of stacks of cards
-    // The next inner array represents a row of stacks of cards
-    // The innermost array represents a single vertical stack of cards
     private List<List<List<CardView>>> cardGrid;
-    private List<Integer> maxStackSize = new ArrayList<>();
-    private final List<List<JLabel>> stackCountLabels = new ArrayList<>();
+    private List<Integer> maxStackSize = new ArrayList<Integer>();
+    private final List<List<JLabel>> stackCountLabels = new ArrayList<List<JLabel>>();
     private Sort cardSort = Sort.CMC;
-    private final List<CardType> selectByTypeSelected = new ArrayList<>();
+    private final List<CardType> selectByTypeSelected = new ArrayList<CardType>();
     private boolean separateCreatures = true;
+    private static final Pattern pattern = Pattern.compile(".*Add(.*)(\\{[WUBRGXC]\\})");
+    private final ArrayList<DragCardGridListener> listeners = new ArrayList();
 
-    public enum Role {
-        MAINDECK("Main deck"),
-        SIDEBOARD("Sideboard/commander");
-
-        Role(String name) {
-            this.name = name;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        private final String name;
+    @Override
+    public Collection<CardView> dragCardList() {
+        return this.allCards.stream().filter(SimpleCardView::isSelected).collect(Collectors.toCollection(ArrayList::new));
     }
 
-    public static class Settings {
+    @Override
+    public void dragCardBegin() {
+    }
 
-        public Sort sort;
-        public boolean separateCreatures;
-        public int cardSize;
+    @Override
+    public void dragCardEnd(DragCardTarget target) {
+        if (target != this && target != null) {
+            this.removeSelectedCards();
+        }
+    }
 
-        private static final Pattern parser = Pattern.compile("\\(([^,]*),([^,]*),([^)]*)\\)");
+    @Override
+    public void dragCardEnter(MouseEvent e) {
+        this.insertArrow.setVisible(true);
+    }
 
-        public static Settings parse(String str) {
-            Matcher m = parser.matcher(str);
-            if (m.find()) {
-                Settings s = new Settings();
-                if (m.groupCount() > 0) {
-                    s.sort = Sort.valueOf(m.group(1));
+    @Override
+    public void dragCardMove(MouseEvent e) {
+        e = SwingUtilities.convertMouseEvent(this, e, this.cardContent);
+        this.showDropPosition(e.getX(), e.getY());
+    }
+
+    @Override
+    public CardEventSource getCardEventSource() {
+        return this.eventSource;
+    }
+
+    private void showDropPosition(int x, int y) {
+        if (x < 0) {
+            x = 0;
+        }
+        if (y < 0) {
+            y = 0;
+        }
+        int cardWidth = this.getCardWidth();
+        int cardHeight = this.getCardHeight();
+        int cardTopHeight = CardRenderer.getCardTopHeight(cardWidth);
+        int dx = x % (cardWidth + this.getGridPadding());
+        int col = x / (cardWidth + this.getGridPadding());
+        int gridWidth = this.cardGrid.isEmpty() ? 0 : this.cardGrid.get(0).size();
+        int countLabelHeight = DragCardGrid.getCountLabelHeight();
+        if (dx < this.getGridPadding() && col < gridWidth) {
+            int curY = countLabelHeight;
+            int rowIndex = 0;
+            for (int i = 0; i < this.cardGrid.size(); ++i) {
+                int maxStack = this.maxStackSize.get(i);
+                int rowHeight = cardTopHeight * (maxStack - 1) + cardHeight;
+                int rowBottom = curY + rowHeight + countLabelHeight;
+                if (y < rowBottom) {
+                    rowIndex = i;
+                    break;
                 }
-                if (m.groupCount() > 1) {
-                    s.separateCreatures = Boolean.valueOf(m.group(2));
+                rowIndex = i + 1;
+                curY = rowBottom;
+            }
+            this.insertArrow.setIcon(INSERT_COL_ICON);
+            this.insertArrow.setSize(64, 64);
+            this.insertArrow.setLocation((cardWidth + this.getGridPadding()) * col + this.getGridPadding() / 2 - 32, curY);
+        } else {
+            col = Math.min(col, gridWidth);
+            int curY = countLabelHeight;
+            int rowIndex = 0;
+            int offsetIntoStack = 0;
+            for (int i = 0; i < this.cardGrid.size(); ++i) {
+                int maxStack = this.maxStackSize.get(i);
+                int rowHeight = cardTopHeight * (maxStack - 1) + cardHeight;
+                int rowBottom = curY + rowHeight + countLabelHeight;
+                if (y < rowBottom) {
+                    rowIndex = i;
+                    offsetIntoStack = y - curY;
+                    break;
                 }
-                if (m.groupCount() > 2) {
-                    s.cardSize = Integer.parseInt(m.group(3));
-                } else {
-                    s.cardSize = 50;
+                rowIndex = i + 1;
+                offsetIntoStack = y - rowBottom;
+                curY = rowBottom;
+            }
+            List<CardView> stack = rowIndex < this.cardGrid.size() && col < this.cardGrid.get(0).size() ? this.cardGrid.get(rowIndex).get(col) : new ArrayList<>();
+            int stackInsertIndex = (offsetIntoStack + cardTopHeight / 2) / cardTopHeight;
+            stackInsertIndex = Math.max(0, Math.min(stackInsertIndex, stack.size()));
+            this.insertArrow.setIcon(INSERT_ROW_ICON);
+            this.insertArrow.setSize(64, 32);
+            this.insertArrow.setLocation((cardWidth + this.getGridPadding()) * col + this.getGridPadding() + cardWidth / 2 - 32, curY + stackInsertIndex * cardTopHeight - 32);
+        }
+    }
+
+    @Override
+    public void dragCardExit(MouseEvent e) {
+        this.insertArrow.setVisible(false);
+    }
+
+    @Override
+    public void dragCardDrop(MouseEvent e, DragCardSource source, Collection<CardView> cards) {
+        int rowIndex;
+        int curY;
+        e = SwingUtilities.convertMouseEvent(this, e, this.cardContent);
+        int x = e.getX();
+        int y = e.getY();
+        if (x < 0) {
+            x = 0;
+        }
+        if (y < 0) {
+            y = 0;
+        }
+        if (source == this) {
+            for (List<List<CardView>> gridRow : this.cardGrid) {
+                for (List<CardView> stack : gridRow) {
+                    for (int i = 0; i < stack.size(); ++i) {
+                        if (!cards.contains(stack.get(i))) continue;
+                        stack.set(i, null);
+                    }
                 }
-                return s;
-            } else {
-                return null;
             }
         }
-
-        @Override
-        public String toString() {
-            return '(' + sort.toString() + ',' + separateCreatures + ',' + cardSize + ')';
+        int cardWidth = this.getCardWidth();
+        int cardHeight = this.getCardHeight();
+        int cardTopHeight = CardRenderer.getCardTopHeight(cardWidth);
+        int dx = x % (cardWidth + this.getGridPadding());
+        int col = x / (cardWidth + this.getGridPadding());
+        int gridWidth = this.cardGrid.isEmpty() ? 0 : this.cardGrid.get(0).size();
+        int countLabelHeight = DragCardGrid.getCountLabelHeight();
+        if (dx < this.getGridPadding() && col < gridWidth) {
+            int i;
+            curY = countLabelHeight;
+            rowIndex = 0;
+            for (i = 0; i < this.cardGrid.size(); ++i) {
+                int maxStack = this.maxStackSize.get(i);
+                int rowHeight = cardTopHeight * (maxStack - 1) + cardHeight;
+                int rowBottom = curY + rowHeight + countLabelHeight;
+                if (y < rowBottom) {
+                    rowIndex = i;
+                    break;
+                }
+                rowIndex = i + 1;
+                curY = rowBottom;
+            }
+            if (rowIndex >= this.cardGrid.size()) {
+                ArrayList newRow = new ArrayList();
+                if (!this.cardGrid.isEmpty()) {
+                    for (int colIndex = 0; colIndex < this.cardGrid.get(0).size(); ++colIndex) {
+                        newRow.add(new ArrayList());
+                    }
+                }
+                this.cardGrid.add(newRow);
+                this.maxStackSize.add(0);
+            }
+            for (i = 0; i < this.cardGrid.size(); ++i) {
+                this.cardGrid.get(i).add(col, new ArrayList());
+            }
+            this.cardGrid.get(rowIndex).get(col).addAll(cards);
+        } else {
+            col = Math.min(col, gridWidth);
+            curY = countLabelHeight;
+            rowIndex = 0;
+            int offsetIntoStack = 0;
+            for (int i = 0; i < this.cardGrid.size(); ++i) {
+                int maxStack = this.maxStackSize.get(i);
+                int rowHeight = cardTopHeight * (maxStack - 1) + cardHeight;
+                int rowBottom = curY + rowHeight + countLabelHeight;
+                if (y < rowBottom) {
+                    rowIndex = i;
+                    offsetIntoStack = y - curY;
+                    break;
+                }
+                rowIndex = i + 1;
+                offsetIntoStack = y - rowBottom;
+                curY = rowBottom;
+            }
+            if (rowIndex >= this.cardGrid.size()) {
+                ArrayList newRow = new ArrayList();
+                if (!this.cardGrid.isEmpty()) {
+                    for (int colIndex = 0; colIndex < this.cardGrid.get(0).size(); ++colIndex) {
+                        newRow.add(new ArrayList());
+                    }
+                }
+                this.cardGrid.add(newRow);
+                this.maxStackSize.add(0);
+            }
+            if (col >= this.cardGrid.get(0).size()) {
+                for (int i = 0; i < this.cardGrid.size(); ++i) {
+                    this.cardGrid.get(i).add(new ArrayList());
+                }
+            }
+            List<CardView> stack = this.cardGrid.get(rowIndex).get(col);
+            int stackInsertIndex = (offsetIntoStack + cardTopHeight / 2) / cardTopHeight;
+            stackInsertIndex = Math.max(0, Math.min(stackInsertIndex, stack.size()));
+            stack.addAll(stackInsertIndex, cards);
         }
+        if (source == this) {
+            this.trimGrid();
+            this.layoutGrid();
+            this.repaintGrid();
+        } else {
+            for (CardView card : cards) {
+                card.setSelected(true);
+                this.addCardView(card);
+                this.eventSource.fireEventDeckCardAdded((SimpleCardView)card, null);
+            }
+            this.layoutGrid();
+            this.repaintGrid();
+        }
+    }
+
+    public void changeGUISize() {
+        Font countLabelFont = DragCardGrid.getCountLabelFont();
+        this.stackCountLabels.stream().flatMap(Collection::stream).forEach(label -> label.setFont(countLabelFont));
+        this.layoutGrid();
+        this.cardScroll.getVerticalScrollBar().setUnitIncrement(CardRenderer.getCardTopHeight(this.getCardWidth()));
+        this.repaintGrid();
+    }
+
+    public void cleanUp() {
+        for (MageCard cardView : this.cardViews.values()) {
+            this.cardContent.remove((Component)cardView);
+        }
+        this.cardGrid.clear();
+        this.maxStackSize.clear();
+        this.allCards.clear();
+        this.lastBigCard = null;
+        this.clearCardEventListeners();
+    }
+
+    public void addCardEventListener(Listener<Event> listener) {
+        this.eventSource.addListener(listener);
+    }
+
+    public void clearCardEventListeners() {
+        this.eventSource.clearListeners();
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+        if (role == Role.SIDEBOARD) {
+            this.creatureCountLabel.setVisible(false);
+            this.landCountLabel.setVisible(false);
+            this.cardSizeSliderLabel.setVisible(false);
+            this.mouseDoubleClickMode.setVisible(false);
+        } else {
+            this.creatureCountLabel.setVisible(true);
+            this.landCountLabel.setVisible(true);
+            this.cardSizeSliderLabel.setVisible(true);
+            this.mouseDoubleClickMode.setVisible(true);
+        }
+        this.updateCounts();
+    }
+
+    private void updateMouseDoubleClicksInfo(boolean isHotKeyPressed) {
+        boolean gameMode = isHotKeyPressed || this.mode != Constants.DeckEditorMode.FREE_BUILDING;
+        String oldText = this.mouseDoubleClickMode.getText();
+        String newText = String.format(DOUBLE_CLICK_MODE_INFO, gameMode ? "MOVE" : "DELETE");
+        if (!oldText.equals(newText)) {
+            this.mouseDoubleClickMode.setText(newText);
+        }
+    }
+
+    public void removeSelectedCards() {
+        List<CardView> cardsToRemove = this.allCards.stream().filter(SimpleCardView::isSelected).collect(Collectors.toList());
+        this.removeCards(cardsToRemove);
+    }
+
+    private void removeCards(List<CardView> cardsToRemove) {
+        cardsToRemove.forEach(cardToRemove -> {
+            for (List<List<CardView>> gridRow : this.cardGrid) {
+                block1: for (List<CardView> stack : gridRow) {
+                    for (int i = 0; i < stack.size(); ++i) {
+                        CardView card = stack.get(i);
+                        if (card == null || !card.equals(cardToRemove)) continue;
+                        this.eventSource.fireEventDeckCardRemoved((SimpleCardView)card);
+                        stack.set(i, null);
+                        this.removeCardView(card);
+                        continue block1;
+                    }
+                }
+            }
+        });
+        this.trimGrid();
+        this.layoutGrid();
+        this.repaintGrid();
+    }
+
+    public DeckCardLayout getCardLayout() {
+        ArrayList<List<List<DeckCardInfo>>> info = new ArrayList<List<List<DeckCardInfo>>>();
+        for (List<List<CardView>> gridRow : this.cardGrid) {
+            ArrayList row = new ArrayList();
+            info.add(row);
+            for (List<CardView> stack : gridRow) {
+                row.add(stack.stream().map(card -> new DeckCardInfo(card.getName(), card.getCardNumber(), card.getExpansionSetCode())).collect(Collectors.toList()));
+            }
+        }
+        return new DeckCardLayout(info, this.saveSettings().toString());
+    }
+
+    public void setDeckEditorMode(Constants.DeckEditorMode mode) {
+        this.mode = mode;
+        this.updateMouseDoubleClicksInfo(false);
     }
 
     public Settings saveSettings() {
         Settings s = new Settings();
-        s.sort = cardSort;
-        s.separateCreatures = separateCreatures;
-        s.cardSize = cardSizeSlider.getValue();
+        s.sort = this.cardSort;
+        s.separateCreatures = this.separateCreatures;
+        s.cardSize = this.cardSizeSlider.getValue();
         return s;
     }
 
     public void loadSettings(Settings s) {
         if (s != null) {
-            setSort(s.sort);
-            setSeparateCreatures(s.separateCreatures);
-            setCardSize(s.cardSize);
-            resort();
+            this.setSort(s.sort);
+            this.setSeparateCreatures(s.separateCreatures);
+            this.setCardSize(s.cardSize);
+            this.resort();
         }
     }
 
     public void setSeparateCreatures(boolean state) {
-        separateCreatures = state;
-        separateCreaturesCb.setSelected(state);
+        this.separateCreatures = state;
+        this.separateCreaturesCb.setSelected(state);
     }
 
     public void setSort(Sort s) {
-        cardSort = s;
-        sortButtons.get(s).setSelected(true);
+        this.cardSort = s;
+        this.sortButtons.get((Object)s).setSelected(true);
     }
 
     public void setCardSize(int size) {
-        cardSizeSlider.setValue(size);
+        this.cardSizeSlider.setValue(size);
     }
 
     public DragCardGrid() {
-        // Make sure that the card grid is populated with at least one (empty) stack to begin with
-        cardGrid = new ArrayList<>();
-
-        // Component init
-        setLayout(new BorderLayout());
-        setOpaque(false);
-
-        // default game mode (real game mode will be set after all components init)
+        JToggleButton button;
+        this.cardGrid = new ArrayList<List<List<CardView>>>();
+        this.setLayout(new BorderLayout());
+        this.setOpaque(false);
         this.mode = Constants.DeckEditorMode.LIMITED_BUILDING;
-
-        // Content
-        cardContent = new JLayeredPane();
-        cardContent.setLayout(null);
-        cardContent.setOpaque(false);
-
-        // ENABLE MOUSE CLICKS (cards, menu)
+        this.cardContent = new JLayeredPane();
+        this.cardContent.setLayout(null);
+        this.cardContent.setOpaque(false);
         this.cardListener = event -> {
             switch (event.getEventType()) {
-                case CARD_POPUP_MENU:
-                    if (event.getSource() != null) {
-                        // menu for card
-                        CardView card = (CardView) event.getSource();
-                        MouseEvent me = event.getMouseEvent();
-                        if (!card.isSelected()) {
-                            selectCard(card);
-                        }
-                        showCardRightClickMenu(card, me);
+                case CARD_POPUP_MENU: {
+                    if (event.getSource() == null) break;
+                    CardView card = (CardView)event.getSource();
+                    MouseEvent me = event.getMouseEvent();
+                    if (!card.isSelected()) {
+                        this.selectCard(card);
                     }
+                    this.showCardRightClickMenu(card, me);
                     break;
-
-                case CARD_CLICK:
-                    if (event.getSource() != null) {
-                        CardView card = (CardView) event.getSource();
-                        MouseEvent me = event.getMouseEvent();
-                        cardClicked(card, me);
-                    }
-                    break;
+                }
+                case CARD_CLICK: {
+                    if (event.getSource() == null) break;
+                    CardView card = (CardView)event.getSource();
+                    MouseEvent me = event.getMouseEvent();
+                    this.cardClicked(card, me);
+                }
             }
         };
-        eventSource.addListener(this.cardListener);
+        this.eventSource.addListener(this.cardListener);
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher(){
 
-        // keyboard listener for ALT status update
-        // it requires GLOBAL listener
-        KeyboardFocusManager.getCurrentKeyboardFocusManager()
-                .addKeyEventDispatcher(new KeyEventDispatcher() {
-                    @Override
-                    public boolean dispatchKeyEvent(KeyEvent e) {
-                        if (e.getKeyCode() == KeyEvent.VK_ALT) {
-                            updateMouseDoubleClicksInfo(e.isAltDown());
-                        }
-                        return false;
-                    }
-                });
-
-
-        // ENABLE MULTI-CARDS SELECTION
-        cardContent.addMouseListener(new MouseAdapter() {
+            @Override
+            public boolean dispatchKeyEvent(KeyEvent e) {
+                if (e.getKeyCode() == 18) {
+                    DragCardGrid.this.updateMouseDoubleClicksInfo(e.isAltDown());
+                }
+                return false;
+            }
+        });
+        this.cardContent.addMouseListener(new MouseAdapter(){
             private boolean isDragging = false;
 
             @Override
@@ -807,539 +616,439 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
                 if (!SwingUtilities.isLeftMouseButton(e)) {
                     return;
                 }
-                isDragging = true;
-                beginSelectionDrag(e.getX(), e.getY(), e.isShiftDown());
-                updateSelectionDrag(e.getX(), e.getY());
+                this.isDragging = true;
+                DragCardGrid.this.beginSelectionDrag(e.getX(), e.getY(), e.isShiftDown());
+                DragCardGrid.this.updateSelectionDrag(e.getX(), e.getY());
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (isDragging) {
-                    isDragging = false;
-                    updateSelectionDrag(e.getX(), e.getY());
-                    endSelectionDrag(e.getX(), e.getY());
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    DragCardGrid.this.updateSelectionDrag(e.getX(), e.getY());
+                    DragCardGrid.this.endSelectionDrag(e.getX(), e.getY());
                 }
             }
         });
-        cardContent.addMouseMotionListener(new MouseAdapter() {
+        this.cardContent.addMouseMotionListener(new MouseAdapter(){
+
             @Override
             public void mouseDragged(MouseEvent e) {
-                updateSelectionDrag(e.getX(), e.getY());
+                DragCardGrid.this.updateSelectionDrag(e.getX(), e.getY());
             }
         });
-
-        cardScroll = new JScrollPane(cardContent,
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        cardScroll.setOpaque(false);
-        cardScroll.getViewport().setOpaque(false);
-        cardScroll.setViewportBorder(BorderFactory.createEmptyBorder());
-        cardScroll.setBorder(BorderFactory.createLineBorder(Color.gray, 1));
-        cardScroll.getVerticalScrollBar().setUnitIncrement(CardRenderer.getCardTopHeight(getCardWidth()));
-        this.add(cardScroll, BorderLayout.CENTER);
-
-        // Toolbar
-        sortButton = new JButton("Sort");
-        filterButton = new JButton("Filter");
-        visibilityButton = new JButton("V"); // "Visibility" button
-        selectByButton = new JButton("Select By");
-        analyseButton = new JButton("M"); // "Mana" button
-        blingButton = new JButton("B"); // "Bling" button
-        oldVersionButton = new JButton("O"); // "Old version" button
-        mouseDoubleClickMode = new JLabel(DOUBLE_CLICK_MODE_INFO);
-        mouseDoubleClickMode.setToolTipText("<html>Mouse modes for double clicks:"
-                + "<br> * &lt;Double Click&gt;: <b>DELETE</b> card from mainboard/sideboard (it works as <b>MOVE</b> in games);"
-                + "<br> * &lt;ALT + Double Click&gt;: <b>MOVE</b> card between mainboard/sideboard (default for games);"
-                + "<br> * Deck editor: use &lt;ALT + Double Click&gt; on cards list to add card to the sideboard instead mainboard."
-        );
-        updateMouseDoubleClicksInfo(false);
-
-        // Name and count label
-        deckNameAndCountLabel = new JLabel();
-
-        // Count labels
-        landCountLabel = new JLabel("", new ImageIcon(getClass().getResource("/buttons/type_land.png")), SwingConstants.LEFT);
-        landCountLabel.setToolTipText("Number of lands in deck");
-        creatureCountLabel = new JLabel("", new ImageIcon(getClass().getResource("/buttons/type_creatures.png")), SwingConstants.LEFT);
-        creatureCountLabel.setToolTipText("Number of creatures in deck");
-
+        this.cardScroll = new JScrollPane(this.cardContent, 20, 30);
+        this.cardScroll.setOpaque(false);
+        this.cardScroll.getViewport().setOpaque(false);
+        this.cardScroll.setViewportBorder(BorderFactory.createEmptyBorder());
+        this.cardScroll.setBorder(BorderFactory.createLineBorder(Color.gray, 1));
+        this.cardScroll.getVerticalScrollBar().setUnitIncrement(CardRenderer.getCardTopHeight(this.getCardWidth()));
+        this.add((Component)this.cardScroll, "Center");
+        this.sortButton = new JButton("Sort");
+        this.filterButton = new JButton("Filter");
+        this.visibilityButton = new JButton("V");
+        this.selectByButton = new JButton("Select By");
+        this.analyseButton = new JButton("M");
+        this.blingButton = new JButton("B");
+        this.oldVersionButton = new JButton("O");
+        this.mouseDoubleClickMode = new JLabel(DOUBLE_CLICK_MODE_INFO);
+        this.mouseDoubleClickMode.setToolTipText("<html>Mouse modes for double clicks:<br> * &lt;Double Click&gt;: <b>DELETE</b> card from mainboard/sideboard (it works as <b>MOVE</b> in games);<br> * &lt;ALT + Double Click&gt;: <b>MOVE</b> card between mainboard/sideboard (default for games);<br> * Deck editor: use &lt;ALT + Double Click&gt; on cards list to add card to the sideboard instead mainboard.");
+        this.updateMouseDoubleClicksInfo(false);
+        this.deckNameAndCountLabel = new JLabel();
+        this.landCountLabel = new JLabel("", new ImageIcon(this.getClass().getResource("/buttons/type_land.png")), 2);
+        this.landCountLabel.setToolTipText("Number of lands in deck");
+        this.creatureCountLabel = new JLabel("", new ImageIcon(this.getClass().getResource("/buttons/type_creatures.png")), 2);
+        this.creatureCountLabel.setToolTipText("Number of creatures in deck");
         JPanel toolbar = new JPanel(new BorderLayout());
         JPanel toolbarInner = new JPanel();
         toolbar.setBackground(PreferencesDialog.getCurrentTheme().getDeckEditorToolbarBackgroundColor());
         toolbar.setOpaque(true);
         toolbarInner.setOpaque(false);
-        toolbarInner.add(deckNameAndCountLabel);
-        toolbarInner.add(landCountLabel);
-        toolbarInner.add(creatureCountLabel);
-        toolbarInner.add(sortButton);
-        toolbarInner.add(filterButton);
-        toolbarInner.add(selectByButton);
-        toolbarInner.add(visibilityButton);
-        toolbarInner.add(analyseButton);
-        toolbarInner.add(blingButton);
-        toolbarInner.add(oldVersionButton);
-        toolbarInner.add(mouseDoubleClickMode);
-        toolbar.add(toolbarInner, BorderLayout.WEST);
+        toolbarInner.add(this.deckNameAndCountLabel);
+        toolbarInner.add(this.landCountLabel);
+        toolbarInner.add(this.creatureCountLabel);
+        toolbarInner.add(this.sortButton);
+        toolbarInner.add(this.filterButton);
+        toolbarInner.add(this.selectByButton);
+        toolbarInner.add(this.visibilityButton);
+        toolbarInner.add(this.analyseButton);
+        toolbarInner.add(this.blingButton);
+        toolbarInner.add(this.oldVersionButton);
+        toolbarInner.add(this.mouseDoubleClickMode);
+        toolbar.add((Component)toolbarInner, "West");
         JPanel sliderPanel = new JPanel(new GridBagLayout());
         sliderPanel.setOpaque(false);
-        cardSizeSlider = new JSlider(SwingConstants.HORIZONTAL, 0, 100, 50);
-        cardSizeSlider.setOpaque(false);
-        cardSizeSlider.setPreferredSize(new Dimension(100, (int) cardSizeSlider.getPreferredSize().getHeight()));
-        cardSizeSlider.addChangeListener(e -> {
-            if (!cardSizeSlider.getValueIsAdjusting()) {
-                // Fraction in [-1, 1]
-                float sliderFrac = ((float) (cardSizeSlider.getValue() - 50)) / 50;
-                // Convert to frac in [0.5, 2.0] exponentially
-                cardSizeMod = (float) Math.pow(2, sliderFrac);
-                // Update grid
-                layoutGrid();
-                repaintGrid();
+        this.cardSizeSlider = new JSlider(0, 0, 100, 50);
+        this.cardSizeSlider.setOpaque(false);
+        this.cardSizeSlider.setPreferredSize(new Dimension(100, (int)this.cardSizeSlider.getPreferredSize().getHeight()));
+        this.cardSizeSlider.addChangeListener(e -> {
+            if (!this.cardSizeSlider.getValueIsAdjusting()) {
+                float sliderFrac = (float)(this.cardSizeSlider.getValue() - 50) / 50.0f;
+                this.cardSizeMod = (float)Math.pow(2.0, sliderFrac);
+                this.layoutGrid();
+                this.repaintGrid();
             }
         });
-        cardSizeSliderLabel = new JLabel("Card size:");
-        sliderPanel.add(cardSizeSliderLabel);
-        sliderPanel.add(cardSizeSlider);
-        toolbar.add(sliderPanel, BorderLayout.EAST);
-        this.add(toolbar, BorderLayout.NORTH);
-
-        // Insert arrow
-        insertArrow = new JLabel();
-        insertArrow.setSize(20, 20);
-        insertArrow.setVisible(false);
-        cardContent.add(insertArrow, (Integer) 1000);
-
-        // Selection panel
-        selectionPanel = new SelectionBox();
-        selectionPanel.setVisible(false);
-        cardContent.add(selectionPanel, (Integer) 1001);
-
-        // Load separate creatures setting
-        separateCreatures = PreferencesDialog.getCachedValue(PreferencesDialog.KEY_DECK_EDITOR_LAST_SEPARATE_CREATURES, "false").equals("true");
+        this.cardSizeSliderLabel = new JLabel("Card size:");
+        sliderPanel.add(this.cardSizeSliderLabel);
+        sliderPanel.add(this.cardSizeSlider);
+        toolbar.add((Component)sliderPanel, "East");
+        this.add((Component)toolbar, "North");
+        this.insertArrow = new JLabel();
+        this.insertArrow.setSize(20, 20);
+        this.insertArrow.setVisible(false);
+        this.cardContent.add((Component)this.insertArrow, (Object)1000);
+        this.selectionPanel = new SelectionBox();
+        this.selectionPanel.setVisible(false);
+        this.cardContent.add((Component)this.selectionPanel, (Object)1001);
+        this.separateCreatures = PreferencesDialog.getCachedValue("deckEditorLastSeparateCreatures", "false").equals("true");
         try {
-            cardSort = Sort.valueOf(PreferencesDialog.getCachedValue(PreferencesDialog.KEY_DECK_EDITOR_LAST_SORT, Sort.NONE.toString()));
-        } catch (IllegalArgumentException ex) {
-            cardSort = Sort.NONE;
+            this.cardSort = Sort.valueOf(PreferencesDialog.getCachedValue("deckEditorLastSort", Sort.NONE.toString()));
         }
-        // Sort popup
-        {
-            sortPopup = new JPopupMenu();
-            sortPopup.setLayout(new GridBagLayout());
+        catch (IllegalArgumentException ex) {
+            this.cardSort = Sort.NONE;
+        }
+        this.sortPopup = new JPopupMenu();
+        this.sortPopup.setLayout(new GridBagLayout());
+        JPanel sortMode = new JPanel();
+        sortMode.setLayout(new GridLayout(Sort.values().length, 1, 0, 2));
+        sortMode.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Sort by..."));
+        GridBagConstraints sortModeC = new GridBagConstraints();
+        sortModeC.gridx = 0;
+        sortModeC.gridy = 0;
+        sortModeC.gridwidth = 1;
+        sortModeC.gridheight = 1;
+        sortModeC.fill = 2;
+        this.sortPopup.add((Component)sortMode, sortModeC);
+        ButtonGroup sortModeGroup = new ButtonGroup();
+        Sort[] sortArray = Sort.values();
+        int n = sortArray.length;
+        for (int i = 0; i < n; ++i) {
+            Sort s = sortArray[i];
+            button = new JToggleButton(s.getText());
+            if (s == this.cardSort) {
+                button.setSelected(true);
+            }
+            this.sortButtons.put(s, button);
+            sortMode.add(button);
+            sortModeGroup.add(button);
+            button.addActionListener(e -> {
+                this.cardSort = s;
+                PreferencesDialog.saveValue("deckEditorLastSort", s.toString());
+                this.resort();
+            });
+        }
+        JPanel sortOptions = new JPanel();
+        sortOptions.setLayout(new BoxLayout((Container)sortOptions, 1));
+        sortOptions.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Sort options"));
+        GridBagConstraints sortOptionsC = new GridBagConstraints();
+        sortOptionsC.gridx = 0;
+        sortOptionsC.gridy = 1;
+        sortOptionsC.gridwidth = 1;
+        sortOptionsC.gridheight = 1;
+        this.sortPopup.add((Component)sortOptions, sortOptionsC);
+        this.separateCreaturesCb = new JCheckBox();
+        this.separateCreaturesCb.setText("Puts creatures in separate first row");
+        this.separateCreaturesCb.setSelected(this.separateCreatures);
+        this.separateCreaturesCb.addItemListener(e -> {
+            this.setSeparateCreatures(this.separateCreaturesCb.isSelected());
+            PreferencesDialog.saveValue("deckEditorLastSeparateCreatures", Boolean.toString(this.separateCreatures));
+            this.resort();
+        });
+        sortOptions.add(this.separateCreaturesCb);
+        this.sortPopup.pack();
+        DragCardGrid.makeButtonPopup(this.sortButton, this.sortPopup);
+        final JPopupMenu visPopup = new JPopupMenu();
+        JMenuItem hideSelected = new JMenuItem("Hide selected");
+        hideSelected.addActionListener(e -> this.hideSelection());
+        visPopup.add(hideSelected);
+        JMenuItem showAll = new JMenuItem("Show all");
+        showAll.addActionListener(e -> this.showAll());
+        visPopup.add(showAll);
+        this.visibilityButton.setToolTipText("Visibility of cards.  Right click to get the same options this provides");
+        this.visibilityButton.addMouseListener(new MouseAdapter(){
 
-            JPanel sortMode = new JPanel();
-            sortMode.setLayout(new GridLayout(Sort.values().length, 1, 0, 2));
-            sortMode.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Sort by..."));
-            GridBagConstraints sortModeC = new GridBagConstraints();
-            sortModeC.gridx = 0;
-            sortModeC.gridy = 0;
-            sortModeC.gridwidth = 1;
-            sortModeC.gridheight = 1;
-            sortModeC.fill = GridBagConstraints.HORIZONTAL;
-            sortPopup.add(sortMode, sortModeC);
-
-            ButtonGroup sortModeGroup = new ButtonGroup();
-            for (final Sort s : Sort.values()) {
-                JToggleButton button = new JToggleButton(s.getText());
-                if (s == cardSort) {
-                    button.setSelected(true);
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!SwingUtilities.isLeftMouseButton(e)) {
+                    return;
                 }
-                sortButtons.put(s, button);
-                sortMode.add(button);
-                sortModeGroup.add(button);
-                button.addActionListener(e -> {
-                    cardSort = s;
-                    PreferencesDialog.saveValue(PreferencesDialog.KEY_DECK_EDITOR_LAST_SORT, s.toString());
-                    resort();
+                visPopup.show(e.getComponent(), 0, e.getComponent().getHeight());
+            }
+        });
+        this.selectByPopup = new JPopupMenu();
+        this.selectByPopup.setLayout(new GridBagLayout());
+        JPanel selectByTypeMode = new JPanel();
+        selectByTypeMode.setLayout(new GridLayout(CardType.values().length, 1, 0, 2));
+        selectByTypeMode.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Select by Type"));
+        GridBagConstraints selectByTypeModeC = new GridBagConstraints();
+        selectByTypeModeC.gridx = 0;
+        selectByTypeModeC.gridy = 0;
+        selectByTypeModeC.gridwidth = 1;
+        selectByTypeModeC.gridheight = 1;
+        selectByTypeModeC.fill = 2;
+        this.selectByPopup.add((Component)selectByTypeMode, selectByTypeModeC);
+        ButtonGroup selectByTypeModeGroup = new ButtonGroup();
+        for (CardType cardType : CardType.values()) {
+            if (cardType == CardType.CONSPIRACY) {
+                this.multiplesButton = new JToggleButton("Multiples");
+                this.selectByTypeButtons.put(cardType, this.multiplesButton);
+                selectByTypeMode.add(this.multiplesButton);
+                selectByTypeModeGroup.add(this.multiplesButton);
+                this.multiplesButton.addActionListener(e -> {
+                    this.multiplesButton.setSelected(!this.multiplesButton.isSelected());
+                    this.reselectBy();
                 });
+                continue;
+            }
+            final JToggleButton typeButton = new JToggleButton(cardType.toString());
+            this.selectByTypeButtons.put(cardType, typeButton);
+            selectByTypeMode.add(typeButton);
+            selectByTypeModeGroup.add(typeButton);
+            typeButton.addActionListener(e -> {
+                typeButton.setSelected(!typeButton.isSelected());
+                this.reselectBy();
+            });
+        }
+        JPanel selectBySearchPanel = new JPanel();
+        selectBySearchPanel.setPreferredSize(new Dimension(150, 60));
+        selectBySearchPanel.setLayout(new GridLayout(1, 1));
+        selectBySearchPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Search:"));
+        GridBagConstraints selectBySearchPanelC = new GridBagConstraints();
+        selectBySearchPanelC.gridx = 0;
+        selectBySearchPanelC.gridy = 1;
+        selectBySearchPanelC.gridwidth = 1;
+        selectBySearchPanelC.gridheight = 1;
+        selectBySearchPanelC.fill = 2;
+        selectBySearchPanelC.fill = 3;
+        this.searchByTextField = new JTextField();
+        this.searchByTextField.setToolTipText("Search cards by any data like name or mana symbols like {W}, {U}, {C}, etc (use quotes for exact search)");
+        this.searchByTextField.addKeyListener(new KeyAdapter(){
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                DragCardGrid.this.reselectBy();
             }
 
-            JPanel sortOptions = new JPanel();
-            sortOptions.setLayout(new BoxLayout(sortOptions, BoxLayout.Y_AXIS));
-            sortOptions.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Sort options"));
-            GridBagConstraints sortOptionsC = new GridBagConstraints();
-            sortOptionsC.gridx = 0;
-            sortOptionsC.gridy = 1;
-            sortOptionsC.gridwidth = 1;
-            sortOptionsC.gridheight = 1;
-            sortPopup.add(sortOptions, sortOptionsC);
-
-            separateCreaturesCb = new JCheckBox();
-            separateCreaturesCb.setText("Puts creatures in separate first row");
-            separateCreaturesCb.setSelected(separateCreatures);
-            separateCreaturesCb.addItemListener(e -> {
-                setSeparateCreatures(separateCreaturesCb.isSelected());
-                PreferencesDialog.saveValue(PreferencesDialog.KEY_DECK_EDITOR_LAST_SEPARATE_CREATURES, Boolean.toString(separateCreatures));
-                resort();
-            });
-            sortOptions.add(separateCreaturesCb);
-            sortPopup.pack();
-
-            makeButtonPopup(sortButton, sortPopup);
-        }
-
-        // Visibility popup
-        {
-            final JPopupMenu visPopup = new JPopupMenu();
-            JMenuItem hideSelected = new JMenuItem("Hide selected");
-            hideSelected.addActionListener(e -> hideSelection());
-            visPopup.add(hideSelected);
-            JMenuItem showAll = new JMenuItem("Show all");
-            showAll.addActionListener(e -> showAll());
-            visPopup.add(showAll);
-            visibilityButton.setToolTipText("Visibility of cards.  Right click to get the same options this provides");
-            visibilityButton.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (!SwingUtilities.isLeftMouseButton(e)) {
-                        return;
-                    }
-                    visPopup.show(e.getComponent(), 0, e.getComponent().getHeight());
-                }
-            });
-        }
-
-        // selectBy.. popup
-        {
-            selectByPopup = new JPopupMenu();
-            selectByPopup.setLayout(new GridBagLayout());
-
-            JPanel selectByTypeMode = new JPanel();
-            selectByTypeMode.setLayout(new GridLayout(CardType.values().length, 1, 0, 2));
-            selectByTypeMode.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Select by Type"));
-            GridBagConstraints selectByTypeModeC = new GridBagConstraints();
-            selectByTypeModeC.gridx = 0;
-            selectByTypeModeC.gridy = 0;
-            selectByTypeModeC.gridwidth = 1;
-            selectByTypeModeC.gridheight = 1;
-            selectByTypeModeC.fill = GridBagConstraints.HORIZONTAL;
-            selectByPopup.add(selectByTypeMode, selectByTypeModeC);
-
-            ButtonGroup selectByTypeModeGroup = new ButtonGroup();
-            for (final CardType cardType : CardType.values()) {
-
-                if (cardType == CardType.CONSPIRACY) {
-                    multiplesButton = new JToggleButton("Multiples");
-                    selectByTypeButtons.put(cardType, multiplesButton);
-                    selectByTypeMode.add(multiplesButton);
-                    selectByTypeModeGroup.add(multiplesButton);
-                    multiplesButton.addActionListener(e -> {
-                        multiplesButton.setSelected(!multiplesButton.isSelected());
-                        reselectBy();
-                    });
-                    continue;
-                }
-
-                JToggleButton button = new JToggleButton(cardType.toString());
-                selectByTypeButtons.put(cardType, button);
-                selectByTypeMode.add(button);
-                selectByTypeModeGroup.add(button);
-                button.addActionListener(e -> {
-                    //selectByTypeSelected.add(cardType);
-                    button.setSelected(!button.isSelected());
-                    reselectBy();
-                });
+            @Override
+            public void keyTyped(KeyEvent e) {
             }
 
-            JPanel selectBySearchPanel = new JPanel();
-            selectBySearchPanel.setPreferredSize(new Dimension(150, 60));
-            selectBySearchPanel.setLayout(new GridLayout(1, 1));
-            selectBySearchPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Search:"));
-            GridBagConstraints selectBySearchPanelC = new GridBagConstraints();
-            selectBySearchPanelC.gridx = 0;
-            selectBySearchPanelC.gridy = 1;
-            selectBySearchPanelC.gridwidth = 1;
-            selectBySearchPanelC.gridheight = 1;
-            selectBySearchPanelC.fill = GridBagConstraints.HORIZONTAL;
-            selectBySearchPanelC.fill = GridBagConstraints.VERTICAL;
-
-            searchByTextField = new JTextField();
-            searchByTextField.setToolTipText("Search cards by any data like name or mana symbols like {W}, {U}, {C}, etc (use quotes for exact search)");
-            searchByTextField.addKeyListener(new KeyAdapter() {
-                @Override
-                public void keyReleased(KeyEvent e) {
-                    reselectBy();
-                }
-
-                @Override
-                public void keyTyped(KeyEvent e) {
-                }
-
-                @Override
-                public void keyPressed(KeyEvent e) {
-
-                }
-            });
-
-            selectBySearchPanel.add(searchByTextField);
-            selectByPopup.add(selectBySearchPanel, selectBySearchPanelC);
-            makeButtonPopup(selectByButton, selectByPopup);
-        }
-
-        // Analyse Mana (aka #blue pips, #islands, #white pips, #plains etc.)
-        analyseButton.setToolTipText("Mana Analyser! Counts coloured/colourless mana costs. Counts land types.");
-        analyseButton.addActionListener(evt -> analyseDeck());
-
-        // Bling button - aka Add in a premium 'JR', 'MBP', 'CS' etc card
-        blingButton.setToolTipText("Bling your deck! Select the original and added cards by selecting 'Multiples' in the selection options");
-        blingButton.addActionListener(evt -> blingDeck());
-
-        // Old version button - Switch cards to the oldest non-promo printing. In case of multiples in a set, take the lowest card number.
-        oldVersionButton.setToolTipText("Switch cards to the oldest non-promo printing");
-        oldVersionButton.addActionListener(evt -> oldVersionDeck());
-
-        // Filter popup
-        filterPopup = new JPopupMenu();
-        filterPopup.setPreferredSize(new Dimension(300, 300));
-        makeButtonPopup(filterButton, filterPopup);
-        filterButton.setVisible(false);
-
-        // Right click in card area
-        initCardAreaPopup();
-
-        // Update counts
-        updateCounts();
+            @Override
+            public void keyPressed(KeyEvent e) {
+            }
+        });
+        selectBySearchPanel.add(this.searchByTextField);
+        this.selectByPopup.add((Component)selectBySearchPanel, selectBySearchPanelC);
+        DragCardGrid.makeButtonPopup(this.selectByButton, this.selectByPopup);
+        this.analyseButton.setToolTipText("Mana Analyser! Counts coloured/colourless mana costs. Counts land types.");
+        this.analyseButton.addActionListener(evt -> this.analyseDeck());
+        this.blingButton.setToolTipText("Bling your deck! Select the original and added cards by selecting 'Multiples' in the selection options");
+        this.blingButton.addActionListener(evt -> this.blingDeck());
+        this.oldVersionButton.setToolTipText("Switch cards to the oldest non-promo printing");
+        this.oldVersionButton.addActionListener(evt -> this.oldVersionDeck());
+        this.filterPopup = new JPopupMenu();
+        this.filterPopup.setPreferredSize(new Dimension(300, 300));
+        DragCardGrid.makeButtonPopup(this.filterButton, this.filterPopup);
+        this.filterButton.setVisible(false);
+        this.initCardAreaPopup();
+        this.updateCounts();
     }
 
     public void initCardAreaPopup() {
         final JPopupMenu menu = new JPopupMenu();
-
         final JMenuItem hideSelected = new JMenuItem("Hide selected");
-        hideSelected.addActionListener(e -> hideSelection());
+        hideSelected.addActionListener(e -> this.hideSelection());
         menu.add(hideSelected);
-
         JMenuItem showAll = new JMenuItem("Show all");
-        showAll.addActionListener(e -> showAll());
+        showAll.addActionListener(e -> this.showAll());
         menu.add(showAll);
-
         JMenu sortMenu = new JMenu("Sort by...");
-        final Map<Sort, JMenuItem> sortMenuItems = new LinkedHashMap<>();
-        for (final Sort sort : Sort.values()) {
-            JMenuItem subSort = new JCheckBoxMenuItem(sort.getText());
+        final LinkedHashMap<Sort, JCheckBoxMenuItem> sortMenuItems = new LinkedHashMap<Sort, JCheckBoxMenuItem>();
+        for (Sort sort : Sort.values()) {
+            JCheckBoxMenuItem subSort = new JCheckBoxMenuItem(sort.getText());
             sortMenuItems.put(sort, subSort);
             subSort.addActionListener(e -> {
-                cardSort = sort;
-                resort();
+                this.cardSort = sort;
+                this.resort();
             });
             sortMenu.add(subSort);
         }
         sortMenu.add(new JPopupMenu.Separator());
         final JCheckBoxMenuItem separateButton = new JCheckBoxMenuItem("Separate creatures");
         separateButton.addActionListener(e -> {
-            setSeparateCreatures(!separateCreatures);
-            resort();
+            this.setSeparateCreatures(!this.separateCreatures);
+            this.resort();
         });
         sortMenu.add(separateButton);
         menu.add(sortMenu);
+        this.cardContent.addMouseListener(new MouseAdapter(){
 
-        // ENABLE popup menu on non card (e.g. show all or sorting)
-        cardContent.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.isPopupTrigger() || SwingUtilities.isRightMouseButton(e)) {
                     for (Sort s : sortMenuItems.keySet()) {
-                        sortMenuItems.get(s).setSelected(cardSort == s);
+                        ((JMenuItem)sortMenuItems.get((Object)s)).setSelected(DragCardGrid.this.cardSort == s);
                     }
-                    hideSelected.setEnabled(!dragCardList().isEmpty());
-                    separateButton.setSelected(separateCreatures);
+                    hideSelected.setEnabled(!DragCardGrid.this.dragCardList().isEmpty());
+                    separateButton.setSelected(DragCardGrid.this.separateCreatures);
                     menu.show(e.getComponent(), e.getX(), e.getY());
                 }
             }
         });
     }
 
-    /**
-     * Deselect all cards in this DragCardGrid
-     */
     public void deselectAll() {
-        for (List<List<CardView>> gridRow : cardGrid) {
+        for (List<List<CardView>> gridRow : this.cardGrid) {
             for (List<CardView> stack : gridRow) {
                 for (CardView card : stack) {
-                    if (card.isSelected()) {
-                        card.setSelected(false);
-                        cardViews.get(card.getId()).update(card);
-                    }
+                    if (!card.isSelected()) continue;
+                    card.setSelected(false);
+                    this.cardViews.get(card.getId()).update(card);
                 }
             }
         }
     }
 
     public void selectByName(List<String> cardNames) {
-        for (List<List<CardView>> gridRow : cardGrid) {
+        for (List<List<CardView>> gridRow : this.cardGrid) {
             for (List<CardView> stack : gridRow) {
                 for (CardView card : stack) {
-                    if (cardNames.contains(card.getName())) {
-                        card.setSelected(true);
-                        cardViews.get(card.getId()).update(card);
-                    }
+                    if (!cardNames.contains(card.getName())) continue;
+                    card.setSelected(true);
+                    this.cardViews.get(card.getId()).update(card);
                 }
             }
         }
     }
 
     private void hideSelection() {
-        Collection<CardView> toHide = dragCardList();
-        for (DragCardGridListener l : listeners) {
+        Collection<CardView> toHide = this.dragCardList();
+        for (DragCardGridListener l : this.listeners) {
             l.hideCards(toHide);
         }
     }
 
     private void duplicateSelection() {
-        Collection<CardView> toDuplicate = dragCardList();
-        for (DragCardGridListener l : listeners) {
+        Collection<CardView> toDuplicate = this.dragCardList();
+        for (DragCardGridListener l : this.listeners) {
             l.duplicateCards(toDuplicate);
         }
     }
 
     private void invertSelection() {
-        Collection<CardView> toInvert = allCards;
-        for (DragCardGridListener l : listeners) {
+        List<CardView> toInvert = this.allCards;
+        for (DragCardGridListener l : this.listeners) {
             l.invertCardSelection(toInvert);
-            for (CardView card : allCards) {
-                MageCard view = cardViews.get(card.getId());
+            for (CardView card : this.allCards) {
+                MageCard view = this.cardViews.get(card.getId());
                 view.update(card);
             }
         }
-        repaint();
+        this.repaint();
     }
 
     private void chooseMatching() {
-        Collection<CardView> toMatch = dragCardList();
-
-        for (DragCardGridListener l : listeners) {
-            for (CardView card : allCards) {
+        Collection<CardView> toMatch = this.dragCardList();
+        for (DragCardGridListener l : this.listeners) {
+            for (CardView card : this.allCards) {
                 for (CardView aMatch : toMatch) {
-                    if (card.getName().equals(aMatch.getName())) {
-                        card.setSelected(true);
-                        cardViews.get(card.getId()).update(card);
-                    }
+                    if (!card.getName().equals(aMatch.getName())) continue;
+                    card.setSelected(true);
+                    this.cardViews.get(card.getId()).update(card);
                 }
             }
         }
-        repaint();
+        this.repaint();
     }
 
     private void showAll() {
-        for (DragCardGridListener l : listeners) {
+        for (DragCardGridListener l : this.listeners) {
             l.showAll();
         }
     }
 
-    /**
-     * Selection drag handling
-     */
     private void beginSelectionDrag(int x, int y, boolean shiftHeld) {
-        // Show the selection panel
-        selectionPanel.setVisible(true);
-        selectionPanel.setLocation(x, y);
-        cardScroll.revalidate();
-
-        // Store the drag start location
-        selectionDragStartX = x;
-        selectionDragStartY = y;
-
-        // Store the starting cards to include in the selection
-        selectionDragStartCards = new HashSet<>();
+        this.selectionPanel.setVisible(true);
+        this.selectionPanel.setLocation(x, y);
+        this.cardScroll.revalidate();
+        this.selectionDragStartX = x;
+        this.selectionDragStartY = y;
+        this.selectionDragStartCards = new HashSet<CardView>();
         if (shiftHeld) {
-            selectionDragStartCards.addAll(dragCardList());
+            this.selectionDragStartCards.addAll(this.dragCardList());
         }
-
-        // Notify selection
-        notifyCardsSelected();
+        this.notifyCardsSelected();
     }
 
     private void updateSelectionDrag(int x, int y) {
-        // Coords
-        int cardWidth = getCardWidth();
-        int cardHeight = getCardHeight();
+        int countLabelHeight;
+        int cardWidth = this.getCardWidth();
+        int cardHeight = this.getCardHeight();
         int cardTopHeight = CardRenderer.getCardTopHeight(cardWidth);
-        int x1 = Math.min(x, selectionDragStartX);
-        int x2 = Math.max(x, selectionDragStartX);
-        int y1 = Math.min(y, selectionDragStartY);
-        int y2 = Math.max(y, selectionDragStartY);
-
-        // Update selection panel size
-        selectionPanel.setLocation(x1, y1);
-        selectionPanel.setSize(x2 - x1, y2 - y1);
-
-        // First and last cols
-        int col1 = x1 / (cardWidth + getGridPadding());
-        int col2 = x2 / (cardWidth + getGridPadding());
-        int offsetIntoCol2 = x2 % (cardWidth + getGridPadding());
-        if (offsetIntoCol2 < getGridPadding()) {
+        int x1 = Math.min(x, this.selectionDragStartX);
+        int x2 = Math.max(x, this.selectionDragStartX);
+        int y1 = Math.min(y, this.selectionDragStartY);
+        int y2 = Math.max(y, this.selectionDragStartY);
+        this.selectionPanel.setLocation(x1, y1);
+        this.selectionPanel.setSize(x2 - x1, y2 - y1);
+        int col1 = x1 / (cardWidth + this.getGridPadding());
+        int col2 = x2 / (cardWidth + this.getGridPadding());
+        int offsetIntoCol2 = x2 % (cardWidth + this.getGridPadding());
+        if (offsetIntoCol2 < this.getGridPadding()) {
             --col2;
         }
-
-        int countLabelHeight = getCountLabelHeight();
-        int curY = countLabelHeight;
-        for (int rowIndex = 0; rowIndex < cardGrid.size(); ++rowIndex) {
-            int stackStartIndex;
-            if (y1 < curY) {
-                stackStartIndex = 0;
-            } else {
-                stackStartIndex = (y1 - curY) / cardTopHeight;
-            }
-            int stackEndIndex;
-            if (y2 < curY) {
-                stackEndIndex = -1;
-            } else {
-                stackEndIndex = (y2 - curY) / cardTopHeight;
-            }
-            List<List<CardView>> gridRow = cardGrid.get(rowIndex);
+        int curY = countLabelHeight = DragCardGrid.getCountLabelHeight();
+        for (int rowIndex = 0; rowIndex < this.cardGrid.size(); ++rowIndex) {
+            int stackStartIndex = y1 < curY ? 0 : (y1 - curY) / cardTopHeight;
+            int stackEndIndex = y2 < curY ? -1 : (y2 - curY) / cardTopHeight;
+            List<List<CardView>> gridRow = this.cardGrid.get(rowIndex);
             for (int col = 0; col < gridRow.size(); ++col) {
                 List<CardView> stack = gridRow.get(col);
-                int stackBottomBegin = curY + cardTopHeight * (stack.size());
+                int stackBottomBegin = curY + cardTopHeight * stack.size();
                 int stackBottomEnd = curY + cardTopHeight * (stack.size() - 1) + cardHeight;
                 for (int i = 0; i < stack.size(); ++i) {
+                    boolean inSeletionDrag;
                     CardView card = stack.get(i);
-                    MageCard view = cardViews.get(card.getId());
-                    boolean inBoundsX = (col >= col1 && col <= col2);
-                    boolean inBoundsY = (i >= stackStartIndex && i <= stackEndIndex);
-                    boolean lastCard = (i == stack.size() - 1);
-                    boolean inSeletionDrag = inBoundsX && (inBoundsY || (lastCard && (y2 >= stackBottomBegin && y1 <= stackBottomEnd)));
-                    if (inSeletionDrag || selectionDragStartCards != null && selectionDragStartCards.contains(card)) {
-                        if (!card.isSelected()) {
-                            card.setSelected(true);
-                            view.update(card);
-                        }
-                    } else if (card.isSelected()) {
-                        card.setSelected(false);
+                    MageCard view = this.cardViews.get(card.getId());
+                    boolean inBoundsX = col >= col1 && col <= col2;
+                    boolean inBoundsY = i >= stackStartIndex && i <= stackEndIndex;
+                    boolean lastCard = i == stack.size() - 1;
+                    boolean bl = inSeletionDrag = inBoundsX && (inBoundsY || lastCard && y2 >= stackBottomBegin && y1 <= stackBottomEnd);
+                    if (inSeletionDrag || this.selectionDragStartCards != null && this.selectionDragStartCards.contains(card)) {
+                        if (card.isSelected()) continue;
+                        card.setSelected(true);
                         view.update(card);
+                        continue;
                     }
+                    if (!card.isSelected()) continue;
+                    card.setSelected(false);
+                    view.update(card);
                 }
             }
-            curY += cardTopHeight * (maxStackSize.get(rowIndex) - 1) + cardHeight + countLabelHeight;
+            curY += cardTopHeight * (this.maxStackSize.get(rowIndex) - 1) + cardHeight + countLabelHeight;
         }
     }
 
-    private void endSelectionDrag(@SuppressWarnings("unused") int x, @SuppressWarnings("unused") int y) {
-        // Hide the selection panel
-        selectionPanel.setVisible(false);
+    private void endSelectionDrag(int x, int y) {
+        this.selectionPanel.setVisible(false);
     }
 
-    // Resort the existing cards based on the current sort
     public void resort() {
-        // clear grid
-        for (List<List<CardView>> gridRow : cardGrid) {
+        for (List<List<CardView>> gridRow : this.cardGrid) {
             for (List<CardView> stack : gridRow) {
                 stack.clear();
             }
         }
-        trimGrid();
-
-        // sort
-        allCards.sort(new CardViewNameComparator());
-
-        // re-insert
-        for (CardView card : allCards) {
-            sortIntoGrid(card, null);
+        this.trimGrid();
+        this.allCards.sort(new CardViewNameComparator());
+        for (CardView card : this.allCards) {
+            this.sortIntoGrid(card, null);
         }
-        trimGrid();
-
-        // Deselect everything
-        deselectAll();
-
-        // render new grid
-        layoutGrid();
-        repaintGrid();
+        this.trimGrid();
+        this.deselectAll();
+        this.layoutGrid();
+        this.repaintGrid();
     }
 
     public void reselectBy() {
@@ -1448,14 +1157,12 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         repaintGrid();
     }
 
-    private static final Pattern pattern = Pattern.compile(".*Add(.*)(\\{[WUBRGXC]\\})");
-
     public void analyseDeck() {
-        Map<String, Integer> qtys = new HashMap<>();
-        Map<String, Integer> pips = new HashMap<>();
-        Map<String, Integer> pips_at_cmcs = new HashMap<>();
-        Map<String, Integer> sourcePips = new HashMap<>();
-        Map<String, Integer> manaCounts = new HashMap<>();
+        HashMap<String, Integer> qtys = new HashMap<String, Integer>();
+        HashMap<String, Integer> pips = new HashMap<String, Integer>();
+        HashMap<String, Integer> pips_at_cmcs = new HashMap<String, Integer>();
+        HashMap sourcePips = new HashMap();
+        HashMap<String, Integer> manaCounts = new HashMap<String, Integer>();
         pips.put("#w}", 0);
         pips.put("#u}", 0);
         pips.put("#b}", 0);
@@ -1469,36 +1176,27 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         qtys.put("forest", 0);
         qtys.put("basic", 0);
         qtys.put("wastes", 0);
-        manaCounts = new HashMap<>();
-
-        for (List<List<CardView>> gridRow : cardGrid) {
+        manaCounts = new HashMap();
+        for (List<List<CardView>> gridRow : this.cardGrid) {
             for (List<CardView> stack : gridRow) {
                 for (CardView card : stack) {
-                    // Type line
                     String t = card.getCardTypes().stream().map(CardType::toString).collect(Collectors.joining(" "));
-                    t += card.getSuperTypes().stream().map(st -> st.toString().toLowerCase(Locale.ENGLISH)).collect(Collectors.joining(" "));
-                    t += card.getSubTypes().stream().map(st -> st.toString().toLowerCase(Locale.ENGLISH)).collect(Collectors.joining(" "));
-
+                    t = t + card.getSuperTypes().stream().map(st -> st.toString().toLowerCase(Locale.ENGLISH)).collect(Collectors.joining(" "));
+                    t = t + card.getSubTypes().stream().map(st -> st.toString().toLowerCase(Locale.ENGLISH)).collect(Collectors.joining(" "));
                     for (String qty : qtys.keySet()) {
-                        int value = qtys.get(qty);
+                        int value = (Integer)qtys.get(qty);
                         if (t.toLowerCase(Locale.ENGLISH).contains(qty)) {
                             qtys.put(qty, ++value);
                         }
-
-                        // Rules
                         for (String str : card.getRules()) {
-                            if (str.toLowerCase(Locale.ENGLISH).contains(qty)) {
-                                qtys.put(qty, ++value);
-                            }
+                            if (!str.toLowerCase(Locale.ENGLISH).contains(qty)) continue;
+                            qtys.put(qty, ++value);
                         }
                     }
-                    // Wastes (special case)
                     if (card.getName().equals("Wastes")) {
-                        int value = qtys.get("wastes");
+                        int value = (Integer)qtys.get("wastes");
                         qtys.put("wastes", ++value);
                     }
-
-                    // Mana Cost
                     String mc = card.getManaCostStr();
                     mc = mc.replaceAll("\\{([WUBRG]).([WUBRG])\\}", "{$1}{$2}");
                     mc = mc.replaceAll("\\{", "#");
@@ -1506,50 +1204,42 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
                     mc = mc.replaceAll("p}", "}");
                     mc = mc.toLowerCase(Locale.ENGLISH);
                     int cmc = card.getManaValue();
-
-                    // Do colorless mana pips
                     Pattern regex = Pattern.compile("#([0-9]+)}");
                     Matcher regexMatcher = regex.matcher(mc);
                     while (regexMatcher.find()) {
                         String val = regexMatcher.group(1);
                         int colorless_val = Integer.parseInt(val);
-
                         int total_c_pip = 0;
                         if (pips.get("#c}") != null) {
-                            total_c_pip = pips.get("#c}");
+                            total_c_pip = (Integer)pips.get("#c}");
                         }
                         pips.put("#c}", colorless_val + total_c_pip);
-
                         int cmc_pip_value = 0;
                         if (pips_at_cmcs.get(cmc + "##c}") != null) {
-                            cmc_pip_value = pips_at_cmcs.get(cmc + "##c}");
+                            cmc_pip_value = (Integer)pips_at_cmcs.get(cmc + "##c}");
                         }
                         pips_at_cmcs.put(cmc + "##c}", colorless_val + cmc_pip_value);
                     }
-
                     for (String pip : pips.keySet()) {
-                        int value = pips.get(pip);
+                        int value = (Integer)pips.get(pip);
                         while (mc.toLowerCase(Locale.ENGLISH).contains(pip)) {
                             pips.put(pip, ++value);
                             int pip_value = 0;
                             if (pips_at_cmcs.get(cmc + "#" + pip) != null) {
-                                pip_value = pips_at_cmcs.get(cmc + "#" + pip);
+                                pip_value = (Integer)pips_at_cmcs.get(cmc + "#" + pip);
                             }
                             pips_at_cmcs.put(cmc + "#" + pip, ++pip_value);
                             mc = mc.replaceFirst(pip, "");
                         }
                     }
-
-                    // Adding mana
                     for (String str : card.getRules()) {
                         Matcher m = pattern.matcher(str);
-                        // ".*Add(.*)(\\{[WUBRGXC]\\})(.*)"
                         while (m.find()) {
                             str = "Add" + m.group(1);
                             int num = 1;
                             if (manaCounts.get(m.group(2)) != null) {
-                                num = manaCounts.get(m.group(2));
-                                num++;
+                                num = (Integer)manaCounts.get(m.group(2));
+                                ++num;
                             }
                             manaCounts.put(m.group(2), num);
                             m = pattern.matcher(str);
@@ -1558,60 +1248,49 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
                 }
             }
         }
-
         JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
-
+        panel.setLayout(new BoxLayout(panel, 0));
         JPanel panel2 = new JPanel();
-        panel2.setLayout(new BoxLayout(panel2, BoxLayout.Y_AXIS));
-        ManaPieChart chart = new ManaPieChart(pips.get("#w}"), pips.get("#u}"), pips.get("#b}"), pips.get("#r}"), pips.get("#g}"), pips.get("#c}"));
+        panel2.setLayout(new BoxLayout(panel2, 1));
+        ManaPieChart chart = new ManaPieChart((Integer)pips.get("#w}"), (Integer)pips.get("#u}"), (Integer)pips.get("#b}"), (Integer)pips.get("#r}"), (Integer)pips.get("#g}"), (Integer)pips.get("#c}"));
         chart.setMinimumSize(new Dimension(200, 200));
         panel2.add(new JLabel("Casting Costs found:"));
         panel2.add(chart);
-
         JPanel panel3 = new JPanel();
-        panel3.setLayout(new BoxLayout(panel3, BoxLayout.Y_AXIS));
-        ManaPieChart chart2 = new ManaPieChart(qtys.get("plains"), qtys.get("island"), qtys.get("swamp"), qtys.get("mountain"), qtys.get("forest"), qtys.get("wastes"));
+        panel3.setLayout(new BoxLayout(panel3, 1));
+        ManaPieChart chart2 = new ManaPieChart((Integer)qtys.get("plains"), (Integer)qtys.get("island"), (Integer)qtys.get("swamp"), (Integer)qtys.get("mountain"), (Integer)qtys.get("forest"), (Integer)qtys.get("wastes"));
         chart2.setMinimumSize(new Dimension(200, 200));
         panel3.add(new JLabel("Basic Land types found:"));
         panel3.add(chart2);
-
         JPanel panel4 = new JPanel();
-        panel4.setLayout(new BoxLayout(panel4, BoxLayout.Y_AXIS));
-        ManaPieChart chart3 = new ManaPieChart(manaCounts.get("{W}"), manaCounts.get("{U}"), manaCounts.get("{B}"), manaCounts.get("{R}"), manaCounts.get("{G}"), manaCounts.get("{C}"));
+        panel4.setLayout(new BoxLayout(panel4, 1));
+        ManaPieChart chart3 = new ManaPieChart((Integer)manaCounts.get("{W}"), (Integer)manaCounts.get("{U}"), (Integer)manaCounts.get("{B}"), (Integer)manaCounts.get("{R}"), (Integer)manaCounts.get("{G}"), (Integer)manaCounts.get("{C}"));
         chart3.setMinimumSize(new Dimension(200, 200));
         panel4.add(new JLabel("Mana sources found:"));
         panel4.add(chart3);
-
         JPanel panel5 = new JPanel();
-        panel5.setLayout(new BoxLayout(panel5, BoxLayout.Y_AXIS));
+        panel5.setLayout(new BoxLayout(panel5, 1));
         ManaBarChart chart4 = new ManaBarChart(pips_at_cmcs);
         chart4.setMinimumSize(new Dimension(200, 200));
         panel5.add(new JLabel("Mana distribution:"));
         panel5.add(chart4);
-
         panel.add(panel2);
         panel.add(panel3);
         panel.add(panel4);
         panel.add(panel5);
-
         JFrame frame = new JFrame("JOptionPane showMessageDialog component example");
-        JOptionPane.showMessageDialog(frame, panel, "This is the distribution of colors found", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(frame, panel, "This is the distribution of colors found", 1);
     }
 
     public void blingDeck() {
-        // TODO: outdated, remove whole bling feature
         if (this.mode != Constants.DeckEditorMode.FREE_BUILDING) {
             return;
         }
-
-        if (JOptionPane.showConfirmDialog(null, "Are you sure you want to bling your deck?  This process will add cards!", "WARNING",
-                JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION) {
+        if (JOptionPane.showConfirmDialog(null, "Are you sure you want to bling your deck?  This process will add cards!", "WARNING", 0) == 1) {
             return;
         }
-        // TODO: Why are these a HashMap? It can be a HashSet<String> instead, as the value is never used in the code.
-        Map<String, Integer> pimpedSets = new HashMap<>();
-        Map<CardView, Integer> pimpedCards = new HashMap<>();
+        HashMap<String, Integer> pimpedSets = new HashMap<String, Integer>();
+        HashMap<CardView, Integer> pimpedCards = new HashMap<CardView, Integer>();
         pimpedSets.put("PCMP", 1);
         pimpedSets.put("MPS", 1);
         pimpedSets.put("MP2", 1);
@@ -1619,8 +1298,6 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         pimpedSets.put("CP1", 1);
         pimpedSets.put("CP2", 1);
         pimpedSets.put("CP3", 1);
-
-        // Judge Reward Gifts
         pimpedSets.put("JGP", 1);
         pimpedSets.put("G99", 1);
         pimpedSets.put("G00", 1);
@@ -1644,8 +1321,6 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         pimpedSets.put("J18", 1);
         pimpedSets.put("J19", 1);
         pimpedSets.put("J20", 1);
-
-        // Arena League
         pimpedSets.put("PARL", 1);
         pimpedSets.put("PAL99", 1);
         pimpedSets.put("PAL00", 1);
@@ -1655,12 +1330,9 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         pimpedSets.put("PAL04", 1);
         pimpedSets.put("PAL05", 1);
         pimpedSets.put("PAL06", 1);
-
         pimpedSets.put("UGIN", 1);
         pimpedSets.put("PALP", 1);
         pimpedSets.put("PELP", 1);
-
-        //Friday Night Magic
         pimpedSets.put("FNM", 1);
         pimpedSets.put("F01", 1);
         pimpedSets.put("F02", 1);
@@ -1680,8 +1352,6 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         pimpedSets.put("F16", 1);
         pimpedSets.put("F17", 1);
         pimpedSets.put("F18", 1);
-
-        // Magic Player Rewards 2001-2011, except for 2002 (P02), which only contains tokens
         pimpedSets.put("MPR", 1);
         pimpedSets.put("P03", 1);
         pimpedSets.put("P04", 1);
@@ -1692,61 +1362,42 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         pimpedSets.put("P09", 1);
         pimpedSets.put("P10", 1);
         pimpedSets.put("P11", 1);
-
-        pimpedSets.put("OVNT", 1); // Vintage Championship
-        pimpedSets.put("PJSE", 1); // Junior Series Europe
-        pimpedSets.put("P2HG", 1); // Two-Headed Giant Tournament
-        pimpedSets.put("PGTW", 1); // Gateway 2006
-        pimpedSets.put("PJAS", 1); // Junior APAC Series
-
+        pimpedSets.put("OVNT", 1);
+        pimpedSets.put("PJSE", 1);
+        pimpedSets.put("P2HG", 1);
+        pimpedSets.put("PGTW", 1);
+        pimpedSets.put("PJAS", 1);
         pimpedSets.put("EXP", 1);
         pimpedSets.put("PGPX", 1);
         pimpedSets.put("PMEI", 1);
         pimpedSets.put("PLS", 1);
-
         String[] sets = pimpedSets.keySet().toArray(new String[pimpedSets.keySet().size()]);
         Boolean didModify = false;
-
-        for (List<List<CardView>> gridRow : cardGrid) {
+        for (List<List<CardView>> gridRow : this.cardGrid) {
             for (List<CardView> stack : gridRow) {
                 for (CardView card : stack) {
-                    if (card.getSuperTypes().contains(SuperType.BASIC)) {
-                        continue;
-                    }
-
-                    if (!pimpedSets.containsKey(card.getExpansionSetCode())) {
-                        final CardCriteria cardCriteria = new CardCriteria();
-                        cardCriteria.setCodes(sets);
-                        cardCriteria.name(card.getName());
-
-                        java.util.List<CardInfo> cardPool = CardRepository.instance.findCards(cardCriteria);
-
-                        if (!cardPool.isEmpty()) {
-                            Card acard = cardPool.get(RandomUtil.nextInt(cardPool.size())).createMockCard();
-
-                            if (acard.getName().equals(card.getName())) {
-                                CardView pimpedCard = new CardView(acard);
-                                addCardView(pimpedCard); // TODO: can be buggy, must use full params
-                                eventSource.fireEventDeckCardAdded(pimpedCard, null);
-                                pimpedCards.put(pimpedCard, 1);
-                                didModify = true;
-                            }
-                        }
-                    }
+                    Card acard;
+                    if (card.getSuperTypes().contains((Object)SuperType.BASIC) || pimpedSets.containsKey(card.getExpansionSetCode())) continue;
+                    CardCriteria cardCriteria = new CardCriteria();
+                    cardCriteria.setCodes(sets);
+                    cardCriteria.name(card.getName());
+                    List<CardInfo> cardPool = CardRepository.instance.findCards(cardCriteria);
+                    if (cardPool.isEmpty() || !(acard = cardPool.get(RandomUtil.nextInt(cardPool.size())).createMockCard()).getName().equals(card.getName())) continue;
+                    CardView pimpedCard = new CardView(acard);
+                    this.addCardView(pimpedCard);
+                    this.eventSource.fireEventDeckCardAdded((SimpleCardView)pimpedCard, null);
+                    pimpedCards.put(pimpedCard, 1);
+                    didModify = true;
                 }
             }
-
-            if (didModify) {
-                for (CardView c : pimpedCards.keySet()) {
-                    sortIntoGrid(c, null);
-                }
-                trimGrid();
-
-                layoutGrid();
-                repaintGrid();
-
-                JOptionPane.showMessageDialog(null, "Added " + pimpedCards.size() + " cards.  You can select them and the originals by choosing 'Multiples'");
+            if (!didModify.booleanValue()) continue;
+            for (CardView c : pimpedCards.keySet()) {
+                this.sortIntoGrid(c, null);
             }
+            this.trimGrid();
+            this.layoutGrid();
+            this.repaintGrid();
+            JOptionPane.showMessageDialog(null, "Added " + pimpedCards.size() + " cards.  You can select them and the originals by choosing 'Multiples'");
         }
     }
 
@@ -1754,40 +1405,31 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         if (this.mode != Constants.DeckEditorMode.FREE_BUILDING) {
             return;
         }
-
-        if (JOptionPane.showConfirmDialog(null, "Are you sure you want to switch your card versions to the oldest ones?", "WARNING",
-                JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) {
+        if (JOptionPane.showConfirmDialog(null, "Are you sure you want to switch your card versions to the oldest ones?", "WARNING", 0) != 0) {
             return;
         }
-
-        deselectAll();
-        Map<CardView, NewCardInfo> cardsToReplace = new HashMap<>();
-        for (List<List<CardView>> gridRow : cardGrid) {
+        this.deselectAll();
+        HashMap<CardView, NewCardInfo> cardsToReplace = new HashMap<CardView, NewCardInfo>();
+        for (List<List<CardView>> gridRow : this.cardGrid) {
             for (List<CardView> stack : gridRow) {
                 for (CardView card : stack) {
+                    Card oldestCard;
+                    CardView oldestView;
                     CardInfo oldestCardInfo = CardRepository.instance.findOldestNonPromoVersionCard(card.getName());
-                    if (oldestCardInfo != null) {
-                        Card oldestCard = oldestCardInfo.createMockCard();
-                        CardView oldestView = new CardView(oldestCard);
-                        if (!card.isSameCardVersion(oldestView)) {
-                            cardsToReplace.put(card, new NewCardInfo(oldestCard, oldestView));
-                        }
-                    }
+                    if (oldestCardInfo == null || card.isSameCardVersion(oldestView = new CardView(oldestCard = oldestCardInfo.createMockCard()))) continue;
+                    cardsToReplace.put(card, new NewCardInfo(oldestCard, oldestView));
                 }
             }
         }
-
-        List<CardView> cardsToRemove = new ArrayList<>();
+        ArrayList<CardView> cardsToRemove = new ArrayList<CardView>();
         cardsToReplace.forEach((currentCard, oldestInfo) -> {
-            addCardView(oldestInfo.newView, oldestInfo.newCard, currentCard);
-            cardsToRemove.add(currentCard);
+            this.addCardView(((NewCardInfo)oldestInfo).newView, ((NewCardInfo)oldestInfo).newCard, (CardView)currentCard);
+            cardsToRemove.add((CardView)currentCard);
         });
-        removeCards(cardsToRemove);
-
+        this.removeCards(cardsToRemove);
         JOptionPane.showMessageDialog(null, "Replaced cards: " + cardsToReplace.size());
     }
 
-    // Update the contents of the card grid
     public void setCards(CardsView cardsView, DeckCardLayout layout, BigCard bigCard) {
         if (bigCard != null) {
             lastBigCard = bigCard;
@@ -1921,49 +1563,46 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
     private int getCount(CardType cardType) {
         if (null != cardType) {
             switch (cardType) {
-                case CREATURE:
-                    return creatureCounter.get();
-                case LAND:
-                    return landCounter.get();
-                case ARTIFACT:
-                    return artifactCounter.get();
-                case ENCHANTMENT:
-                    return enchantmentCounter.get();
-                case INSTANT:
-                    return instantCounter.get();
-                case PLANESWALKER:
-                    return planeswalkerCounter.get();
-                case SORCERY:
-                    return sorceryCounter.get();
-                case KINDRED:
-                    return kindredCounter.get();
-                default:
-                    break;
+                case CREATURE: {
+                    return this.creatureCounter.get();
+                }
+                case LAND: {
+                    return this.landCounter.get();
+                }
+                case ARTIFACT: {
+                    return this.artifactCounter.get();
+                }
+                case ENCHANTMENT: {
+                    return this.enchantmentCounter.get();
+                }
+                case INSTANT: {
+                    return this.instantCounter.get();
+                }
+                case PLANESWALKER: {
+                    return this.planeswalkerCounter.get();
+                }
+                case SORCERY: {
+                    return this.sorceryCounter.get();
+                }
+                case KINDRED: {
+                    return this.kindredCounter.get();
+                }
             }
         }
         return 0;
     }
 
     private void updateCounts() {
-        int extraDeckCount = allCards.stream()
-                        .filter(c -> c.isExtraDeckCard())
-                        .collect(Collectors.toSet())
-                        .size();
-        int maindeckCount = allCards.size() - extraDeckCount;
-        deckNameAndCountLabel.setText(role.getName() + " - " + maindeckCount + (
-                extraDeckCount > 0 ? " (" + extraDeckCount + ")"
-                : ""
-        ));
-        creatureCountLabel.setText(String.valueOf(creatureCounter.get()));
-        landCountLabel.setText(String.valueOf(landCounter.get()));
-        for (CardType cardType : selectByTypeButtons.keySet()) {
-            AbstractButton button = selectByTypeButtons.get(cardType);
+        int extraDeckCount = this.allCards.stream().filter(c -> c.isExtraDeckCard()).collect(Collectors.toSet()).size();
+        int maindeckCount = this.allCards.size() - extraDeckCount;
+        this.deckNameAndCountLabel.setText(this.role.getName() + " - " + maindeckCount + (extraDeckCount > 0 ? " (" + extraDeckCount + ")" : ""));
+        this.creatureCountLabel.setText(String.valueOf(this.creatureCounter.get()));
+        this.landCountLabel.setText(String.valueOf(this.landCounter.get()));
+        for (CardType cardType : this.selectByTypeButtons.keySet()) {
+            AbstractButton button = this.selectByTypeButtons.get((Object)cardType);
             String text = cardType.toString();
-            int numCards = getCount(cardType);
-            if (cardType == CardType.CONSPIRACY) {
-                continue;
-            }
-
+            int numCards = this.getCount(cardType);
+            if (cardType == CardType.CONSPIRACY) continue;
             if (numCards > 0) {
                 button.setForeground(Color.BLACK);
                 text = text + " - " + numCards;
@@ -1974,338 +1613,381 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         }
     }
 
-    private void showCardRightClickMenu(@SuppressWarnings("unused") final CardView card, MouseEvent e) {
+    private void showCardRightClickMenu(CardView card, MouseEvent e) {
         JPopupMenu menu = new JPopupMenu();
         JMenuItem hide = new JMenuItem("Hide (hidden in sideboard)");
-        hide.addActionListener(e2 -> hideSelection());
+        hide.addActionListener(e2 -> this.hideSelection());
         menu.add(hide);
-
         JMenuItem invertSelection = new JMenuItem("Invert selection");
-        invertSelection.addActionListener(e2 -> invertSelection());
+        invertSelection.addActionListener(e2 -> this.invertSelection());
         menu.add(invertSelection);
-
         JMenuItem chooseMatching = new JMenuItem("Select same cards");
-        chooseMatching.addActionListener(e2 -> chooseMatching());
+        chooseMatching.addActionListener(e2 -> this.chooseMatching());
         menu.add(chooseMatching);
-
-        // Show 'Duplicate Selection' for FREE_BUILDING
         if (this.mode == Constants.DeckEditorMode.FREE_BUILDING) {
+            JMenuItem chooseEdition = new JMenuItem("Elegir edici\u00f3n...");
+            chooseEdition.addActionListener(e2 -> this.chooseEdition(card));
+            menu.add(chooseEdition);
+            menu.add(new JPopupMenu.Separator());
             JMenuItem duplicateSelection = new JMenuItem("Duplicate selected cards");
-            duplicateSelection.addActionListener(e2 -> duplicateSelection());
+            duplicateSelection.addActionListener(e2 -> this.duplicateSelection());
             menu.add(duplicateSelection);
         }
         menu.show(e.getComponent(), e.getX(), e.getY());
     }
 
-    /**
-     * Add existing card view, e.g. after dragging between zones
-     *
-     * @param newView
-     */
-    public void addCardView(final CardView newView) {
-        addCardView(newView, null, null);
+    private void chooseEdition(CardView clickedCard) {
+        if (this.mode != Constants.DeckEditorMode.FREE_BUILDING || clickedCard == null) {
+            return;
+        }
+        CardCriteria criteria = new CardCriteria();
+        criteria.name(clickedCard.getName());
+        ArrayList<CardInfo> printings = new ArrayList<CardInfo>(CardRepository.instance.findCards(criteria));
+        printings.sort(Comparator.comparing(CardInfo::getSetCode, Comparator.nullsLast(String::compareToIgnoreCase)).thenComparingInt(this::xcpPrintingSelectorNumberSort).thenComparing(CardInfo::getCardNumber, Comparator.nullsLast(String::compareToIgnoreCase)));
+        if (printings.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No se encontraron ediciones para " + clickedCard.getName());
+            return;
+        }
+        DefaultListModel model = new DefaultListModel();
+        printings.forEach(model::addElement);
+        JList<Object> list = new JList<Object>(model);
+        list.setSelectionMode(0);
+        list.setVisibleRowCount(Math.min(12, printings.size()));
+        list.setFixedCellHeight(42);
+        list.setCellRenderer(new DefaultListCellRenderer(){
+
+            @Override
+            public Component getListCellRendererComponent(JList<?> listComponent, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel)super.getListCellRendererComponent(listComponent, value, index, isSelected, cellHasFocus);
+                CardInfo info = (CardInfo)value;
+                ExpansionSet expansion = Sets.findSet(info.getSetCode());
+                String setName = expansion == null ? "" : expansion.getName();
+                label.setText("<html><b>" + info.getSetCode() + "</b>  #" + info.getCardNumber() + (setName.isEmpty() ? "" : " \u00b7 " + setName) + "<br>" + (Object)((Object)info.getRarity()) + "</html>");
+                label.setIcon(null);
+                return label;
+            }
+        });
+        JTextField editionSearch = new JTextField();
+        editionSearch.setToolTipText("Busca por c\u00f3digo o nombre de edici\u00f3n, por ejemplo LOR o Lorwyn");
+        final Runnable filterPrintings = () -> {
+            String query = editionSearch.getText().trim().toLowerCase(Locale.ROOT);
+            model.clear();
+            for (CardInfo info : printings) {
+                String setName;
+                ExpansionSet expansion = Sets.findSet(info.getSetCode());
+                String string = setName = expansion == null ? "" : expansion.getName();
+                if (!query.isEmpty() && !String.valueOf(info.getSetCode()).toLowerCase(Locale.ROOT).contains(query) && !setName.toLowerCase(Locale.ROOT).contains(query)) continue;
+                model.addElement(info);
+            }
+            if (!model.isEmpty()) {
+                list.setSelectedIndex(0);
+                list.ensureIndexIsVisible(0);
+            }
+        };
+        editionSearch.getDocument().addDocumentListener(new DocumentListener(){
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filterPrintings.run();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filterPrintings.run();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filterPrintings.run();
+            }
+        });
+        JLabel previewLabel = new JLabel("Selecciona una edici\u00f3n", 0);
+        previewLabel.setPreferredSize(new Dimension(230, 330));
+        list.addListSelectionListener(event -> {
+            if (event.getValueIsAdjusting()) {
+                return;
+            }
+            CardInfo info = (CardInfo)list.getSelectedValue();
+            if (info == null) {
+                previewLabel.setIcon(null);
+                return;
+            }
+            try {
+                CardView preview = new CardView(info.createMockCard());
+                BufferedImage image = ImageCache.getCardImage(preview, 220, 310).getImage();
+                previewLabel.setText(image == null ? "Imagen no descargada" : "");
+                previewLabel.setIcon(image == null ? null : new ImageIcon(image));
+            }
+            catch (Exception ex) {
+                previewLabel.setText("No se pudo cargar la imagen");
+                previewLabel.setIcon(null);
+            }
+        });
+        int currentIndex = 0;
+        for (int i = 0; i < printings.size(); ++i) {
+            CardInfo info = (CardInfo)printings.get(i);
+            if (!Objects.equals(info.getSetCode(), clickedCard.getExpansionSetCode()) || !Objects.equals(info.getCardNumber(), clickedCard.getCardNumber())) continue;
+            currentIndex = i;
+            break;
+        }
+        list.setSelectedIndex(currentIndex);
+        list.ensureIndexIsVisible(currentIndex);
+        JScrollPane scroll = new JScrollPane(list);
+        scroll.setPreferredSize(new Dimension(260, 500));
+        JPanel listPanel = new JPanel(new BorderLayout(0, 6));
+        JPanel searchPanel = new JPanel(new BorderLayout(6, 0));
+        searchPanel.add((Component)new JLabel("Buscar edici\u00f3n:"), "West");
+        searchPanel.add((Component)editionSearch, "Center");
+        listPanel.add((Component)searchPanel, "North");
+        listPanel.add((Component)scroll, "Center");
+        JPanel selectorPanel = new JPanel(new BorderLayout(10, 0));
+        selectorPanel.add((Component)listPanel, "Center");
+        selectorPanel.add((Component)previewLabel, "East");
+        int answer = JOptionPane.showConfirmDialog(this, selectorPanel, "Elegir edici\u00f3n - " + clickedCard.getName(), 2, -1);
+        CardInfo selected = (CardInfo)list.getSelectedValue();
+        if (answer != 0 || selected == null) {
+            return;
+        }
+        List<CardView> cardsToReplace = this.allCards.stream().filter(card -> Objects.equals(card.getName(), clickedCard.getName())).collect(Collectors.toCollection(ArrayList::new));
+        ArrayList<CardView> cardsToRemove = new ArrayList<CardView>();
+        for (CardView currentCard : cardsToReplace) {
+            Card replacement;
+            CardView replacementView;
+            if (currentCard.isSameCardVersion(replacementView = new CardView(replacement = selected.createMockCard()))) continue;
+            this.addCardView(replacementView, replacement, currentCard);
+            cardsToRemove.add(currentCard);
+        }
+        this.removeCards(cardsToRemove);
     }
 
-    /**
-     * Add new card view, e.g. on duplicate or oldest replace
-     *
-     * @param newView
-     * @param newCard
-     * @param duplicatedFromView
-     */
-    public void addCardView(final CardView newView, final Card newCard, final CardView duplicatedFromView) {
-        if ((newCard == null) != (duplicatedFromView == null)) {
+    private int xcpPrintingSelectorNumberSort(CardInfo info) {
+        String number = info.getCardNumber();
+        if (number == null) {
+            return Integer.MAX_VALUE;
+        }
+        Matcher matcher = Pattern.compile("\\d+").matcher(number);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group());
+            }
+            catch (NumberFormatException ignored) {
+                return Integer.MAX_VALUE;
+            }
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    public void addCardView(CardView newView) {
+        this.addCardView(newView, null, null);
+    }
+
+    public void addCardView(final CardView newView, Card newCard, CardView duplicatedFromView) {
+        if (newCard == null != (duplicatedFromView == null)) {
             throw new IllegalArgumentException("Wrong code usage: if you duplicate card then must ref real card too");
         }
-
-        allCards.add(newView);
-
-        // update count stats
-        // TODO: rework to full recalc without cards storage
-        for (CardTypeCounter counter : allCounters) {
+        this.allCards.add(newView);
+        for (CardTypeCounter counter : this.allCounters) {
             counter.add(newView);
         }
-        updateCounts();
-
-        // Create the card view
-        final MageCard cardPanel = Plugins.instance.getMageCard(newView, lastBigCard, new CardIconRenderSettings(), new Dimension(getCardWidth(), getCardHeight()), null, true, true, PreferencesDialog.getRenderMode(), true);
-        cardPanel.setCardContainerRef(this);
+        this.updateCounts();
+        final MageCard cardPanel = Plugins.instance.getMageCard(newView, this.lastBigCard, new CardIconRenderSettings(), new Dimension(this.getCardWidth(), this.getCardHeight()), null, true, true, PreferencesDialog.getRenderMode(), true);
+        cardPanel.setCardContainerRef((Container)this);
         cardPanel.update(newView);
-        // cards bounds set in layoutGrid()
         cardPanel.setCardCaptionTopOffset(0);
+        cardPanel.addMouseMotionListener((MouseMotionListener)new MouseAdapter(){
 
-        // ENABLE DRAG SUPPORT FOR CARDS
-        // TODO: rewrite mouseDragged in MageActionCallback, so it can support any drags, not hands only
-        cardPanel.addMouseMotionListener(new MouseAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
-                if (!dragger.isDragging()) {
-                    // If the card isn't already selected, make sure it is
+                if (!DragCardGrid.this.dragger.isDragging()) {
                     if (!newView.isSelected()) {
-                        selectCard(newView);
+                        DragCardGrid.this.selectCard(newView);
                     }
-                    dragger.handleDragStart(cardPanel, e);
+                    DragCardGrid.this.dragger.handleDragStart(cardPanel, e);
                 }
             }
         });
-
-        // And add it
-        cardContent.add(cardPanel);
-        cardViews.put(newView.getId(), cardPanel);
-
+        this.cardContent.add((Component)cardPanel);
+        this.cardViews.put(newView.getId(), cardPanel);
         if (newCard != null || duplicatedFromView != null) {
-            sortIntoGrid(newView, duplicatedFromView);
-            eventSource.fireEventDeckCardAdded(newView, newCard);
-
-            // clear grid from empty rows
-            trimGrid();
-
-            // Update layout
-            layoutGrid();
-            repaintGrid();
+            this.sortIntoGrid(newView, duplicatedFromView);
+            this.eventSource.fireEventDeckCardAdded((SimpleCardView)newView, newCard);
+            this.trimGrid();
+            this.layoutGrid();
+            this.repaintGrid();
         }
     }
 
-    private final ArrayList<DragCardGridListener> listeners = new ArrayList<>();
-
     public void addDragCardGridListener(DragCardGridListener l) {
-        listeners.add(l);
+        this.listeners.add(l);
     }
 
     private void notifyCardsSelected() {
-        for (DragCardGridListener listener : listeners) {
+        for (DragCardGridListener listener : this.listeners) {
             listener.cardsSelected();
         }
     }
 
     private void selectCard(CardView targetCard) {
-        // Set the selected card to the target card
-        for (CardView card : allCards) {
+        for (CardView card : this.allCards) {
             if (card == targetCard) {
-                if (!card.isSelected()) {
-                    card.setSelected(true);
-                    cardViews.get(card.getId()).update(card);
-                }
-            } else if (card.isSelected()) {
-                card.setSelected(false);
-                cardViews.get(card.getId()).update(card);
+                if (card.isSelected()) continue;
+                card.setSelected(true);
+                this.cardViews.get(card.getId()).update(card);
+                continue;
             }
+            if (!card.isSelected()) continue;
+            card.setSelected(false);
+            this.cardViews.get(card.getId()).update(card);
         }
     }
 
     private void toggleSelected(CardView targetCard) {
         targetCard.setSelected(!targetCard.isSelected());
-        cardViews.get(targetCard.getId()).update(targetCard);
+        this.cardViews.get(targetCard.getId()).update(targetCard);
     }
 
     private void cardClicked(CardView targetCard, MouseEvent e) {
         if (e.isShiftDown()) {
-            toggleSelected(targetCard);
+            this.toggleSelected(targetCard);
         } else {
-            selectCard(targetCard);
+            this.selectCard(targetCard);
         }
-        notifyCardsSelected();
+        this.notifyCardsSelected();
     }
 
     private void removeCardView(CardView card) {
-        allCards.remove(card);
-
-        // update count stats
-        // TODO: rework to full recalc without cards storage
-        for (CardTypeCounter counter : allCounters) {
+        this.allCards.remove(card);
+        for (CardTypeCounter counter : this.allCounters) {
             counter.remove(card);
         }
-        updateCounts();
-
-        cardContent.remove(cardViews.get(card.getId()));
-        cardViews.remove(card.getId());
+        this.updateCounts();
+        this.cardContent.remove((Component)this.cardViews.get(card.getId()));
+        this.cardViews.remove(card.getId());
     }
 
-    /**
-     * Add a card to the cardGrid, in the position that the current sort
-     * dictates.
-     * <p>
-     * Warning, you must call trimGrid() after all cards inserted
-     *
-     * @param newCard Card to add to the cardGrid array.
-     */
     private void sortIntoGrid(CardView newCard, CardView duplicatedFromCard) {
-        // fast put duplicated card to the same place as original
-        if (duplicatedFromCard != null) {
-            for (List<List<CardView>> gridRow : cardGrid) {
-                for (List<CardView> gridStack : gridRow) {
-                    for (int i = 0; i < gridStack.size(); i++) {
-                        if (gridStack.get(i).equals(duplicatedFromCard)) {
-                            gridStack.add(i, newCard);
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-
-        // row 1 must exists
-        if (cardGrid.isEmpty()) {
-            cardGrid.add(0, new ArrayList<>());
-            maxStackSize.add(0, 0);
-        }
-
-        // target row
         List<List<CardView>> targetRow;
-        if (separateCreatures) {
-            // separate mode (two rows mode)
-            // row 1 for creatures
-            // row 2 for other
-
-            // row 2 must exists
-            if (cardGrid.size() < 2) {
-                cardGrid.add(1, new ArrayList<>());
-                maxStackSize.add(1, 0);
-                // Populate with stacks matching the first row
-                for (int i = 0; i < cardGrid.get(0).size(); ++i) {
-                    cardGrid.get(1).add(new ArrayList<>());
-                }
-            }
-
-            // workaround to fix wrong sorting on one card insert (if no creatures then trim will remove first row)
-            boolean isFirstRowWithCreatures = true;
-            for (int i = 0; i < cardGrid.get(0).size(); ++i) {
-                if (cardGrid.get(0).get(i).stream().anyMatch(card -> !card.isCreature())) {
-                    isFirstRowWithCreatures = false;
-                    break;
-                }
-            }
-
-            if (!isFirstRowWithCreatures) {
-                // move all cards to row 2 (at first position)
-                for (int i = 0; i < cardGrid.get(0).size(); ++i) {
-                    if (!cardGrid.get(0).get(i).isEmpty()) {
-                        cardGrid.get(1).add(cardGrid.get(0).get(i));
+        if (duplicatedFromCard != null) {
+            for (List<List<CardView>> gridRow : this.cardGrid) {
+                for (List<CardView> gridStack : gridRow) {
+                    for (int i = 0; i < gridStack.size(); ++i) {
+                        if (!gridStack.get(i).equals(duplicatedFromCard)) continue;
+                        gridStack.add(i, newCard);
+                        return;
                     }
                 }
-                cardGrid.get(0).clear();
-                while (cardGrid.get(0).size() < cardGrid.get(1).size()) {
-                    cardGrid.get(0).add(new ArrayList<>());
+            }
+        }
+        if (this.cardGrid.isEmpty()) {
+            this.cardGrid.add(0, new ArrayList());
+            this.maxStackSize.add(0, 0);
+        }
+        if (this.separateCreatures) {
+            int i;
+            if (this.cardGrid.size() < 2) {
+                this.cardGrid.add(1, new ArrayList());
+                this.maxStackSize.add(1, 0);
+                for (int i2 = 0; i2 < this.cardGrid.get(0).size(); ++i2) {
+                    this.cardGrid.get(1).add(new ArrayList());
                 }
             }
-
-            if (newCard.isCreature()) {
-                // creature cards goes to row 1
-                targetRow = cardGrid.get(0);
-            } else {
-                // non-creature cards goes to row 2
-                targetRow = cardGrid.get(1);
+            boolean isFirstRowWithCreatures = true;
+            for (i = 0; i < this.cardGrid.get(0).size(); ++i) {
+                if (!this.cardGrid.get(0).get(i).stream().anyMatch(card -> !card.isCreature())) continue;
+                isFirstRowWithCreatures = false;
+                break;
             }
+            if (!isFirstRowWithCreatures) {
+                for (i = 0; i < this.cardGrid.get(0).size(); ++i) {
+                    if (this.cardGrid.get(0).get(i).isEmpty()) continue;
+                    this.cardGrid.get(1).add(this.cardGrid.get(0).get(i));
+                }
+                this.cardGrid.get(0).clear();
+                while (this.cardGrid.get(0).size() < this.cardGrid.get(1).size()) {
+                    this.cardGrid.get(0).add(new ArrayList());
+                }
+            }
+            targetRow = newCard.isCreature() ? this.cardGrid.get(0) : this.cardGrid.get(1);
         } else {
-            // one row mode
-            targetRow = cardGrid.get(0);
+            targetRow = this.cardGrid.get(0);
         }
-
-        // Find the right column to insert into
         boolean didInsert = false;
         for (int currentColumn = 0; currentColumn < targetRow.size(); ++currentColumn) {
-            // Find an item from this column
             CardView cardInColumn = null;
-            for (List<List<CardView>> gridRow : cardGrid) {
-                for (CardView card : gridRow.get(currentColumn)) {
-                    cardInColumn = card;
-                    break;
-                }
+            for (List<List<CardView>> gridRow : this.cardGrid) {
+                CardView card2;
+                Iterator<CardView> iterator = gridRow.get(currentColumn).iterator();
+                if (!iterator.hasNext()) continue;
+                cardInColumn = card2 = iterator.next();
             }
-
-            // No card in this column?
             if (cardInColumn == null) {
-                // Error, should not have an empty column
-                logger.error("Empty column! " + currentColumn);
-            } else {
-                CardViewComparator cardComparator = cardSort.getComparator();
-                int res = cardComparator.compare(newCard, cardInColumn);
-                if (res <= 0) {
-                    // Insert into this col, but if less, then we need to create a new col here first
-                    if (res < 0) {
-                        for (int rowIndex = 0; rowIndex < cardGrid.size(); ++rowIndex) {
-                            cardGrid.get(rowIndex).add(currentColumn, new ArrayList<>());
-                        }
-                    }
-                    targetRow.get(currentColumn).add(newCard);
-                    didInsert = true;
-                    break;
-                } else {
-                    // Nothing to do, go to next iteration
+                logger.error((Object)("Empty column! " + currentColumn));
+                continue;
+            }
+            CardViewComparator cardComparator = this.cardSort.getComparator();
+            int res = cardComparator.compare(newCard, cardInColumn);
+            if (res > 0) continue;
+            if (res < 0) {
+                for (int rowIndex = 0; rowIndex < this.cardGrid.size(); ++rowIndex) {
+                    this.cardGrid.get(rowIndex).add(currentColumn, new ArrayList());
                 }
             }
+            targetRow.get(currentColumn).add(newCard);
+            didInsert = true;
+            break;
         }
-
-        // If nothing else, insert in a new column after everything else
         if (!didInsert) {
-            for (int rowIndex = 0; rowIndex < cardGrid.size(); ++rowIndex) {
-                cardGrid.get(rowIndex).add(new ArrayList<>());
+            for (int rowIndex = 0; rowIndex < this.cardGrid.size(); ++rowIndex) {
+                this.cardGrid.get(rowIndex).add(new ArrayList());
             }
             targetRow.get(targetRow.size() - 1).add(newCard);
         }
-
-        // empty row trim (trimGrid) must be called from outside after all cards inserted
     }
 
-    /**
-     * Delete any empty columns / rows from the grid, and eleminate any empty
-     * space in stacks
-     */
     private void trimGrid() {
-        // Compact stacks and rows
-        for (int rowIndex = 0; rowIndex < cardGrid.size(); ++rowIndex) {
-            List<List<CardView>> gridRow = cardGrid.get(rowIndex);
+        for (int rowIndex = 0; rowIndex < this.cardGrid.size(); ++rowIndex) {
+            List<List<CardView>> gridRow = this.cardGrid.get(rowIndex);
             int rowMaxStackSize = 0;
             for (List<CardView> stack : gridRow) {
-                // Clear out nulls in the stack
                 for (int i = 0; i < stack.size(); ++i) {
-                    if (stack.get(i) == null) {
-                        stack.remove(i--);
-                    }
+                    if (stack.get(i) != null) continue;
+                    stack.remove(i--);
                 }
-                // Is the stack still non-empty?
                 rowMaxStackSize = Math.max(rowMaxStackSize, stack.size());
             }
-            // Is the row empty? If so remove it
             if (rowMaxStackSize == 0) {
-                cardGrid.remove(rowIndex);
-                maxStackSize.remove(rowIndex);
+                this.cardGrid.remove(rowIndex);
+                this.maxStackSize.remove(rowIndex);
                 --rowIndex;
-            } else {
-                maxStackSize.set(rowIndex, rowMaxStackSize);
+                continue;
+            }
+            this.maxStackSize.set(rowIndex, rowMaxStackSize);
+        }
+        if (!this.cardGrid.isEmpty()) {
+            for (int colIndex = 0; colIndex < this.cardGrid.get(0).size(); ++colIndex) {
+                boolean hasContent = false;
+                for (List<List<CardView>> aCardGrid : this.cardGrid) {
+                    if (aCardGrid.get(colIndex).isEmpty()) continue;
+                    hasContent = true;
+                    break;
+                }
+                if (hasContent) continue;
+                for (List<List<CardView>> aCardGrid : this.cardGrid) {
+                    aCardGrid.remove(colIndex);
+                }
+                --colIndex;
             }
         }
-
-        // Remove empty columns
-        if (!cardGrid.isEmpty()) {
-            for (int colIndex = 0; colIndex < cardGrid.get(0).size(); ++colIndex) {
-                boolean hasContent = false; // Until contested
-                for (List<List<CardView>> aCardGrid : cardGrid) {
-                    if (!aCardGrid.get(colIndex).isEmpty()) {
-                        hasContent = true;
-                        break;
-                    }
-                }
-                if (!hasContent) {
-                    for (List<List<CardView>> aCardGrid : cardGrid) {
-                        aCardGrid.remove(colIndex);
-                    }
-                    --colIndex;
-                }
-            }
-        }
-
-        // Clean up extra column header count labels
-        while (stackCountLabels.size() > cardGrid.size()) {
-            List<JLabel> labels = stackCountLabels.remove(cardGrid.size());
+        while (this.stackCountLabels.size() > this.cardGrid.size()) {
+            List<JLabel> labels = this.stackCountLabels.remove(this.cardGrid.size());
             for (JLabel label : labels) {
-                cardContent.remove(label);
+                this.cardContent.remove(label);
             }
         }
-        int colCount = cardGrid.isEmpty() ? 0 : cardGrid.get(0).size();
-        for (List<JLabel> labels : stackCountLabels) {
+        int colCount = this.cardGrid.isEmpty() ? 0 : this.cardGrid.get(0).size();
+        for (List<JLabel> labels : this.stackCountLabels) {
             while (labels.size() > colCount) {
-                cardContent.remove(labels.remove(colCount));
+                this.cardContent.remove(labels.remove(colCount));
             }
         }
     }
@@ -2314,128 +1996,106 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
         if (GUISizeHelper.editorCardDimension == null) {
             return 200;
         }
-        return (int) (GUISizeHelper.editorCardDimension.width * cardSizeMod);
+        return (int)((float)GUISizeHelper.editorCardDimension.width * this.cardSizeMod);
     }
 
     private int getCardHeight() {
-        return (int) (1.4 * getCardWidth());
+        return (int)(1.4 * (double)this.getCardWidth());
     }
 
     private void repaintGrid() {
-        cardScroll.revalidate();
-        cardScroll.repaint();
-        repaint();
+        this.cardScroll.revalidate();
+        this.cardScroll.repaint();
+        this.repaint();
     }
 
-    /**
-     * Position all of the card views correctly
-     */
     private void layoutGrid() {
-        // Basic dimensions
-        int cardWidth = getCardWidth();
-        int cardHeight = getCardHeight();
+        int cardWidth = this.getCardWidth();
+        int cardHeight = this.getCardHeight();
         int cardTopHeight = CardRenderer.getCardTopHeight(cardWidth);
-
-        int countLabelHeight = getCountLabelHeight();
-
-        // Layout one at a time
+        int countLabelHeight = DragCardGrid.getCountLabelHeight();
         int layerIndex = 0;
         int currentY = countLabelHeight;
         int maxWidth = 0;
-        for (int rowIndex = 0; rowIndex < cardGrid.size(); ++rowIndex) {
+        for (int rowIndex = 0; rowIndex < this.cardGrid.size(); ++rowIndex) {
             int rowMaxStackSize = 0;
-            List<List<CardView>> gridRow = cardGrid.get(rowIndex);
+            List<List<CardView>> gridRow = this.cardGrid.get(rowIndex);
             for (int colIndex = 0; colIndex < gridRow.size(); ++colIndex) {
+                JLabel countLabel;
                 List<CardView> stack = gridRow.get(colIndex);
-
-                // Stack count label
-                if (stackCountLabels.size() <= rowIndex) {
-                    stackCountLabels.add(new ArrayList<>());
+                if (this.stackCountLabels.size() <= rowIndex) {
+                    this.stackCountLabels.add(new ArrayList());
                 }
-                if (stackCountLabels.get(rowIndex).size() <= colIndex) {
-                    // add new count label for the column
-
-                    // ENABLE cards auto-selection in the stack
+                if (this.stackCountLabels.get(rowIndex).size() <= colIndex) {
                     if (this.countLabelListener == null) {
-                        this.countLabelListener = new MouseAdapter() {
+                        this.countLabelListener = new MouseAdapter(){
+
                             @Override
                             public void mouseClicked(MouseEvent e) {
                                 if (!SwingUtilities.isLeftMouseButton(e)) {
                                     return;
                                 }
-                                JLabel countLabel = (JLabel) e.getComponent();
-                                List<CardView> cards = findCardStackByCountLabel(countLabel);
-                                boolean selected = !cards.isEmpty() && cards.get(0).isSelected();
+                                JLabel countLabel = (JLabel)e.getComponent();
+                                List<CardView> cards = DragCardGrid.this.findCardStackByCountLabel(countLabel);
+                                boolean selected = !cards.isEmpty() && ((CardView)cards.get(0)).isSelected();
                                 cards.forEach(card -> {
                                     card.setSelected(!selected);
-                                    cardViews.get(card.getId()).update(card);
+                                    ((MageCard)DragCardGrid.this.cardViews.get(card.getId())).update(card);
                                 });
                             }
                         };
                     }
-
-                    JLabel countLabel = DragCardGrid.createCountLabel(this.countLabelListener);
-                    cardContent.add(countLabel, (Integer) 0);
-                    stackCountLabels.get(rowIndex).add(countLabel);
+                    countLabel = DragCardGrid.createCountLabel(this.countLabelListener);
+                    this.cardContent.add((Component)countLabel, (Object)0);
+                    this.stackCountLabels.get(rowIndex).add(countLabel);
                 }
-
-                JLabel countLabel = stackCountLabels.get(rowIndex).get(colIndex);
+                countLabel = this.stackCountLabels.get(rowIndex).get(colIndex);
                 if (stack.isEmpty()) {
                     countLabel.setVisible(false);
                 } else {
-                    String description = cardSort.getComparator().getCategoryName(stack.get(0));
+                    String description = this.cardSort.getComparator().getCategoryName(stack.get(0));
                     DragCardGrid.updateCountLabel(countLabel, stack.size(), description);
-                    countLabel.setLocation(getGridPadding() + (cardWidth + getGridPadding()) * colIndex, currentY - countLabelHeight);
+                    countLabel.setLocation(this.getGridPadding() + (cardWidth + this.getGridPadding()) * colIndex, currentY - countLabelHeight);
                     countLabel.setSize(cardWidth, countLabelHeight);
                     countLabel.setVisible(true);
                 }
-
-                // Max stack size
                 rowMaxStackSize = Math.max(rowMaxStackSize, stack.size());
-
-                // Layout cards in stack
                 for (int i = 0; i < stack.size(); ++i) {
                     CardView card = stack.get(i);
-                    MageCard view = cardViews.get(card.getId());
-                    int x = getGridPadding() + (cardWidth + getGridPadding()) * colIndex;
+                    MageCard view = this.cardViews.get(card.getId());
+                    int x = this.getGridPadding() + (cardWidth + this.getGridPadding()) * colIndex;
                     int y = currentY + i * cardTopHeight;
                     view.setCardBounds(x, y, cardWidth, cardHeight);
-                    cardContent.setLayer(view, layerIndex++);
+                    this.cardContent.setLayer((Component)view, layerIndex++);
                 }
             }
-
-            // Update the max stack size for this row and the max width
-            maxWidth = Math.max(maxWidth, getGridPadding() + (getGridPadding() + cardWidth) * gridRow.size());
-            maxStackSize.set(rowIndex, rowMaxStackSize);
-            currentY += (cardTopHeight * (rowMaxStackSize - 1) + cardHeight) + countLabelHeight;
+            maxWidth = Math.max(maxWidth, this.getGridPadding() + (this.getGridPadding() + cardWidth) * gridRow.size());
+            this.maxStackSize.set(rowIndex, rowMaxStackSize);
+            currentY += cardTopHeight * (rowMaxStackSize - 1) + cardHeight + countLabelHeight;
         }
-
-        // Resize card container
-        cardContent.setPreferredSize(new Dimension(maxWidth, currentY - countLabelHeight + getGridPadding()));
-        //cardContent.setSize(maxWidth, currentY - COUNT_LABEL_HEIGHT + getGridPadding());
+        this.cardContent.setPreferredSize(new Dimension(maxWidth, currentY - countLabelHeight + this.getGridPadding()));
     }
 
     private int getGridPadding() {
-        return Math.max(GRID_PADDING, Math.round(cardSizeMod * GRID_PADDING * GUISizeHelper.dialogGuiScale));
+        return Math.max(12, Math.round(this.cardSizeMod * 12.0f * GUISizeHelper.dialogGuiScale));
     }
 
     public static int getCountLabelHeight() {
-        // must allow 2 lines of text
-        return Math.round(1.3f * 2.0f * getCountLabelFontSize());
+        return Math.round(2.6f * DragCardGrid.getCountLabelFontSize());
     }
 
     private static float getCountLabelFontSize() {
-        return 0.8f * GUISizeHelper.dialogFont.getSize();
+        return 0.8f * (float)GUISizeHelper.dialogFont.getSize();
     }
 
     public static Font getCountLabelFont() {
-        return GUISizeHelper.dialogFont.deriveFont(Font.BOLD, getCountLabelFontSize());
+        return GUISizeHelper.dialogFont.deriveFont(1, DragCardGrid.getCountLabelFontSize());
     }
 
     public static JLabel createCountLabel(MouseListener mouseListener) {
-        JLabel countLabel = new JLabel("", JLabel.CENTER);
-        countLabel.setFont(getCountLabelFont());
-        countLabel.setForeground(Color.WHITE); // TODO: add theme support for better visible text?
+        JLabel countLabel = new JLabel("", 0);
+        countLabel.setFont(DragCardGrid.getCountLabelFont());
+        countLabel.setForeground(Color.WHITE);
         if (mouseListener != null) {
             countLabel.addMouseListener(mouseListener);
         }
@@ -2443,73 +2103,145 @@ public class DragCardGrid extends JPanel implements DragCardSource, DragCardTarg
     }
 
     public static void updateCountLabel(JLabel countLabel, int amount, String description) {
-        // two modes:
-        // * small: one line with count
-        // * big: two lines with count and description
-        String labelText = ManaSymbols.replaceSymbolsWithHTML(description, Math.round(getCountLabelFontSize()));
+        String labelText = ManaSymbols.replaceSymbolsWithHTML(description, Math.round(DragCardGrid.getCountLabelFontSize()));
         String labelHint = ManaSymbols.replaceSymbolsWithHTML(description, ManaSymbols.Type.TOOLTIP);
         boolean smallMode = description.isEmpty();
-        boolean supportCustomClicks = countLabel.getMouseListeners().length > 0
-                && !(countLabel.getMouseListeners()[0] instanceof ToolTipManager); // ignore auto-added ToolTipManager for mouse over hints
-
-        // border: 1px solid black
-        // white-space: nowrap;
-        countLabel.setText("<html>"
-                + "<div style='text-align: center;'>"
-                + "  <div>" + amount + "</div>"
-                + (smallMode ? "" : "  <div style=''>" + labelText + "</div>")
-                + "</div>");
-        countLabel.setToolTipText("<html>"
-                + amount + (smallMode ? "" : " - " + labelHint)
-                + (supportCustomClicks ? "<br>Click on the count label to select/unselect cards stack." : "")
-        );
-        countLabel.setVerticalAlignment(smallMode ? JLabel.CENTER : JLabel.TOP);
+        boolean supportCustomClicks = countLabel.getMouseListeners().length > 0 && !(countLabel.getMouseListeners()[0] instanceof ToolTipManager);
+        countLabel.setText("<html><div style='text-align: center;'>  <div>" + amount + "</div>" + (smallMode ? "" : "  <div style=''>" + labelText + "</div>") + "</div>");
+        countLabel.setToolTipText("<html>" + amount + (smallMode ? "" : " - " + labelHint) + (supportCustomClicks ? "<br>Click on the count label to select/unselect cards stack." : ""));
+        countLabel.setVerticalAlignment(smallMode ? 0 : 1);
         if (DebugUtil.GUI_DECK_EDITOR_DRAW_COUNT_LABEL_BORDER) {
             countLabel.setBorder(BorderFactory.createLineBorder(Color.green));
         }
     }
 
     private List<CardView> findCardStackByCountLabel(JLabel countLabel) {
-        for (int rowIndex = 0; rowIndex < cardGrid.size(); ++rowIndex) {
-            List<List<CardView>> gridRow = cardGrid.get(rowIndex);
+        for (int rowIndex = 0; rowIndex < this.cardGrid.size(); ++rowIndex) {
+            List<List<CardView>> gridRow = this.cardGrid.get(rowIndex);
             for (int colIndex = 0; colIndex < gridRow.size(); ++colIndex) {
-                if (stackCountLabels.size() < rowIndex
-                        || stackCountLabels.get(rowIndex).size() < colIndex
-                        || !countLabel.equals(stackCountLabels.get(rowIndex).get(colIndex))) {
-                    continue;
-                }
+                if (this.stackCountLabels.size() < rowIndex || this.stackCountLabels.get(rowIndex).size() < colIndex || !countLabel.equals(this.stackCountLabels.get(rowIndex).get(colIndex))) continue;
                 return gridRow.get(colIndex);
             }
         }
-        return new ArrayList<>();
+        return new ArrayList<CardView>();
     }
 
-    private static void makeButtonPopup(final AbstractButton button, final JPopupMenu popup) {
+    private static void makeButtonPopup(AbstractButton button, JPopupMenu popup) {
         button.addActionListener(e -> popup.show(button, 0, button.getHeight()));
     }
-}
 
-/**
- * Note: This class can't just be a JPanel, because a JPanel doesn't draw when
- * it has Opaque = false, but this class needs to go into a JLayeredPane while
- * being translucent, so it NEEDS Opaque = false in order to behave correctly.
- * Thus this simple class is needed to implement a translucent box in a
- * JLayeredPane.
- */
-class SelectionBox extends JComponent {
+    public static enum Sort {
+        NONE("No Sort", new CardViewNoneComparator()),
+        CARD_TYPE("Card Type", new CardViewCardTypeComparator()),
+        CMC("Mana Value", new CardViewCostComparator()),
+        COLOR("Color", new CardViewColorComparator()),
+        COLOR_IDENTITY("Color Identity", new CardViewColorIdentityComparator()),
+        RARITY("Rarity", new CardViewRarityComparator()),
+        EDH_POWER_LEVEL("EDH Power Level", new CardViewEDHPowerLevelComparator());
 
-    public SelectionBox() {
-        setOpaque(false);
+        private final CardViewComparator comparator;
+        private final String text;
+
+        private Sort(String text, CardViewComparator comparator) {
+            this.comparator = comparator;
+            this.text = text;
+        }
+
+        public CardViewComparator getComparator() {
+            return this.comparator;
+        }
+
+        public String getText() {
+            return this.text;
+        }
     }
 
-    @Override
-    public void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        g = g.create();
-        g.setColor(new Color(100, 100, 200, 128));
-        g.fillRect(0, 0, getWidth(), getHeight());
-        g.setColor(new Color(0, 0, 255));
-        g.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
-        g.dispose();
+    public static enum Role {
+        MAINDECK("Main deck"),
+        SIDEBOARD("Sideboard/commander");
+
+        private final String name;
+
+        private Role(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return this.name;
+        }
+    }
+
+    public static class Settings {
+        public Sort sort;
+        public boolean separateCreatures;
+        public int cardSize;
+        private static final Pattern parser = Pattern.compile("\\(([^,]*),([^,]*),([^)]*)\\)");
+
+        public static Settings parse(String str) {
+            Matcher m = parser.matcher(str);
+            if (m.find()) {
+                Settings s = new Settings();
+                if (m.groupCount() > 0) {
+                    s.sort = Sort.valueOf(m.group(1));
+                }
+                if (m.groupCount() > 1) {
+                    s.separateCreatures = Boolean.valueOf(m.group(2));
+                }
+                s.cardSize = m.groupCount() > 2 ? Integer.parseInt(m.group(3)) : 50;
+                return s;
+            }
+            return null;
+        }
+
+        public String toString() {
+            return '(' + this.sort.toString() + ',' + this.separateCreatures + ',' + this.cardSize + ')';
+        }
+    }
+
+    private abstract class CardTypeCounter {
+        private int count = 0;
+
+        private CardTypeCounter() {
+        }
+
+        protected abstract boolean is(CardView var1);
+
+        int get() {
+            return this.count;
+        }
+
+        void add(CardView card) {
+            if (this.is(card)) {
+                ++this.count;
+            }
+        }
+
+        void remove(CardView card) {
+            if (this.is(card)) {
+                --this.count;
+            }
+        }
+    }
+
+    public static interface DragCardGridListener {
+        public void cardsSelected();
+
+        public void hideCards(Collection<CardView> var1);
+
+        public void duplicateCards(Collection<CardView> var1);
+
+        public void invertCardSelection(Collection<CardView> var1);
+
+        public void showAll();
+    }
+
+    private class NewCardInfo {
+        private final Card newCard;
+        private final CardView newView;
+
+        public NewCardInfo(Card newCard, CardView newView) {
+            this.newCard = newCard;
+            this.newView = newView;
+        }
     }
 }

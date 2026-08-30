@@ -975,6 +975,25 @@ public class DeckEditorPanel extends javax.swing.JPanel {
         }
     }
 
+    /**
+     * Some deck formats do not contain a NAME entry. Keep the editor's
+     * existing Deck Name field useful by falling back to the source filename.
+     */
+    private void ensureDeckName(Deck loadedDeck, String filePath) {
+        if (loadedDeck.getName() != null && !loadedDeck.getName().trim().isEmpty()) {
+            return;
+        }
+
+        String fileName = new File(filePath).getName();
+        int extension = fileName.lastIndexOf('.');
+        if (extension > 0) {
+            fileName = fileName.substring(0, extension);
+        }
+        if (!fileName.trim().isEmpty()) {
+            loadedDeck.setName(fileName);
+        }
+    }
+
     private boolean loadDeck(String file, boolean saveAutoFixedFile) {
         MageFrame.getDesktop().setCursor(new Cursor(Cursor.WAIT_CURSOR));
         try {
@@ -983,6 +1002,7 @@ public class DeckEditorPanel extends javax.swing.JPanel {
             processAndShowImportErrors(errorMessages);
 
             if (newDeck != null) {
+                ensureDeckName(newDeck, file);
                 deck = newDeck;
                 refreshDeck(false, true);
                 return true;
@@ -1519,6 +1539,7 @@ public class DeckEditorPanel extends javax.swing.JPanel {
                 processAndShowImportErrors(errorMessages);
 
                 if (newDeck != null) {
+                    ensureDeckName(newDeck, file.getPath());
                     deck = newDeck;
                     refreshDeck(true, true);
                 }

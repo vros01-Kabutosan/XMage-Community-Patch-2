@@ -1852,7 +1852,9 @@ extends JPanel {
 
         for (RevealedView revealView : game.getRevealed()) {
             String name = revealView.getName();
-            this.retainedReveals.put(name, new CardsView(new ArrayList<CardView>(revealView.getCards().values())));
+            if (isSpellReveal(game, revealView)) {
+                this.retainedReveals.put(name, new CardsView(new ArrayList<CardView>(revealView.getCards().values())));
+            }
         }
 
         for (Map.Entry<String, CardsView> entry : this.retainedReveals.entrySet()) {
@@ -1868,6 +1870,17 @@ extends JPanel {
 
         this.closeMissingCardInfoWindows(this.revealed, activeWindows);
         this.removeClosedCardInfoWindows(this.revealed);
+    }
+
+    private boolean isSpellReveal(GameView game, RevealedView revealView) {
+        String revealName = revealView.getName();
+        for (CardView stackCard : game.getStack().values()) {
+            if (stackCard.getMageObjectType() == MageObjectType.SPELL
+                    && revealName.startsWith(stackCard.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Set<UUID> collectPublicCardIds(GameView game) {

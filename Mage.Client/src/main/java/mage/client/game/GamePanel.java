@@ -177,6 +177,8 @@ extends JPanel {
     private final Map<UUID, CardInfoWindowDialog> exiles = new HashMap<UUID, CardInfoWindowDialog>();
     private final Map<String, CardInfoWindowDialog> revealed = new HashMap<String, CardInfoWindowDialog>();
     private final Map<String, CardInfoWindowDialog> lookedAt = new HashMap<String, CardInfoWindowDialog>();
+    private final Map<String, Timer> pendingCardInfoWindowClosures = new HashMap<String, Timer>();
+    private static final int CARD_INFO_WINDOW_CLOSE_DELAY_MS = 250;
     private final Map<String, CardsView> graveyards = new HashMap<String, CardsView>();
     private final Map<String, CardInfoWindowDialog> graveyardWindows = new HashMap<String, CardInfoWindowDialog>();
     private final Map<String, CardInfoWindowDialog> companion = new HashMap<String, CardInfoWindowDialog>();
@@ -487,6 +489,8 @@ extends JPanel {
         this.gameChatPanel.cleanUp();
         this.userChatPanel.cleanUp();
         this.removeListener();
+        this.pendingCardInfoWindowClosures.values().forEach(Timer::stop);
+        this.pendingCardInfoWindowClosures.clear();
         this.handContainer.cleanUp();
         this.disposeFloatingStackWindow();
         this.stackObjects.cleanUp();
@@ -1843,6 +1847,7 @@ extends JPanel {
     private void showRevealed(GameView game) {
         Set<String> activeWindows = new HashSet<>();
         for (RevealedView revealView : game.getRevealed()) {
+            this.cancelPendingCardInfoWindowClosure(this.revealed, revealView.getName());
             activeWindows.add(revealView.getName());
             this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, revealView.getName(), (LinkedHashMap)revealView.getCards());
         }
@@ -1853,6 +1858,7 @@ extends JPanel {
     private void showLookedAt(GameView game) {
         Set<String> activeWindows = new HashSet<>();
         for (LookedAtView lookedAtView : game.getLookedAt()) {
+            this.cancelPendingCardInfoWindowClosure(this.lookedAt, lookedAtView.getName());
             activeWindows.add(lookedAtView.getName());
             this.handleGameInfoWindow(this.lookedAt, CardInfoWindowDialog.ShowType.LOOKED_AT, lookedAtView.getName(), (LinkedHashMap)lookedAtView.getCards());
         }
@@ -1881,11 +1887,7 @@ extends JPanel {
         if (cardsView == null || cardsView.isEmpty()) {
             CardInfoWindowDialog staleWindow = windowMap.get(name);
             if (staleWindow != null) {
-                try {
-                    staleWindow.setClosed(true);
-                } catch (PropertyVetoException e) {
-                    logger.warn((Object)"Couldn't close empty card information window", (Throwable)e);
-                }
+                this.scheduleCardInfoWindowClosure(windowMap, name, staleWindow);
             }
             return;
         }
@@ -1921,13 +1923,55 @@ extends JPanel {
     private void closeMissingCardInfoWindows(Map<String, CardInfoWindowDialog> windowMap, Set<String> activeWindows) {
         for (Map.Entry<String, CardInfoWindowDialog> entry : windowMap.entrySet()) {
             if (!activeWindows.contains(entry.getKey())) {
-                try {
-                    entry.getValue().setClosed(true);
-                } catch (PropertyVetoException e) {
-                    logger.warn((Object)"Couldn't close stale card information window", (Throwable)e);
-                }
+                this.scheduleCardInfoWindowClosure(windowMap, entry.getKey(), entry.getValue());
             }
         }
+    }
+
+    private String cardInfoWindowClosureKey(Map<String, CardInfoWindowDialog> windowMap, String name) {
+        return (windowMap == this.revealed ? "reveal:" : "lookedAt:") + name;
+    }
+
+    private void cancelPendingCardInfoWindowClosure(Map<String, CardInfoWindowDialog> windowMap, String name) {
+        Timer timer = this.pendingCardInfoWindowClosures.remove(this.cardInfoWindowClosureKey(windowMap, name));
+        if (timer != null) {
+            timer.stop();
+        }
+    }
+
+    private boolean isCardInfoWindowStillActive(Map<String, CardInfoWindowDialog> windowMap, String name) {
+        if (this.lastGameData.game == null) {
+            return false;
+        }
+        if (windowMap == this.revealed) {
+            return this.lastGameData.game.getRevealed().stream().anyMatch(view -> view.getName().equals(name));
+        }
+        if (windowMap == this.lookedAt) {
+            return this.lastGameData.game.getLookedAt().stream().anyMatch(view -> view.getName().equals(name));
+        }
+        return false;
+    }
+
+    private void scheduleCardInfoWindowClosure(Map<String, CardInfoWindowDialog> windowMap, String name, CardInfoWindowDialog window) {
+        String key = this.cardInfoWindowClosureKey(windowMap, name);
+        if (this.pendingCardInfoWindowClosures.containsKey(key)) {
+            return;
+        }
+        Timer timer = new Timer(CARD_INFO_WINDOW_CLOSE_DELAY_MS, event -> {
+            this.pendingCardInfoWindowClosures.remove(key);
+            if (this.isCardInfoWindowStillActive(windowMap, name) || window.isClosed()) {
+                return;
+            }
+            try {
+                window.setClosed(true);
+            } catch (PropertyVetoException e) {
+                logger.warn((Object)"Could not close stale card information window", (Throwable)e);
+            }
+            this.removeClosedCardInfoWindows(windowMap);
+        });
+        timer.setRepeats(false);
+        this.pendingCardInfoWindowClosures.put(key, timer);
+        timer.start();
     }
 
     public void ask(int messageId, GameView gameView, String question, Map<String, Serializable> options) {

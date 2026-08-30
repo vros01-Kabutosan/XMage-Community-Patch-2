@@ -117,6 +117,9 @@ extends MagePane {
                 }
                 int result = this.process.waitFor();
                 this.append("\nProceso terminado con c\u00f3digo " + result + ".\n");
+                if (result == 0) {
+                    this.runDeckOrganizer();
+                }
             }
             catch (Exception error) {
                 this.append("\nERROR: " + error.getMessage() + "\n");
@@ -132,6 +135,31 @@ extends MagePane {
         }, "xmage-deck-downloader");
         worker.setDaemon(true);
         worker.start();
+    }
+
+    private void runDeckOrganizer() {
+        Path script = this.engineDirectory().getParent().getParent().resolve("sample-decks").resolve("Descargados").resolve("ordenar_decks.py");
+        if (!Files.isRegularFile(script, new LinkOption[0])) {
+            this.append("No se encuentra el ordenador de decks: " + script + "\n");
+            return;
+        }
+        this.append("Iniciando ordenación automática de decks...\n");
+        try {
+            ProcessBuilder organizer = new ProcessBuilder(this.pythonCommand(), "-u", script.toString(), "--no-pausa", "--extensiones", ".dck");
+            organizer.directory(script.getParent().toFile());
+            organizer.redirectErrorStream(true);
+            Process organizerProcess = organizer.start();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(organizerProcess.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    this.append("[Ordenador] " + line + "\n");
+                }
+            }
+            int organizerResult = organizerProcess.waitFor();
+            this.append("Ordenación automática terminada con código " + organizerResult + ".\n");
+        } catch (Exception error) {
+            this.append("ERROR al ordenar decks: " + error.getMessage() + "\n");
+        }
     }
 
     private void sendContinue(ActionEvent event) {

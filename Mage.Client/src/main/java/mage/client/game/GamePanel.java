@@ -1847,6 +1847,7 @@ extends JPanel {
     }
 
     private void showRevealed(GameView game) {
+        Set<String> activeWindows = new HashSet<>();
         Set<UUID> publicCardIds = collectPublicCardIds(game);
 
         for (RevealedView revealView : game.getRevealed()) {
@@ -1913,7 +1914,6 @@ extends JPanel {
     private void showLookedAt(GameView game) {
         for (LookedAtView lookedAtView : game.getLookedAt()) {
             this.cancelPendingCardInfoWindowClosure(this.lookedAt, lookedAtView.getName());
-            activeWindows.add(lookedAtView.getName());
             this.handleGameInfoWindow(this.lookedAt, CardInfoWindowDialog.ShowType.LOOKED_AT, lookedAtView.getName(), (LinkedHashMap)lookedAtView.getCards());
         }
 

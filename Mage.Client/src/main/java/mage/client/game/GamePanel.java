@@ -1884,7 +1884,7 @@ extends JPanel {
     }
 
     private void handleGameInfoWindow(Map<String, CardInfoWindowDialog> windowMap, CardInfoWindowDialog.ShowType showType, String name, LinkedHashMap cardsView) {
-        if (cardsView == null || cardsView.isEmpty()) {
+        if ((showType == CardInfoWindowDialog.ShowType.REVEAL || showType == CardInfoWindowDialog.ShowType.LOOKED_AT) && (cardsView == null || cardsView.isEmpty())) {
             CardInfoWindowDialog staleWindow = windowMap.get(name);
             if (staleWindow != null) {
                 this.scheduleCardInfoWindowClosure(windowMap, name, staleWindow);
@@ -1922,7 +1922,7 @@ extends JPanel {
     /** Close reveal/look-at windows that disappeared from the authoritative game view. */
     private void closeMissingCardInfoWindows(Map<String, CardInfoWindowDialog> windowMap, Set<String> activeWindows) {
         for (Map.Entry<String, CardInfoWindowDialog> entry : windowMap.entrySet()) {
-            if (!activeWindows.contains(entry.getKey())) {
+            if (!activeWindows.contains(entry.getKey()) && (entry.getValue().getShowType() == CardInfoWindowDialog.ShowType.REVEAL || entry.getValue().getShowType() == CardInfoWindowDialog.ShowType.LOOKED_AT)) {
                 this.scheduleCardInfoWindowClosure(windowMap, entry.getKey(), entry.getValue());
             }
         }

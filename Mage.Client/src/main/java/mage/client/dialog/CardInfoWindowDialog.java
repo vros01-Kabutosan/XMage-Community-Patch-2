@@ -102,6 +102,10 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
         cards.cleanUp();
     }
 
+    public ShowType getShowType() {
+        return showType;
+    }
+
     @Override
     public void changeGUISize() {
         setGUISize();

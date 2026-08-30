@@ -487,6 +487,46 @@ function Test-PortOpen {
     }
 }
 
+function Get-XmageProcesses {
+    return @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+        $exe = [string]$_.ExecutablePath
+        $cmd = [string]$_.CommandLine
+        $exe.StartsWith($Active, [System.StringComparison]::OrdinalIgnoreCase) -or ($cmd.IndexOf($Active, [System.StringComparison]::OrdinalIgnoreCase) -ge 0)
+    })
+}
+
+function Stop-XmageForCleanStart {
+    $processes = @(Get-XmageProcesses)
+    foreach ($process in $processes) {
+        Write-Log "XMAGE_PROCESS=PID:$($process.ProcessId);NAME:$($process.Name);COMMAND:$([string]$process.CommandLine)"
+    }
+    if ($processes.Count -eq 0) {
+        Write-Log "CLEAN_START=NO_XMAGE_PROCESSES"
+        Clear-StaleOverlayTemps -Root $Active
+        return
+    }
+    foreach ($process in $processes) {
+        Stop-Process -Id ([int]$process.ProcessId) -Force -ErrorAction Stop
+        Write-Log "PROCESS_STOP=PASS;PID=$($process.ProcessId)"
+    }
+    $remaining = @()
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        Start-Sleep -Milliseconds 250
+        $remaining = @(Get-XmageProcesses)
+        if ($remaining.Count -eq 0) {
+            break
+        }
+    }
+    if ($remaining.Count -ne 0) {
+        foreach ($process in $remaining) {
+            Write-Log "CLEAN_START_REMAINING=PID:$($process.ProcessId);NAME:$($process.Name)"
+        }
+        throw "No se pudo confirmar un arranque limpio: quedan procesos XMage activos."
+    }
+    Write-Log "CLEAN_START=PASS;PROCESSES_STOPPED=$($processes.Count)"
+    Clear-StaleOverlayTemps -Root $Active
+}
+
 function Start-ExistingLauncher {
     param(
         [string]$Path,
@@ -720,23 +760,7 @@ try {
         $ExitCode = 0
     }
     else {
-        $processes = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue | Where-Object {
-            $exe = [string]$_.ExecutablePath
-            $cmd = [string]$_.CommandLine
-            $exe.StartsWith($Active, [System.StringComparison]::OrdinalIgnoreCase) -or ($cmd.IndexOf($Active, [System.StringComparison]::OrdinalIgnoreCase) -ge 0)
-        })
-        foreach ($process in $processes) {
-            Write-Log "XMAGE_PROCESS=PID:$($process.ProcessId);NAME:$($process.Name);COMMAND:$([string]$process.CommandLine)"
-        }
-        if (($processes.Count -gt 0) -and (-not $ForceCloseXmage)) {
-            throw "Hay procesos XMage activos. Repite con -ForceCloseXmage; no se toca una instalación en uso."
-        }
-        foreach ($process in $processes) {
-            Stop-Process -Id ([int]$process.ProcessId) -Force -ErrorAction Stop
-            Write-Log "PROCESS_STOP=PASS;PID=$($process.ProcessId)"
-        }
-        Start-Sleep -Milliseconds 500
-        Clear-StaleOverlayTemps -Root $Active
+        Stop-XmageForCleanStart
 
         $activeClientMatches = @()
         if (Test-Path -Path (Join-Path $Active "client\lib") -PathType Container) {

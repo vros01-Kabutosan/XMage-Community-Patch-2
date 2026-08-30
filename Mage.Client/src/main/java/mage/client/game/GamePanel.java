@@ -1841,16 +1841,22 @@ extends JPanel {
     }
 
     private void showRevealed(GameView game) {
+        Set<String> activeWindows = new HashSet<>();
         for (RevealedView revealView : game.getRevealed()) {
+            activeWindows.add(revealView.getName());
             this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, revealView.getName(), (LinkedHashMap)revealView.getCards());
         }
+        this.closeMissingCardInfoWindows(this.revealed, activeWindows);
         this.removeClosedCardInfoWindows(this.revealed);
     }
 
     private void showLookedAt(GameView game) {
+        Set<String> activeWindows = new HashSet<>();
         for (LookedAtView lookedAtView : game.getLookedAt()) {
+            activeWindows.add(lookedAtView.getName());
             this.handleGameInfoWindow(this.lookedAt, CardInfoWindowDialog.ShowType.LOOKED_AT, lookedAtView.getName(), (LinkedHashMap)lookedAtView.getCards());
         }
+        this.closeMissingCardInfoWindows(this.lookedAt, activeWindows);
         this.removeClosedCardInfoWindows(this.lookedAt);
     }
 
@@ -1872,6 +1878,17 @@ extends JPanel {
     }
 
     private void handleGameInfoWindow(Map<String, CardInfoWindowDialog> windowMap, CardInfoWindowDialog.ShowType showType, String name, LinkedHashMap cardsView) {
+        if (cardsView == null || cardsView.isEmpty()) {
+            CardInfoWindowDialog staleWindow = windowMap.get(name);
+            if (staleWindow != null) {
+                try {
+                    staleWindow.setClosed(true);
+                } catch (PropertyVetoException e) {
+                    logger.warn((Object)"Couldn't close empty card information window", (Throwable)e);
+                }
+            }
+            return;
+        }
         CardInfoWindowDialog cardInfoWindowDialog;
         if (!windowMap.containsKey(name)) {
             cardInfoWindowDialog = new CardInfoWindowDialog(showType, name);
@@ -1898,6 +1915,19 @@ extends JPanel {
 
     private void removeClosedCardInfoWindows(Map<String, CardInfoWindowDialog> windowMap) {
         windowMap.entrySet().removeIf(entry -> ((CardInfoWindowDialog)entry.getValue()).isClosed());
+    }
+
+    /** Close reveal/look-at windows that disappeared from the authoritative game view. */
+    private void closeMissingCardInfoWindows(Map<String, CardInfoWindowDialog> windowMap, Set<String> activeWindows) {
+        for (Map.Entry<String, CardInfoWindowDialog> entry : windowMap.entrySet()) {
+            if (!activeWindows.contains(entry.getKey())) {
+                try {
+                    entry.getValue().setClosed(true);
+                } catch (PropertyVetoException e) {
+                    logger.warn((Object)"Couldn't close stale card information window", (Throwable)e);
+                }
+            }
+        }
     }
 
     public void ask(int messageId, GameView gameView, String question, Map<String, Serializable> options) {

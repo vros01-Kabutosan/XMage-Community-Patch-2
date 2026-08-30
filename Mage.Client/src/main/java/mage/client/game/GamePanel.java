@@ -1732,12 +1732,6 @@ extends JPanel {
         for (CardInfoWindowDialog cardInfoWindowDialog : this.exiles.values()) {
             cardInfoWindowDialog.hideDialog();
         }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.revealed.values()) {
-            cardInfoWindowDialog.hideDialog();
-        }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.lookedAt.values()) {
-            cardInfoWindowDialog.hideDialog();
-        }
         for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
             cardInfoWindowDialog.hideDialog();
         }

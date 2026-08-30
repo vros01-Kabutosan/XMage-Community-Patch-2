@@ -1852,6 +1852,9 @@ extends JPanel {
 
         for (RevealedView revealView : game.getRevealed()) {
             String name = revealView.getName();
+            this.cancelPendingCardInfoWindowClosure(this.revealed, name);
+            activeWindows.add(name);
+            this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, name, (LinkedHashMap) revealView.getCards());
             if (isSpellReveal(game, revealView)) {
                 this.retainedReveals.put(name, new CardsView(new ArrayList<CardView>(revealView.getCards().values())));
             }

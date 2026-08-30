@@ -96,6 +96,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
         }
         this.setTitelBarToolTip(name);
         setGUISize();
+        applyMinimalInfoWindowStyle();
     }
 
     public void cleanUp() {
@@ -106,6 +107,15 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
         return showType;
     }
 
+    private void applyMinimalInfoWindowStyle() {
+        if (showType != ShowType.REVEAL && showType != ShowType.LOOKED_AT) {
+            return;
+        }
+        Color background = new Color(31, 35, 43);
+        getContentPane().setBackground(background);
+        cards.setBackgroundColor(background);
+        cards.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
+    }
     @Override
     public void changeGUISize() {
         setGUISize();
@@ -141,6 +151,11 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     public void loadCardsAndShow(CardsView showCards, BigCard bigCard, UUID gameId, boolean revertOrder) {
         cards.loadCards(showCards, bigCard, gameId, revertOrder);
 
+        if (showType == ShowType.REVEAL || showType == ShowType.LOOKED_AT) {
+            String newTitle = name + " (" + showCards.size() + ")";
+            setTitle(newTitle);
+            this.setTitelBarToolTip(newTitle);
+        }
         // additional info for grave windows
         if (showType == ShowType.GRAVEYARD) {
             int qty = qtyCardTypes(showCards);

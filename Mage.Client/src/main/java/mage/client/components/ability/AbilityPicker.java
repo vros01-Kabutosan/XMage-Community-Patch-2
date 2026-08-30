@@ -284,7 +284,10 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
     private void objectMouseClicked(MouseEvent event) {
         int index = rows.getSelectedIndex();
         AbilityPickerAction action = (AbilityPickerAction) choices.get(index);
-        action.actionPerformed(null);
+        rows.repaint();
+        javax.swing.Timer activationTimer = new javax.swing.Timer(80, timerEvent -> action.actionPerformed(null));
+        activationTimer.setRepeats(false);
+        activationTimer.start();
     }
 
     private static final class CheckmarkIcon implements Icon {

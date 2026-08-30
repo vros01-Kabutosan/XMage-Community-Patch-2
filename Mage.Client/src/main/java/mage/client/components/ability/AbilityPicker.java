@@ -60,6 +60,8 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
 
     private boolean selected = false;
 
+    private Point dragOffset;
+
     public AbilityPicker() {
         this(1.0f);
     }
@@ -134,7 +136,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         this.selected = true; // to stop previous modal
 
         rows.setListData(this.choices.toArray());
-        this.rows.setSelectedIndex(0);
+        this.rows.clearSelection();
         this.selected = false; // back to false - waiting for selection
         this.title.setText(this.message);
         setVisible(true);
@@ -196,10 +198,12 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
             }
         });
 
-        rows.setSelectedIndex(0);
+        rows.clearSelection();
         rows.setFont(new Font("SansSerif", Font.PLAIN, sizeMod(15)));
         rows.setBorder(BorderFactory.createEmptyBorder());
         rows.addMouseWheelListener(this);
+
+        installDragSupport(title);
 
 
         jScrollPane2.setViewportView(rows);
@@ -234,6 +238,33 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
                         .addPreferredGap(LayoutStyle.RELATED).add(layout.createParallelGroup(GroupLayout.BASELINE)).addPreferredGap(LayoutStyle.RELATED).add(
                                 layout.createParallelGroup(GroupLayout.BASELINE)).addPreferredGap(LayoutStyle.RELATED).add(layout.createParallelGroup(GroupLayout.LEADING)).addPreferredGap(
                                 LayoutStyle.RELATED).add(jScrollPane2, GroupLayout.PREFERRED_SIZE, sizeMod(180), GroupLayout.PREFERRED_SIZE).addContainerGap(sizeMod(23), Short.MAX_VALUE)));
+    }
+
+    private void installDragSupport(Component dragSource) {
+        dragSource.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent event) {
+                if (SwingUtilities.isLeftMouseButton(event)) {
+                    dragOffset = event.getPoint();
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent event) {
+                dragOffset = null;
+            }
+        });
+        dragSource.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent event) {
+                if (dragOffset == null || !SwingUtilities.isLeftMouseButton(event)) {
+                    return;
+                }
+                Point location = getLocation();
+                location.translate(event.getX() - dragOffset.x, event.getY() - dragOffset.y);
+                setLocation(location);
+            }
+        });
     }
 
     @Override

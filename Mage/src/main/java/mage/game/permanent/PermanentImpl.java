@@ -2372,7 +2372,10 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
         // Check if room is now fully unlocked
         boolean otherDoorUnlocked = isLeftDoor ? rightHalfUnlocked : leftHalfUnlocked;
         if (otherDoorUnlocked) {
-            game.addSimultaneousEvent(event);
+            // The door unlock itself must be handled immediately so its
+            // "When you unlock this door" trigger is not lost. The separate
+            // fully-unlocked event remains simultaneous for Room-wide triggers.
+            game.fireEvent(event);
             game.addSimultaneousEvent(new GameEvent(EventType.ROOM_FULLY_UNLOCKED, getId(), source, source.getControllerId()));
         } else {
             game.fireEvent(event);

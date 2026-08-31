@@ -138,9 +138,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     private void applyMinimalInfoWindowStyle() {
-        if (showType != ShowType.REVEAL && showType != ShowType.LOOKED_AT) {
-            return;
-        }
+
         Color background = new Color(31, 35, 43);
         getContentPane().setBackground(background);
         cards.setBackgroundColor(background);

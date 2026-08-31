@@ -1848,10 +1848,34 @@ extends JPanel {
     }
 
     private void showRevealed(GameView game) {
+        Set<String> activeWindows = new HashSet<>();
+        Set<UUID> publicCardIds = collectPublicCardIds(game);
         for (RevealedView revealView : game.getRevealed()) {
-            this.cancelPendingCardInfoWindowClosure(this.revealed, revealView.getName());
-            this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, revealView.getName(), (LinkedHashMap) revealView.getCards());
+            String name = revealView.getName();
+            this.cancelPendingCardInfoWindowClosure(this.revealed, name);
+            if (isSpellReveal(game, revealView)) {
+                CardsView knownCards = this.retainedReveals.get(name);
+                if (knownCards == null) {
+                    knownCards = new CardsView(new ArrayList<CardView>(revealView.getCards().values()));
+                    this.retainedReveals.put(name, knownCards);
+                } else {
+                    knownCards.putAll(revealView.getCards());
+                }
+                knownCards.keySet().removeAll(publicCardIds);
+                if (knownCards.isEmpty()) {
+                    this.retainedReveals.remove(name);
+                    continue;
+                }
+                activeWindows.add(name);
+                if (!this.isCardInfoWindowManuallyClosed(this.revealed, name)) {
+                    this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, name, knownCards);
+                }
+            } else {
+                activeWindows.add(name);
+                this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, name, (LinkedHashMap) revealView.getCards());
+            }
         }
+        this.closeMissingCardInfoWindows(this.revealed, activeWindows);
         this.removeClosedCardInfoWindows(this.revealed);
     }
     private boolean isSpellReveal(GameView game, RevealedView revealView) {

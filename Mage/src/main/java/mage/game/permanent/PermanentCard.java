@@ -18,6 +18,7 @@ import mage.cards.ModalDoubleFacedCardHalf;
 import mage.cards.RoomCard;
 import mage.cards.SplitCard;
 import mage.constants.SpellAbilityType;
+import mage.constants.Zone;
 import mage.game.Game;
 import mage.game.events.ZoneChangeEvent;
 import mage.players.Player;
@@ -100,6 +101,12 @@ public class PermanentCard extends PermanentImpl {
         startingLoyalty = card.getStartingLoyalty();
         startingDefense = card.getStartingDefense();
         copyFromCard(card, game, false);
+        // A Room spell resolves from a half, while the battlefield object is
+        // built from the parent card. Preserve the selected half explicitly.
+        if (card instanceof RoomCard
+                && game.getState().getZone(card.getId()) == Zone.STACK) {
+            setRoomCastHalf(((RoomCard) card).getLastCastHalf());
+        }
         // if temporary added abilities to the spell/card exist, you need to add it to the permanent derived from that card
         Abilities<Ability> otherAbilities = game.getState().getAllOtherAbilities(card.getId());
         if (otherAbilities != null) {

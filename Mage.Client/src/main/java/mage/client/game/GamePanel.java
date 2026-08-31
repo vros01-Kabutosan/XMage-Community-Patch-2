@@ -1739,6 +1739,12 @@ extends JPanel {
         for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
             cardInfoWindowDialog.hideDialog();
         }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.revealed.values()) {
+            cardInfoWindowDialog.hideDialog();
+        }
+        for (CardInfoWindowDialog cardInfoWindowDialog : this.lookedAt.values()) {
+            cardInfoWindowDialog.hideDialog();
+        }
         for (CardInfoWindowDialog cardInfoWindowDialog : this.sideboardWindows.values()) {
             cardInfoWindowDialog.hideDialog();
         }
@@ -1842,49 +1848,12 @@ extends JPanel {
     }
 
     private void showRevealed(GameView game) {
-        Set<String> activeWindows = new HashSet<>();
-        Set<UUID> publicCardIds = collectPublicCardIds(game);
-
         for (RevealedView revealView : game.getRevealed()) {
-            String name = revealView.getName();
-            this.cancelPendingCardInfoWindowClosure(this.revealed, name);
-            activeWindows.add(name);
-            this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, name, (LinkedHashMap) revealView.getCards());
-            if (isSpellReveal(game, revealView)) {
-                this.retainedReveals.put(name, new CardsView(new ArrayList<CardView>(revealView.getCards().values())));
-            }
+            this.cancelPendingCardInfoWindowClosure(this.revealed, revealView.getName());
+            this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, revealView.getName(), (LinkedHashMap) revealView.getCards());
         }
-
-        Iterator<Map.Entry<String, CardsView>> retainedIterator = this.retainedReveals.entrySet().iterator();
-        while (retainedIterator.hasNext()) {
-            Map.Entry<String, CardsView> entry = retainedIterator.next();
-            CardsView knownCards = entry.getValue();
-            knownCards.keySet().removeAll(publicCardIds);
-            if (knownCards.isEmpty()) {
-                this.manuallyClosedCardInfoWindows.remove(this.cardInfoWindowClosureKey(this.revealed, entry.getKey()));
-                CardInfoWindowDialog staleWindow = this.revealed.get(entry.getKey());
-                if (staleWindow != null && !staleWindow.isClosed()) {
-                    try {
-                        staleWindow.setClosed(true);
-                    } catch (PropertyVetoException e) {
-                        logger.warn((Object)"Couldn't close consumed reveal window", (Throwable)e);
-                    }
-                }
-                retainedIterator.remove();
-                continue;
-            }
-            this.cancelPendingCardInfoWindowClosure(this.revealed, entry.getKey());
-            activeWindows.add(entry.getKey());
-            if (!this.isCardInfoWindowManuallyClosed(this.revealed, entry.getKey())) {
-                this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, entry.getKey(), (LinkedHashMap) knownCards);
-            }
-        }
-
-
-        this.closeMissingCardInfoWindows(this.revealed, activeWindows);
         this.removeClosedCardInfoWindows(this.revealed);
     }
-
     private boolean isSpellReveal(GameView game, RevealedView revealView) {
         String revealName = revealView.getName();
         for (CardView stackCard : game.getStack().values()) {
@@ -1911,19 +1880,12 @@ extends JPanel {
     }
 
     private void showLookedAt(GameView game) {
-        Set<String> activeWindows = new HashSet<>();
         for (LookedAtView lookedAtView : game.getLookedAt()) {
             this.cancelPendingCardInfoWindowClosure(this.lookedAt, lookedAtView.getName());
-            activeWindows.add(lookedAtView.getName());
-            if (!this.isCardInfoWindowManuallyClosed(this.lookedAt, lookedAtView.getName())) {
-                this.handleGameInfoWindow(this.lookedAt, CardInfoWindowDialog.ShowType.LOOKED_AT, lookedAtView.getName(), (LinkedHashMap)lookedAtView.getCards());
-            }
+            this.handleGameInfoWindow(this.lookedAt, CardInfoWindowDialog.ShowType.LOOKED_AT, lookedAtView.getName(), (LinkedHashMap)lookedAtView.getCards());
         }
-
-        this.closeMissingCardInfoWindows(this.lookedAt, activeWindows);
         this.removeClosedCardInfoWindows(this.lookedAt);
     }
-
     private void showCompanion(GameView game) {
         for (RevealedView revealView : game.getCompanion()) {
             this.handleGameInfoWindow(this.companion, CardInfoWindowDialog.ShowType.COMPANION, revealView.getName(), (LinkedHashMap)revealView.getCards());

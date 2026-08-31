@@ -106,6 +106,8 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
     protected boolean solved = false;
 
     protected boolean roomWasUnlockedOnCast = false;
+    // Preserve the cast half across the card-to-permanent blueprint transition.
+    protected SpellAbilityType roomCastHalf = null;
     protected boolean leftHalfUnlocked = false;
     protected boolean rightHalfUnlocked = false;
     protected Map<String, List<UUID>> connectedCards = new HashMap<>();
@@ -210,6 +212,7 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
         this.leftHalfUnlocked = permanent.leftHalfUnlocked;
         this.rightHalfUnlocked = permanent.rightHalfUnlocked;
         this.roomWasUnlockedOnCast = permanent.roomWasUnlockedOnCast;
+        this.roomCastHalf = permanent.roomCastHalf;
         this.manifested = permanent.manifested;
         this.cloaked = permanent.cloaked;
         this.createOrder = permanent.createOrder;
@@ -2305,6 +2308,16 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
     @Override
     public boolean wasRoomUnlockedOnCast() {
         return roomWasUnlockedOnCast;
+    }
+
+    @Override
+    public SpellAbilityType getRoomCastHalf() {
+        return roomCastHalf;
+    }
+
+    @Override
+    public void setRoomCastHalf(SpellAbilityType roomCastHalf) {
+        this.roomCastHalf = roomCastHalf;
     }
 
     @Override

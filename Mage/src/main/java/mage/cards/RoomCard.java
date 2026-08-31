@@ -134,17 +134,11 @@ class RoomEnterUnlockEffect extends OneShotEffect {
 
         permanent.unlockRoomOnCast(game);
 
-        // Get the parent card to access the lastCastHalf variable
-        RoomCard roomCardBlueprint = (RoomCard) RoomCharacteristicsEffect.findRoomCard(permanent);
-        if (roomCardBlueprint == null) {
-            return true;
-        }
-
-        // TODO: possible buggy with AI -- find spell mode by spell ability and do not store it in card's data due game states isolation?!
-        SpellAbilityType lastCastHalf = roomCardBlueprint.getLastCastHalf();
-        if (lastCastHalf == SpellAbilityType.SPLIT_LEFT || lastCastHalf == SpellAbilityType.SPLIT_RIGHT) {
-            roomCardBlueprint.setLastCastHalf(null);
-            return permanent.unlockDoor(game, source, lastCastHalf == SpellAbilityType.SPLIT_LEFT);
+        // Read the half from the permanent, not the mutable card blueprint.
+        SpellAbilityType castHalf = permanent.getRoomCastHalf();
+        permanent.setRoomCastHalf(null);
+        if (castHalf == SpellAbilityType.SPLIT_LEFT || castHalf == SpellAbilityType.SPLIT_RIGHT) {
+            return permanent.unlockDoor(game, source, castHalf == SpellAbilityType.SPLIT_LEFT);
         }
 
         return true;

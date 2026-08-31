@@ -5,6 +5,7 @@ import mage.MageObjectReference;
 import mage.abilities.Ability;
 import mage.cards.Card;
 import mage.constants.Zone;
+import mage.constants.SpellAbilityType;
 import mage.counters.Counter;
 import mage.counters.CounterType;
 import mage.game.Controllable;
@@ -514,6 +515,10 @@ public interface Permanent extends Card, Controllable {
     void setHarnessed(boolean value);
 
     boolean wasRoomUnlockedOnCast();
+
+    SpellAbilityType getRoomCastHalf();
+
+    void setRoomCastHalf(SpellAbilityType roomCastHalf);
 
     /**
      * used to reset the locked status of a room. Only used when copying a room

@@ -179,6 +179,7 @@ extends JPanel {
     private final Map<String, CardInfoWindowDialog> lookedAt = new HashMap<String, CardInfoWindowDialog>();
     private final Map<String, CardsView> retainedReveals = new HashMap<String, CardsView>();
     private final Map<String, Timer> pendingCardInfoWindowClosures = new HashMap<String, Timer>();
+    private final Set<String> manuallyClosedCardInfoWindows = new HashSet<String>();
     private static final int CARD_INFO_WINDOW_CLOSE_DELAY_MS = 250;
     private final Map<String, CardsView> graveyards = new HashMap<String, CardsView>();
     private final Map<String, CardInfoWindowDialog> graveyardWindows = new HashMap<String, CardInfoWindowDialog>();
@@ -1860,6 +1861,7 @@ extends JPanel {
             CardsView knownCards = entry.getValue();
             knownCards.keySet().removeAll(publicCardIds);
             if (knownCards.isEmpty()) {
+                this.manuallyClosedCardInfoWindows.remove(this.cardInfoWindowClosureKey(this.revealed, entry.getKey()));
                 CardInfoWindowDialog staleWindow = this.revealed.get(entry.getKey());
                 if (staleWindow != null && !staleWindow.isClosed()) {
                     try {
@@ -1873,10 +1875,13 @@ extends JPanel {
             }
             this.cancelPendingCardInfoWindowClosure(this.revealed, entry.getKey());
             activeWindows.add(entry.getKey());
-            this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, entry.getKey(), (LinkedHashMap) knownCards);
+            if (!this.isCardInfoWindowManuallyClosed(this.revealed, entry.getKey())) {
+                this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, entry.getKey(), (LinkedHashMap) knownCards);
+            }
         }
 
 
+        this.closeMissingCardInfoWindows(this.revealed, activeWindows);
         this.removeClosedCardInfoWindows(this.revealed);
     }
 
@@ -1906,11 +1911,16 @@ extends JPanel {
     }
 
     private void showLookedAt(GameView game) {
+        Set<String> activeWindows = new HashSet<>();
         for (LookedAtView lookedAtView : game.getLookedAt()) {
             this.cancelPendingCardInfoWindowClosure(this.lookedAt, lookedAtView.getName());
-            this.handleGameInfoWindow(this.lookedAt, CardInfoWindowDialog.ShowType.LOOKED_AT, lookedAtView.getName(), (LinkedHashMap)lookedAtView.getCards());
+            activeWindows.add(lookedAtView.getName());
+            if (!this.isCardInfoWindowManuallyClosed(this.lookedAt, lookedAtView.getName())) {
+                this.handleGameInfoWindow(this.lookedAt, CardInfoWindowDialog.ShowType.LOOKED_AT, lookedAtView.getName(), (LinkedHashMap)lookedAtView.getCards());
+            }
         }
 
+        this.closeMissingCardInfoWindows(this.lookedAt, activeWindows);
         this.removeClosedCardInfoWindows(this.lookedAt);
     }
 
@@ -1942,6 +1952,11 @@ extends JPanel {
         CardInfoWindowDialog cardInfoWindowDialog;
         if (!windowMap.containsKey(name)) {
             cardInfoWindowDialog = new CardInfoWindowDialog(showType, name);
+            if (showType == CardInfoWindowDialog.ShowType.REVEAL
+                    || showType == CardInfoWindowDialog.ShowType.LOOKED_AT
+                    || showType == CardInfoWindowDialog.ShowType.REVEAL_TOP_LIBRARY) {
+                cardInfoWindowDialog.setUserCloseListener(() -> this.manuallyClosedCardInfoWindows.add(this.cardInfoWindowClosureKey(windowMap, name)));
+            }
             windowMap.put(name, cardInfoWindowDialog);
             MageFrame.getDesktop().add((Component)cardInfoWindowDialog, cardInfoWindowDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         } else {
@@ -1964,9 +1979,18 @@ extends JPanel {
     }
 
     private void removeClosedCardInfoWindows(Map<String, CardInfoWindowDialog> windowMap) {
-        windowMap.entrySet().removeIf(entry -> ((CardInfoWindowDialog)entry.getValue()).isClosed());
+        windowMap.entrySet().removeIf(entry -> {
+            boolean closed = entry.getValue().isClosed();
+            if (closed) {
+                this.manuallyClosedCardInfoWindows.remove(this.cardInfoWindowClosureKey(windowMap, entry.getKey()));
+            }
+            return closed;
+        });
     }
 
+    private boolean isCardInfoWindowManuallyClosed(Map<String, CardInfoWindowDialog> windowMap, String name) {
+        return this.manuallyClosedCardInfoWindows.contains(this.cardInfoWindowClosureKey(windowMap, name));
+    }
     /** Close reveal/look-at windows that disappeared from the authoritative game view. */
     private void closeMissingCardInfoWindows(Map<String, CardInfoWindowDialog> windowMap, Set<String> activeWindows) {
         for (Map.Entry<String, CardInfoWindowDialog> entry : windowMap.entrySet()) {
@@ -2012,6 +2036,7 @@ extends JPanel {
             }
             try {
                 window.setClosed(true);
+                this.manuallyClosedCardInfoWindows.remove(key);
             } catch (PropertyVetoException e) {
                 logger.warn((Object)"Could not close stale card information window", (Throwable)e);
             }

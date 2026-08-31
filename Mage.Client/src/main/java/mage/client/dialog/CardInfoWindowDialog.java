@@ -39,12 +39,15 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     private final ShowType showType;
     private boolean positioned;
     private final String name;
+    private Runnable userCloseListener;
 
     public CardInfoWindowDialog(ShowType showType, String name) {
         this.name = name;
         this.title = name;
         this.showType = showType;
         this.positioned = false;
+        this.userCloseListener = () -> {
+        };
         initComponents();
 
         this.setModal(false);
@@ -52,14 +55,35 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
             case LOOKED_AT:
                 this.setFrameIcon(new ImageIcon(ImageManagerImpl.instance.getLookedAtImage()));
                 this.setClosable(true);
+                this.setDefaultCloseOperation(HIDE_ON_CLOSE);
+                this.addInternalFrameListener(new InternalFrameAdapter() {
+                    @Override
+                    public void internalFrameClosing(InternalFrameEvent e) {
+                        CardInfoWindowDialog.this.userCloseListener.run();
+                    }
+                });
                 break;
             case REVEAL:
                 this.setFrameIcon(new ImageIcon(ImageManagerImpl.instance.getRevealedImage()));
                 this.setClosable(true);
+                this.setDefaultCloseOperation(HIDE_ON_CLOSE);
+                this.addInternalFrameListener(new InternalFrameAdapter() {
+                    @Override
+                    public void internalFrameClosing(InternalFrameEvent e) {
+                        CardInfoWindowDialog.this.userCloseListener.run();
+                    }
+                });
                 break;
             case REVEAL_TOP_LIBRARY:
                 this.setFrameIcon(new ImageIcon(ImageHelper.getImageFromResources("/info/library.png")));
                 this.setClosable(true);
+                this.setDefaultCloseOperation(HIDE_ON_CLOSE);
+                this.addInternalFrameListener(new InternalFrameAdapter() {
+                    @Override
+                    public void internalFrameClosing(InternalFrameEvent e) {
+                        CardInfoWindowDialog.this.userCloseListener.run();
+                    }
+                });
                 break;
             case GRAVEYARD:
                 this.setFrameIcon(new ImageIcon(ImageHelper.getImageFromResources("/info/grave.png")));
@@ -105,6 +129,12 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
     public ShowType getShowType() {
         return showType;
+    }
+
+    /** Called only when the user presses the internal window close button. */
+    public void setUserCloseListener(Runnable listener) {
+        this.userCloseListener = listener == null ? () -> {
+        } : listener;
     }
 
     private void applyMinimalInfoWindowStyle() {

@@ -247,7 +247,9 @@ implements CardPlugin {
             this.cardSpacingX = this.cardHeight - this.cardWidth + this.extraCardSpacingX;
             this.cardSpacingY = Math.round((float)this.cardHeight * 0.03f);
             this.stackSpacingX = Math.round((float)this.cardWidth * 0.07f);
-            this.stackSpacingY = Math.round((float)this.cardHeight * 0.1f);
+            // Show a larger edge of cards in grouped battlefield stacks.
+            // Grouping, order, hitboxes and interaction semantics remain unchanged.
+            this.stackSpacingY = Math.round((float)this.cardHeight * 0.16f);
             this.attachmentSpacingY = Math.round((float)this.cardHeight * 0.13f);
             Row creatures = (Row)rowAllCreatures.clone();
             Row lands = (Row)rowAllLands.clone();

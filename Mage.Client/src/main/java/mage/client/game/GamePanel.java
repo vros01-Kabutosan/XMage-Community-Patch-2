@@ -1875,6 +1875,29 @@ extends JPanel {
                 this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, name, (LinkedHashMap) revealView.getCards());
             }
         }
+        // The server may omit the reveal entry after the discard resolves.
+        // Keep only the still-private cards alive until each one becomes public.
+        Iterator<Map.Entry<String, CardsView>> retainedIterator = this.retainedReveals.entrySet().iterator();
+        while (retainedIterator.hasNext()) {
+            Map.Entry<String, CardsView> entry = retainedIterator.next();
+            if (activeWindows.contains(entry.getKey())) {
+                continue;
+            }
+            CardsView knownCards = entry.getValue();
+            knownCards.keySet().removeAll(publicCardIds);
+            if (knownCards.isEmpty()) {
+                CardInfoWindowDialog staleWindow = this.revealed.get(entry.getKey());
+                if (staleWindow != null) {
+                    this.scheduleCardInfoWindowClosure(this.revealed, entry.getKey(), staleWindow);
+                }
+                retainedIterator.remove();
+                continue;
+            }
+            activeWindows.add(entry.getKey());
+            if (!this.isCardInfoWindowManuallyClosed(this.revealed, entry.getKey())) {
+                this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, entry.getKey(), knownCards);
+            }
+        }
         this.closeMissingCardInfoWindows(this.revealed, activeWindows);
         this.removeClosedCardInfoWindows(this.revealed);
     }

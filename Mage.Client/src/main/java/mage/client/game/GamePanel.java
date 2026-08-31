@@ -752,11 +752,11 @@ extends JPanel {
     }
 
     private Map<String, Integer> loadSplitterLocationsFromSettings(String settingsKey) {
-        HashMap res;
+        Map<String, Integer> res;
         Type type = new TypeToken<Map<String, Integer>>(){}.getType();
         try {
             String savedData = PreferencesDialog.getCachedValue(settingsKey, "");
-            res = (HashMap)new Gson().fromJson(savedData, type);
+            res = new Gson().fromJson(savedData, type);
         }
         catch (Exception e) {
             res = null;

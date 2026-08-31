@@ -178,6 +178,7 @@ extends JPanel {
     private final Map<String, CardInfoWindowDialog> revealed = new HashMap<String, CardInfoWindowDialog>();
     private final Map<String, CardInfoWindowDialog> lookedAt = new HashMap<String, CardInfoWindowDialog>();
     private final Map<String, CardsView> retainedReveals = new HashMap<String, CardsView>();
+    private String activeSpellRevealName;
     private final Map<String, Timer> pendingCardInfoWindowClosures = new HashMap<String, Timer>();
     private final Set<String> manuallyClosedCardInfoWindows = new HashSet<String>();
     private static final int CARD_INFO_WINDOW_CLOSE_DELAY_MS = 250;
@@ -494,6 +495,7 @@ extends JPanel {
         this.pendingCardInfoWindowClosures.values().forEach(Timer::stop);
         this.pendingCardInfoWindowClosures.clear();
         this.retainedReveals.clear();
+        this.activeSpellRevealName = null;
         this.handContainer.cleanUp();
         this.disposeFloatingStackWindow();
         this.stackObjects.cleanUp();
@@ -1854,13 +1856,12 @@ extends JPanel {
             String name = revealView.getName();
             this.cancelPendingCardInfoWindowClosure(this.revealed, name);
             if (isSpellReveal(game, revealView)) {
-                CardsView knownCards = this.retainedReveals.get(name);
-                if (knownCards == null) {
-                    knownCards = new CardsView(new ArrayList<CardView>(revealView.getCards().values()));
-                    this.retainedReveals.put(name, knownCards);
-                } else {
-                    knownCards.putAll(revealView.getCards());
+                if (!name.equals(this.activeSpellRevealName)) {
+                    this.retainedReveals.clear();
+                    this.activeSpellRevealName = name;
                 }
+                CardsView knownCards = new CardsView(new ArrayList<CardView>(revealView.getCards().values()));
+                this.retainedReveals.put(name, knownCards);
                 knownCards.keySet().removeAll(publicCardIds);
                 if (knownCards.isEmpty()) {
                     this.retainedReveals.remove(name);

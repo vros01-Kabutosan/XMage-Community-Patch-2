@@ -32,8 +32,8 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
     // TODO: add gui scale support (form file lost, so it's ok for scale, see PlayerPanelExt)
 
     private static final String DEFAULT_MESSAGE = "Choose spell or ability";
-    private static final int DIALOG_WIDTH = 500;
-    private static final int DIALOG_HEIGHT = 255;
+    private static final int DIALOG_WIDTH = 650;
+    private static final int DIALOG_HEIGHT = 285;
     private static final String CHOICE_PREFIX = "<html>";
 
     private static final Logger log = Logger.getLogger(AbilityPicker.class);
@@ -199,7 +199,9 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         });
 
         rows.clearSelection();
-        rows.setFont(new Font("SansSerif", Font.PLAIN, sizeMod(15)));
+        // A slightly smaller base font leaves room for long modal descriptions.
+        // The renderer below also forces HTML line wrapping.
+        rows.setFont(new Font("SansSerif", Font.PLAIN, sizeMod(13)));
         rows.setBorder(BorderFactory.createEmptyBorder());
         rows.addMouseWheelListener(this);
 
@@ -215,7 +217,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
         layout.setHorizontalGroup(layout.createParallelGroup(GroupLayout.LEADING).add(
                 GroupLayout.TRAILING,
                 layout.createSequentialGroup().addContainerGap().add(
-                        layout.createParallelGroup(GroupLayout.TRAILING).add(GroupLayout.LEADING, jScrollPane2, GroupLayout.DEFAULT_SIZE, sizeMod(422), Short.MAX_VALUE).add(GroupLayout.LEADING,
+                        layout.createParallelGroup(GroupLayout.TRAILING).add(GroupLayout.LEADING, jScrollPane2, GroupLayout.DEFAULT_SIZE, sizeMod(572), Short.MAX_VALUE).add(GroupLayout.LEADING,
                                 layout.createSequentialGroup().add(title).addPreferredGap(LayoutStyle.RELATED, sizeMod(5), Short.MAX_VALUE).add(sizeMod(1), sizeMod(1), sizeMod(1))).add(
                                 GroupLayout.LEADING,
                                 layout.createSequentialGroup().add(layout.createParallelGroup(GroupLayout.LEADING)
@@ -237,7 +239,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
                                 ).add(layout.createSequentialGroup().add(sizeMod(8), sizeMod(8), sizeMod(8))))
                         .addPreferredGap(LayoutStyle.RELATED).add(layout.createParallelGroup(GroupLayout.BASELINE)).addPreferredGap(LayoutStyle.RELATED).add(
                                 layout.createParallelGroup(GroupLayout.BASELINE)).addPreferredGap(LayoutStyle.RELATED).add(layout.createParallelGroup(GroupLayout.LEADING)).addPreferredGap(
-                                LayoutStyle.RELATED).add(jScrollPane2, GroupLayout.PREFERRED_SIZE, sizeMod(175), GroupLayout.PREFERRED_SIZE).addContainerGap(sizeMod(23), Short.MAX_VALUE)));
+                                LayoutStyle.RELATED).add(jScrollPane2, GroupLayout.PREFERRED_SIZE, sizeMod(205), GroupLayout.PREFERRED_SIZE).addContainerGap(sizeMod(23), Short.MAX_VALUE)));
     }
 
     private void installDragSupport(Component dragSource) {
@@ -349,7 +351,7 @@ public class AbilityPicker extends JXPanel implements MouseWheelListener {
             Object object = choices.get(index);
             String name = object.toString();
             String rendererText = name.startsWith(CHOICE_PREFIX) ? name.substring(CHOICE_PREFIX.length()) : name;
-            label.setText(CHOICE_PREFIX + "<div style=\"width:" + sizeMod(455) + "px\">" + rendererText + "</div></html>");
+            label.setText(CHOICE_PREFIX + "<body style=\"width:" + sizeMod(535) + "px\">" + rendererText + "</body></html>");
 
             label.setIcon(new CheckmarkIcon(isSelected, sizeMod(16)));
             label.setIconTextGap(sizeMod(8));

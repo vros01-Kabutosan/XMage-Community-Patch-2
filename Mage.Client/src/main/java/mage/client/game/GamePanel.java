@@ -1739,7 +1739,8 @@ extends JPanel {
             boolean active = entry.getKey().equals(summaryPhase);
             JLabel cell = entry.getValue();
             cell.setBackground(active ? new Color(55, 95, 125) : new Color(38, 43, 52));
-            cell.setForeground(active ? Color.WHITE : new Color(190, 198, 210));
+            boolean combat = entry.getKey().startsWith("Combat_");
+            cell.setForeground(active ? Color.YELLOW : combat ? new Color(255, 105, 105) : new Color(190, 198, 210));
         }
         this.updatePhaseSummaryBounds();
         this.phaseSummaryBar.repaint();
@@ -1756,7 +1757,7 @@ extends JPanel {
         int barWidth = Math.max(320, areaWidth - 16);
         int barHeight = 44;
         int x = areaOrigin.x + Math.max(0, (areaWidth - barWidth) / 2);
-        int y = origin.y - barHeight + 6;
+        int y = origin.y - barHeight + 20;
         if (y < 0) {
             this.phaseSummaryBar.setVisible(false);
             return;

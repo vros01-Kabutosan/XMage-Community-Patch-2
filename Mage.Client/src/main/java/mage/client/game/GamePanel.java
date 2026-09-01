@@ -1753,8 +1753,8 @@ extends JPanel {
         Point origin = SwingUtilities.convertPoint(this.handContainer, 0, 0, this.jLayeredPane);
         int areaWidth = this.pnlHelperHandButtonsStackArea.getWidth();
         Point areaOrigin = SwingUtilities.convertPoint(this.pnlHelperHandButtonsStackArea, 0, 0, this.jLayeredPane);
-        int barWidth = Math.min(1100, Math.max(500, areaWidth - 48));
-        int barHeight = 34;
+        int barWidth = Math.max(320, areaWidth - 16);
+        int barHeight = 44;
         int x = areaOrigin.x + Math.max(0, (areaWidth - barWidth) / 2);
         int y = origin.y - barHeight + 6;
         if (y < 0) {
@@ -2968,12 +2968,12 @@ extends JPanel {
         this.phaseSummaryBar.setOpaque(true);
         this.phaseSummaryBar.setBackground(new Color(24, 27, 34));
         this.phaseSummaryBar.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)), BorderFactory.createEmptyBorder(2, 2, 2, 2)));
-        this.phaseSummaryBar.setPreferredSize(new Dimension(1100, 34));
+        this.phaseSummaryBar.setPreferredSize(new Dimension(1600, 44));
         this.phaseSummaryBar.setVisible(false);
         String[] summaryPhases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"};
         for (String phaseName : summaryPhases) {
             JLabel cell = new JLabel(phaseName.replace("_", " "), JLabel.CENTER);
-            cell.setFont(cell.getFont().deriveFont(Font.BOLD, 10.0f));
+            cell.setFont(cell.getFont().deriveFont(Font.BOLD, 16.0f));
             cell.setForeground(new Color(190, 198, 210));
             cell.setBackground(new Color(38, 43, 52));
             cell.setOpaque(true);

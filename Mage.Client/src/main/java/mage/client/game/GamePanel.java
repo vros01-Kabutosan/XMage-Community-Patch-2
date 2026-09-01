@@ -206,6 +206,7 @@ extends JPanel {
     private final Map<String, Card> loadedCards = new HashMap<String, Card>();
     private static final String XCP_UI_RESIZE_V1_3 = "XCP_UI_RESIZE_V1_3";
     private final Map<String, HoverButton> phaseButtons = new LinkedHashMap<String, HoverButton>();
+    private final Map<String, JLabel> phaseSummaryCells = new LinkedHashMap<String, JLabel>();
     private final Map<String, MageSplitter> splitters = new LinkedHashMap<String, MageSplitter>();
     private boolean isSplittersFullyRestored = false;
     private MageDialogState choiceWindowState;
@@ -281,6 +282,7 @@ extends JPanel {
     private HandPanel handContainer;
     private JPanel jPhases;
     private JPanel phasesContainer;
+    private JPanel phaseSummaryBar;
     private JLabel txtHoldPriority;
     private boolean imagePanelState;
 
@@ -1728,6 +1730,37 @@ extends JPanel {
             }
         });
         this.jPhases.invalidate();
+        this.updatePhaseSummary(currentPhaseName);
+    }
+
+    private void updatePhaseSummary(String currentPhaseName) {
+        String summaryPhase = currentPhaseName.startsWith("Combat_") ? "Combat" : currentPhaseName;
+        for (Map.Entry<String, JLabel> entry : this.phaseSummaryCells.entrySet()) {
+            boolean active = entry.getKey().equals(summaryPhase);
+            JLabel cell = entry.getValue();
+            cell.setBackground(active ? new Color(55, 95, 125) : new Color(38, 43, 52));
+            cell.setForeground(active ? Color.WHITE : new Color(190, 198, 210));
+        }
+        this.updatePhaseSummaryBounds();
+        this.phaseSummaryBar.repaint();
+    }
+
+    private void updatePhaseSummaryBounds() {
+        if (this.jLayeredPane == null || !this.handContainer.isShowing() || this.handContainer.getWidth() < 280) {
+            this.phaseSummaryBar.setVisible(false);
+            return;
+        }
+        Point origin = SwingUtilities.convertPoint(this.handContainer, 0, 0, this.jLayeredPane);
+        int barWidth = Math.min(560, this.handContainer.getWidth() - 24);
+        int barHeight = 28;
+        int x = origin.x + (this.handContainer.getWidth() - barWidth) / 2;
+        int y = origin.y - barHeight - 2;
+        if (y < 0) {
+            this.phaseSummaryBar.setVisible(false);
+            return;
+        }
+        this.phaseSummaryBar.setBounds(x, y, barWidth, barHeight);
+        this.phaseSummaryBar.setVisible(true);
     }
 
     public void onDeactivated() {
@@ -2924,6 +2957,27 @@ extends JPanel {
         for (String name : phases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"}) {
             this.createPhaseButton(name, phasesMouseAdapter);
         }
+        this.phaseSummaryBar = new JPanel(new java.awt.GridLayout(1, 7, 2, 0)) {
+            @Override
+            public boolean contains(int x, int y) {
+                return false;
+            }
+        };
+        this.phaseSummaryBar.setOpaque(true);
+        this.phaseSummaryBar.setBackground(new Color(24, 27, 34));
+        this.phaseSummaryBar.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)), BorderFactory.createEmptyBorder(2, 2, 2, 2)));
+        this.phaseSummaryBar.setPreferredSize(new Dimension(560, 28));
+        this.phaseSummaryBar.setVisible(false);
+        String[] summaryPhases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat", "Main2", "Cleanup"};
+        for (String phaseName : summaryPhases) {
+            JLabel cell = new JLabel(phaseName.equals("Main1") ? "Main 1" : phaseName.equals("Main2") ? "Main 2" : phaseName, JLabel.CENTER);
+            cell.setFont(cell.getFont().deriveFont(Font.BOLD, 10.0f));
+            cell.setForeground(new Color(190, 198, 210));
+            cell.setBackground(new Color(38, 43, 52));
+            cell.setOpaque(true);
+            this.phaseSummaryCells.put(phaseName, cell);
+            this.phaseSummaryBar.add(cell);
+        }
         this.pnlReplay.setOpaque(false);
         this.phasesContainer = new JPanel(new BorderLayout());
         this.phasesContainer.setOpaque(false);
@@ -3166,6 +3220,8 @@ extends JPanel {
 
     public void installComponents() {
         this.jLayeredPane.setOpaque(false);
+        this.jLayeredPane.add(this.phaseSummaryBar, JLayeredPane.PALETTE_LAYER);
+        this.updatePhaseSummaryBounds();
         this.jLayeredPane.add(DialogManager.getManager(this.gameId), JLayeredPane.MODAL_LAYER, 0);
         this.installAbilityPicker();
     }
@@ -3177,6 +3233,7 @@ extends JPanel {
 
     private void uninstallComponents() {
         if (this.jLayeredPane != null) {
+            this.jLayeredPane.remove(this.phaseSummaryBar);
             this.jLayeredPane.remove(DialogManager.getManager(this.gameId));
         }
         DialogManager.removeGame(this.gameId);

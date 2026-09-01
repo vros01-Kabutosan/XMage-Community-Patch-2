@@ -1734,7 +1734,7 @@ extends JPanel {
     }
 
     private void updatePhaseSummary(String currentPhaseName) {
-        String summaryPhase = currentPhaseName.startsWith("Combat_") ? "Combat" : currentPhaseName;
+        String summaryPhase = currentPhaseName;
         for (Map.Entry<String, JLabel> entry : this.phaseSummaryCells.entrySet()) {
             boolean active = entry.getKey().equals(summaryPhase);
             JLabel cell = entry.getValue();
@@ -1751,10 +1751,12 @@ extends JPanel {
             return;
         }
         Point origin = SwingUtilities.convertPoint(this.handContainer, 0, 0, this.jLayeredPane);
-        int barWidth = Math.min(560, this.handContainer.getWidth() - 24);
-        int barHeight = 28;
-        int x = origin.x + (this.handContainer.getWidth() - barWidth) / 2;
-        int y = origin.y - barHeight - 2;
+        int areaWidth = this.pnlHelperHandButtonsStackArea.getWidth();
+        Point areaOrigin = SwingUtilities.convertPoint(this.pnlHelperHandButtonsStackArea, 0, 0, this.jLayeredPane);
+        int barWidth = Math.min(1100, Math.max(500, areaWidth - 48));
+        int barHeight = 34;
+        int x = areaOrigin.x + Math.max(0, (areaWidth - barWidth) / 2);
+        int y = origin.y - barHeight + 6;
         if (y < 0) {
             this.phaseSummaryBar.setVisible(false);
             return;
@@ -2957,7 +2959,7 @@ extends JPanel {
         for (String name : phases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"}) {
             this.createPhaseButton(name, phasesMouseAdapter);
         }
-        this.phaseSummaryBar = new JPanel(new java.awt.GridLayout(1, 7, 2, 0)) {
+        this.phaseSummaryBar = new JPanel(new java.awt.GridLayout(1, 12, 2, 0)) {
             @Override
             public boolean contains(int x, int y) {
                 return false;
@@ -2966,11 +2968,11 @@ extends JPanel {
         this.phaseSummaryBar.setOpaque(true);
         this.phaseSummaryBar.setBackground(new Color(24, 27, 34));
         this.phaseSummaryBar.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)), BorderFactory.createEmptyBorder(2, 2, 2, 2)));
-        this.phaseSummaryBar.setPreferredSize(new Dimension(560, 28));
+        this.phaseSummaryBar.setPreferredSize(new Dimension(1100, 34));
         this.phaseSummaryBar.setVisible(false);
-        String[] summaryPhases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat", "Main2", "Cleanup"};
+        String[] summaryPhases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"};
         for (String phaseName : summaryPhases) {
-            JLabel cell = new JLabel(phaseName.equals("Main1") ? "Main 1" : phaseName.equals("Main2") ? "Main 2" : phaseName, JLabel.CENTER);
+            JLabel cell = new JLabel(phaseName.replace("_", " "), JLabel.CENTER);
             cell.setFont(cell.getFont().deriveFont(Font.BOLD, 10.0f));
             cell.setForeground(new Color(190, 198, 210));
             cell.setBackground(new Color(38, 43, 52));
@@ -2982,6 +2984,7 @@ extends JPanel {
         this.phasesContainer = new JPanel(new BorderLayout());
         this.phasesContainer.setOpaque(false);
         this.phasesContainer.setBorder(new EmptyBorder(0, 2, 8, 2));
+        this.phasesContainer.setVisible(false);
         this.phasesContainer.add((Component)this.jPhases, "South");
         this.bigCardPanel = new JPanel();
         this.bigCardPanel.setOpaque(false);

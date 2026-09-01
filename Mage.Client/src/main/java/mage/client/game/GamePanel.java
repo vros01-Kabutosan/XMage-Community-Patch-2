@@ -1954,6 +1954,10 @@ extends JPanel {
     }
     private boolean isSpellReveal(GameView game, RevealedView revealView) {
         String revealName = revealView.getName();
+        // Preserve dynamic identity after the spell leaves the stack.
+        if (this.retainedReveals.containsKey(revealName)) {
+            return true;
+        }
         for (CardView stackCard : game.getStack().values()) {
             if (stackCard.getMageObjectType() == MageObjectType.SPELL
                     && revealName.startsWith(stackCard.getName())) {
@@ -2041,9 +2045,8 @@ extends JPanel {
     private void removeClosedCardInfoWindows(Map<String, CardInfoWindowDialog> windowMap) {
         windowMap.entrySet().removeIf(entry -> {
             boolean closed = entry.getValue().isClosed();
-            if (closed) {
-                this.manuallyClosedCardInfoWindows.remove(this.cardInfoWindowClosureKey(windowMap, entry.getKey()));
-            }
+            // Manual-close state must survive removal from the window map.
+            // It is cleared only when a new reveal identity is detected.
             return closed;
         });
     }
@@ -2971,7 +2974,8 @@ extends JPanel {
             protected void paintComponent(Graphics graphics) {
                 Graphics2D g = (Graphics2D) graphics.create();
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g.setPaint(new java.awt.GradientPaint(0, 0, new Color(18, 21, 28), 0, getHeight(), new Color(36, 42, 52)));
+                super.paintComponent(graphics);
+                g.setPaint(new java.awt.GradientPaint(0, 0, new Color(12, 16, 23), 0, getHeight(), new Color(42, 52, 66)));
                 g.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
                 g.setColor(new Color(92, 104, 124));
                 g.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
@@ -2979,7 +2983,7 @@ extends JPanel {
                 super.paintComponent(graphics);
             }
         };
-        this.phaseSummaryBar.setOpaque(true);
+        this.phaseSummaryBar.setOpaque(false);
         this.phaseSummaryBar.setBackground(new Color(24, 27, 34));
         this.phaseSummaryBar.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
         this.phaseSummaryBar.setPreferredSize(new Dimension(1600, 44));

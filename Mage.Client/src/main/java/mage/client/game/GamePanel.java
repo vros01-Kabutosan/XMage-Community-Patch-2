@@ -2026,7 +2026,8 @@ extends JPanel {
             return false;
         }
         if (windowMap == this.revealed) {
-            return this.lastGameData.game.getRevealed().stream().anyMatch(view -> view.getName().equals(name));
+            return this.lastGameData.game.getRevealed().stream().anyMatch(view -> view.getName().equals(name))
+                    || (this.retainedReveals.containsKey(name) && !this.retainedReveals.get(name).isEmpty());
         }
         if (windowMap == this.lookedAt) {
             return this.lastGameData.game.getLookedAt().stream().anyMatch(view -> view.getName().equals(name));

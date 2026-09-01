@@ -206,6 +206,7 @@ extends JPanel {
     private final Map<String, Card> loadedCards = new HashMap<String, Card>();
     private static final String XCP_UI_RESIZE_V1_3 = "XCP_UI_RESIZE_V1_3";
     private final Map<String, HoverButton> phaseButtons = new LinkedHashMap<String, HoverButton>();
+    private final Map<String, JLabel> phaseSummaryCells = new LinkedHashMap<String, JLabel>();
     private final Map<String, MageSplitter> splitters = new LinkedHashMap<String, MageSplitter>();
     private boolean isSplittersFullyRestored = false;
     private MageDialogState choiceWindowState;
@@ -281,6 +282,7 @@ extends JPanel {
     private HandPanel handContainer;
     private JPanel jPhases;
     private JPanel phasesContainer;
+    private JPanel phaseSummaryBar;
     private JLabel txtHoldPriority;
     private boolean imagePanelState;
 
@@ -348,12 +350,29 @@ extends JPanel {
         pnlCommandsFeedbackAndHand.setOpaque(false);
         pnlCommandsFeedbackAndHand.add((Component)this.feedbackPanel, "North");
         pnlCommandsFeedbackAndHand.add((Component)this.handContainer, "Center");
+        JLayeredPane pnlCommandsFeedbackAndHandLayer = new JLayeredPane();
+        pnlCommandsFeedbackAndHandLayer.setLayout(null);
+        pnlCommandsFeedbackAndHandLayer.add((Component)pnlCommandsFeedbackAndHand, JLayeredPane.DEFAULT_LAYER);
+        pnlCommandsFeedbackAndHandLayer.add((Component)this.phaseSummaryBar, JLayeredPane.PALETTE_LAYER);
+        pnlCommandsFeedbackAndHandLayer.addComponentListener(new ComponentAdapter(){
+            @Override
+            public void componentResized(ComponentEvent event) {
+                int width = pnlCommandsFeedbackAndHandLayer.getWidth();
+                int height = pnlCommandsFeedbackAndHandLayer.getHeight();
+                pnlCommandsFeedbackAndHand.setBounds(0, 0, width, height);
+                int barWidth = Math.min(560, Math.max(280, width - 24));
+                int barHeight = Math.max(24, GamePanel.this.phaseSummaryBar.getPreferredSize().height);
+                int x = Math.max(0, (width - barWidth) / 2);
+                int y = Math.max(0, Math.min(height - barHeight, GamePanel.this.feedbackPanel.getHeight() - barHeight - 2));
+                GamePanel.this.phaseSummaryBar.setBounds(x, y, barWidth, barHeight);
+            }
+        });
         JPanel pnlCommandsSkipAndStack = new JPanel(new BorderLayout());
         pnlCommandsSkipAndStack.setOpaque(false);
         pnlCommandsSkipAndStack.add((Component)this.pnlShortCuts, "South");
         pnlCommandsFeedbackAndHand.setMinimumSize(new Dimension(0, 0));
         pnlCommandsSkipAndStack.setMinimumSize(new Dimension(0, 0));
-        pnlCommandsRoot.add((Component)pnlCommandsFeedbackAndHand, "Center");
+        pnlCommandsRoot.add((Component)pnlCommandsFeedbackAndHandLayer, "Center");
         pnlCommandsRoot.add((Component)pnlCommandsSkipAndStack, "South");
         this.pnlHelperHandButtonsStackArea.add((Component)pnlCommandsRoot, "South");
         if (DebugUtil.GUI_GAME_DRAW_SKIP_BUTTONS_PANEL_BORDER) {
@@ -1728,6 +1747,18 @@ extends JPanel {
             }
         });
         this.jPhases.invalidate();
+        this.updatePhaseSummary(currentPhaseName);
+    }
+
+    private void updatePhaseSummary(String currentPhaseName) {
+        String summaryPhase = currentPhaseName.startsWith("Combat_") ? "Combat" : currentPhaseName;
+        for (Map.Entry<String, JLabel> entry : this.phaseSummaryCells.entrySet()) {
+            boolean active = entry.getKey().equals(summaryPhase);
+            JLabel cell = entry.getValue();
+            cell.setBackground(active ? new Color(55, 95, 125) : new Color(38, 43, 52));
+            cell.setForeground(active ? Color.WHITE : new Color(190, 198, 210));
+        }
+        this.phaseSummaryBar.repaint();
     }
 
     public void onDeactivated() {
@@ -2923,6 +2954,27 @@ extends JPanel {
         }
         for (String name : phases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"}) {
             this.createPhaseButton(name, phasesMouseAdapter);
+        }
+        this.phaseSummaryBar = new JPanel(new java.awt.GridLayout(1, 7, 2, 0)) {
+            @Override
+            public boolean contains(int x, int y) {
+                return false;
+            }
+        };
+        this.phaseSummaryBar.setOpaque(true);
+        this.phaseSummaryBar.setBackground(new Color(24, 27, 34));
+        this.phaseSummaryBar.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)), BorderFactory.createEmptyBorder(2, 2, 2, 2)));
+        this.phaseSummaryBar.setPreferredSize(new Dimension(560, 28));
+        this.phaseSummaryBar.setEnabled(false);
+        String[] summaryPhases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat", "Main2", "Cleanup"};
+        for (String phaseName : summaryPhases) {
+            JLabel cell = new JLabel(phaseName.equals("Main1") ? "Main 1" : phaseName.equals("Main2") ? "Main 2" : phaseName, JLabel.CENTER);
+            cell.setFont(cell.getFont().deriveFont(Font.BOLD, 10.0f));
+            cell.setForeground(new Color(190, 198, 210));
+            cell.setBackground(new Color(38, 43, 52));
+            cell.setOpaque(true);
+            this.phaseSummaryCells.put(phaseName, cell);
+            this.phaseSummaryBar.add(cell);
         }
         this.pnlReplay.setOpaque(false);
         this.phasesContainer = new JPanel(new BorderLayout());

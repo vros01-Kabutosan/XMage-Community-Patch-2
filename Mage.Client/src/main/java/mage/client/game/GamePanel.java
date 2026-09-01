@@ -1857,6 +1857,19 @@ extends JPanel {
             this.cancelPendingCardInfoWindowClosure(this.revealed, name);
             if (isSpellReveal(game, revealView)) {
                 if (!name.equals(this.activeSpellRevealName)) {
+                    for (String previousName : new ArrayList<String>(this.retainedReveals.keySet())) {
+                        if (!previousName.equals(name)) {
+                            CardInfoWindowDialog previousWindow = this.revealed.get(previousName);
+                            if (previousWindow != null && !previousWindow.isClosed()) {
+                                try {
+                                    previousWindow.setClosed(true);
+                                } catch (PropertyVetoException e) {
+                                    logger.warn((Object)"Could not close previous dynamic reveal window", (Throwable)e);
+                                }
+                            }
+                            this.manuallyClosedCardInfoWindows.remove(this.cardInfoWindowClosureKey(this.revealed, previousName));
+                        }
+                    }
                     this.retainedReveals.clear();
                     this.activeSpellRevealName = name;
                 }

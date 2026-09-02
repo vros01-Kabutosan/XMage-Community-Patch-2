@@ -444,6 +444,17 @@ public class HelperPanel extends JPanel {
         }
 
         @Override
+        public Dimension getPreferredSize() {
+            Dimension size = super.getPreferredSize();
+            String text = getText();
+            if (text != null && !text.isEmpty()) {
+                size.width = Math.max(size.width, getFontMetrics(getFont()).stringWidth(text) + 32);
+            }
+            size.height = Math.max(size.height, 32);
+            return size;
+        }
+
+        @Override
         protected void paintComponent(Graphics graphics) {
             Graphics2D g = (Graphics2D) graphics.create();
             try {
@@ -459,7 +470,21 @@ public class HelperPanel extends JPanel {
             } finally {
                 g.dispose();
             }
-            super.paintComponent(graphics);
+            String text = getText();
+            if (text != null && !text.isEmpty()) {
+                Graphics2D textGraphics = (Graphics2D) graphics.create();
+                try {
+                    textGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    textGraphics.setFont(getFont());
+                    textGraphics.setColor(isEnabled() ? getForeground() : new Color(145, 151, 163));
+                    FontMetrics metrics = textGraphics.getFontMetrics();
+                    int x = Math.max(0, (getWidth() - metrics.stringWidth(text)) / 2);
+                    int y = (getHeight() - metrics.getHeight()) / 2 + metrics.getAscent();
+                    textGraphics.drawString(text, x, y);
+                } finally {
+                    textGraphics.dispose();
+                }
+            }
         }
 
         @Override
@@ -480,7 +505,7 @@ public class HelperPanel extends JPanel {
         button.setFocusable(true);
         button.setForeground(new Color(238, 242, 248));
         button.setBackground(new Color(48, 56, 70));
-        button.setBorder(BorderFactory.createEmptyBorder(5, 16, 5, 16));
+        button.setBorder(BorderFactory.createEmptyBorder(5, 14, 5, 14));
     }
 
     @Override

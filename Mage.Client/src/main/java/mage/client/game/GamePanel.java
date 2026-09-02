@@ -341,14 +341,32 @@ extends JPanel {
         this.pnlHelperHandButtonsStackArea.setLayout(new BorderLayout());
         JPanel pnlBattlefieldAndPhases = new JPanel(new BorderLayout());
         pnlBattlefieldAndPhases.setOpaque(false);
-        pnlBattlefieldAndPhases.add((Component)this.pnlBattlefield, "Center");
+        JLayeredPane pnlBattlefieldOverlay = new JLayeredPane() {
+            @Override
+            public void doLayout() {
+                int width = getWidth();
+                int height = getHeight();
+                GamePanel.this.pnlBattlefield.setBounds(0, 0, width, height);
+
+                Dimension helperSize = GamePanel.this.helper.getPreferredSize();
+                Dimension feedbackSize = GamePanel.this.feedbackPanel.getPreferredSize();
+                int feedbackWidth = Math.min(width, Math.max(1, helperSize.width));
+                int feedbackHeight = Math.min(height, Math.max(1, feedbackSize.height));
+                int feedbackX = Math.max(0, (width - feedbackWidth) / 2);
+                int feedbackY = Math.max(0, height - feedbackHeight - 6);
+                GamePanel.this.feedbackPanel.setBounds(feedbackX, feedbackY, feedbackWidth, feedbackHeight);
+            }
+        };
+        pnlBattlefieldOverlay.setOpaque(false);
+        pnlBattlefieldOverlay.add((Component)this.pnlBattlefield, JLayeredPane.DEFAULT_LAYER);
+        pnlBattlefieldOverlay.add((Component)this.feedbackPanel, JLayeredPane.PALETTE_LAYER);
+        pnlBattlefieldAndPhases.add((Component)pnlBattlefieldOverlay, "Center");
         pnlBattlefieldAndPhases.add((Component)this.phasesContainer, "East");
         this.pnlHelperHandButtonsStackArea.add((Component)pnlBattlefieldAndPhases, "Center");
         JPanel pnlCommandsRoot = new JPanel(new BorderLayout());
         pnlCommandsRoot.setOpaque(false);
         JPanel pnlCommandsFeedbackAndHand = new JPanel(new BorderLayout());
         pnlCommandsFeedbackAndHand.setOpaque(false);
-        pnlCommandsFeedbackAndHand.add((Component)this.feedbackPanel, "North");
         JPanel pnlPhaseAndHand = new JPanel(new BorderLayout());
         pnlPhaseAndHand.setOpaque(false);
         pnlPhaseAndHand.add((Component)this.phaseSummaryBar, "North");

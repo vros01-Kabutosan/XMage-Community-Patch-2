@@ -34,10 +34,10 @@ public class HelperPanel extends JPanel {
     private static final Color DECISION_BORDER = new Color(91, 103, 122, 210);
     private static final int DECISION_SURFACE_WIDTH = 760;
     private static final int DECISION_SURFACE_HORIZONTAL_PADDING = 16;
-    private static final int DECISION_SURFACE_VERTICAL_PADDING = 8;
-    private static final int DECISION_FOOTER_HEIGHT = 48;
-    private static final int DECISION_MIN_TEXT_HEIGHT = 48;
-    private static final int DECISION_SURFACE_OUTER_VERTICAL_GAP = 6;
+    private static final int DECISION_SURFACE_TOP_PADDING = 4;
+    private static final int DECISION_SURFACE_BOTTOM_PADDING = 24;
+    private static final int DECISION_FOOTER_HEIGHT = 40;
+    private static final int DECISION_MIN_TEXT_HEIGHT = 33;
 
     private javax.swing.JButton btnLeft;
     private javax.swing.JButton btnRight;
@@ -148,7 +148,9 @@ public class HelperPanel extends JPanel {
 
         this.setLayout(new BorderLayout());
         this.setOpaque(false);
-        this.setBorder(BorderFactory.createEmptyBorder(7, 14, 7, 14));
+        // Keep this row compact: unused height here steals space from the battlefield
+        // and can clip player controls such as Hints.
+        this.setBorder(BorderFactory.createEmptyBorder(2, 14, 2, 14));
 
         mainPanel = new JPanel(new CenteredDecisionLayout());
         mainPanel.setOpaque(false);
@@ -189,9 +191,9 @@ public class HelperPanel extends JPanel {
         decisionSurface.setLayout(new BorderLayout(0, 4));
         decisionSurface.setOpaque(false);
         decisionSurface.setBorder(BorderFactory.createEmptyBorder(
-                DECISION_SURFACE_VERTICAL_PADDING,
+                DECISION_SURFACE_TOP_PADDING,
                 DECISION_SURFACE_HORIZONTAL_PADDING,
-                DECISION_SURFACE_VERTICAL_PADDING,
+                DECISION_SURFACE_BOTTOM_PADDING,
                 DECISION_SURFACE_HORIZONTAL_PADDING
         ));
         decisionSurface.setPreferredSize(new Dimension(DECISION_SURFACE_WIDTH, getDecisionSurfaceHeight()));
@@ -429,13 +431,16 @@ public class HelperPanel extends JPanel {
     }
 
     private static int getDecisionSurfaceHeightForCurrentSize() {
-        // The GamePanel is created before the first GUI-size pass on a fresh
-        // client, so the global value can still be zero. Keep a real message
-        // row in that case instead of allowing the footer to touch the edge.
-        int textHeight = Math.max(DECISION_MIN_TEXT_HEIGHT, GUISizeHelper.gameFeedbackPanelMaxHeight);
+        // Reserve one main line and one compact secondary line. The former global
+        // maximum reserved four lines and unnecessarily reduced the battlefield.
+        int textHeight = Math.max(
+                DECISION_MIN_TEXT_HEIGHT,
+                GUISizeHelper.gameFeedbackPanelMainMessageFontSize
+                        + GUISizeHelper.gameFeedbackPanelExtraMessageFontSize + 12
+        );
         int footerHeight = DECISION_FOOTER_HEIGHT;
-        int paddingHeight = 2 * DECISION_SURFACE_VERTICAL_PADDING + 4;
-        return Math.max(86, textHeight + footerHeight + paddingHeight);
+        int paddingHeight = DECISION_SURFACE_TOP_PADDING + DECISION_SURFACE_BOTTOM_PADDING + 4;
+        return textHeight + footerHeight + paddingHeight;
     }
 
     private int getDecisionSurfaceHeight() {
@@ -443,12 +448,12 @@ public class HelperPanel extends JPanel {
     }
 
     public static int getRequiredHeightForCurrentSize() {
-        return getDecisionSurfaceHeightForCurrentSize() + 14 + 2 * DECISION_SURFACE_OUTER_VERTICAL_GAP;
+        return getDecisionSurfaceHeightForCurrentSize() + 4;
     }
 
     public int getRequiredHeight() {
         Insets insets = getInsets();
-        return getDecisionSurfaceHeight() + insets.top + insets.bottom + 2 * DECISION_SURFACE_OUTER_VERTICAL_GAP;
+        return getDecisionSurfaceHeight() + insets.top + insets.bottom;
     }
 
     private static class CenteredDecisionLayout implements LayoutManager {
@@ -514,23 +519,21 @@ public class HelperPanel extends JPanel {
             int width = getWidth();
             int height = getHeight();
             Dimension buttonsSize = buttonGrid.getPreferredSize();
-            int buttonWidth = Math.min(buttonsSize.width, Math.max(0, width - 12));
-            int buttonHeight = Math.min(buttonsSize.height, Math.max(0, height - 4));
-            int buttonX = Math.max(0, (width - buttonWidth) / 2);
-            int buttonY = Math.max(0, (height - buttonHeight) / 2);
-
             Dimension badgeSize = turnBadge.getPreferredSize();
             int badgeWidth = turnBadge.isVisible() ? Math.min(badgeSize.width, Math.max(0, width - 8)) : 0;
             int badgeHeight = turnBadge.isVisible() ? Math.min(badgeSize.height, Math.max(0, height - 4)) : 0;
+            // Reserve an equal side lane for the badge on both sides. The controls
+            // remain exactly centred and the badge stays fully inside the corner.
+            int badgeSide = badgeWidth > 0 ? badgeWidth + 8 : 0;
+            int centralWidth = Math.max(0, width - 2 * badgeSide);
+            int buttonWidth = Math.min(buttonsSize.width, centralWidth);
+            int buttonHeight = Math.min(buttonsSize.height, Math.max(0, height - 4));
+            int buttonX = badgeSide + Math.max(0, (centralWidth - buttonWidth) / 2);
+            int buttonY = Math.max(0, (height - buttonHeight) / 2);
+
             int badgeX = Math.max(0, width - badgeWidth - 6);
             int badgeY = Math.max(0, (height - badgeHeight) / 2);
 
-            // Keep the badge in the corner without ever covering a control.
-            if (badgeWidth > 0 && buttonX + buttonWidth + 8 > badgeX) {
-                int availableButtonWidth = Math.max(0, badgeX - 8);
-                buttonWidth = Math.min(buttonWidth, availableButtonWidth);
-                buttonX = Math.max(0, (availableButtonWidth - buttonWidth) / 2);
-            }
 
             buttonGrid.setBounds(buttonX, buttonY, buttonWidth, buttonHeight);
             turnBadge.setBounds(badgeX, badgeY, badgeWidth, badgeHeight);

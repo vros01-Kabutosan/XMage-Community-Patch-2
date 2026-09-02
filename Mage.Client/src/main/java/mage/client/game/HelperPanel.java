@@ -110,8 +110,8 @@ public class HelperPanel extends JPanel {
 
     private void setGUISize() {
         //this.setMaximumSize(new Dimension(getParent().getWidth(), Integer.MAX_VALUE));
-        textAreaScrollPane.setMaximumSize(new Dimension(getParent().getWidth(), GUISizeHelper.gameFeedbackPanelMaxHeight));
-        textAreaScrollPane.setPreferredSize(new Dimension(getParent().getWidth(), GUISizeHelper.gameFeedbackPanelMaxHeight));
+        textAreaScrollPane.setMaximumSize(new Dimension(760, GUISizeHelper.gameFeedbackPanelMaxHeight));
+        textAreaScrollPane.setPreferredSize(new Dimension(760, GUISizeHelper.gameFeedbackPanelMaxHeight));
 
         btnLeft.setFont(GUISizeHelper.gameFeedbackPanelFont);
         btnRight.setFont(GUISizeHelper.gameFeedbackPanelFont);
@@ -150,7 +150,10 @@ public class HelperPanel extends JPanel {
         textAreaScrollPane.getViewport().setOpaque(false);
         textAreaScrollPane.setBorder(null);
         textAreaScrollPane.setViewportBorder(null);
-        mainPanel.add(textAreaScrollPane);
+        JPanel textHost = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        textHost.setOpaque(false);
+        textHost.add(textAreaScrollPane);
+        mainPanel.add(textHost);
 
         buttonContainer = new JPanel();
         buttonContainer.setLayout(new GridBagLayout());
@@ -539,7 +542,7 @@ public class HelperPanel extends JPanel {
         if (this.secondaryMessage != null) {
             panelText += "<div style='font-size:" + GUISizeHelper.gameFeedbackPanelExtraMessageFontSize + "pt'>" + secondaryMessage + "</div>";
         }
-        this.dialogTextArea.setText(panelText, this.getWidth());
+        this.dialogTextArea.setText(panelText, 728);
     }
 
     public void setAutoAnswerMessage(String autoAnswerMessage) {

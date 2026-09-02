@@ -456,8 +456,8 @@ extends JPanel {
                 return;
             }
             this.resizeTimer.stop();
-            this.setGUISize(false);
             this.feedbackPanel.changeGUISize();
+            this.setGUISize(false);
             GamePanel.xcpForceLayoutTree(this);
             this.xcpRefreshBattlefields();
             this.xcpRevalidateAncestors();
@@ -588,9 +588,9 @@ extends JPanel {
 
     public void changeGUISize() {
         this.initComponents = true;
+        this.feedbackPanel.changeGUISize();
         this.setGUISize(true);
         this.stackObjects.changeGUISize();
-        this.feedbackPanel.changeGUISize();
         this.handContainer.changeGUISize();
         for (PlayAreaPanel playAreaPanel : this.players.values()) {
             playAreaPanel.changeGUISize();
@@ -635,7 +635,10 @@ extends JPanel {
         // Reserve the complete decision surface: message viewport, footer,
         // rounded-surface padding and the HelperPanel outer insets. This keeps
         // the buttons and lower rounded corners inside the feedback row.
-        int feedbackPanelHeight = Math.max(upperPanelsHeight, HelperPanel.getRequiredHeightForCurrentSize());
+        int decisionPanelHeight = this.helper == null
+                ? HelperPanel.getRequiredHeightForCurrentSize()
+                : this.helper.getRequiredHeight();
+        int feedbackPanelHeight = Math.max(upperPanelsHeight, decisionPanelHeight);
         this.feedbackPanel.setPreferredSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
         this.feedbackPanel.setMinimumSize(new Dimension(0, feedbackPanelHeight));
         this.feedbackPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));

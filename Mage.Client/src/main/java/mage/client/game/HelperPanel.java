@@ -35,7 +35,9 @@ public class HelperPanel extends JPanel {
     private static final int DECISION_SURFACE_WIDTH = 760;
     private static final int DECISION_SURFACE_HORIZONTAL_PADDING = 16;
     private static final int DECISION_SURFACE_VERTICAL_PADDING = 8;
-    private static final int DECISION_FOOTER_HEIGHT = 40;
+    private static final int DECISION_FOOTER_HEIGHT = 48;
+    private static final int DECISION_MIN_TEXT_HEIGHT = 48;
+    private static final int DECISION_SURFACE_OUTER_VERTICAL_GAP = 6;
 
     private javax.swing.JButton btnLeft;
     private javax.swing.JButton btnRight;
@@ -427,7 +429,10 @@ public class HelperPanel extends JPanel {
     }
 
     private static int getDecisionSurfaceHeightForCurrentSize() {
-        int textHeight = Math.max(0, GUISizeHelper.gameFeedbackPanelMaxHeight);
+        // The GamePanel is created before the first GUI-size pass on a fresh
+        // client, so the global value can still be zero. Keep a real message
+        // row in that case instead of allowing the footer to touch the edge.
+        int textHeight = Math.max(DECISION_MIN_TEXT_HEIGHT, GUISizeHelper.gameFeedbackPanelMaxHeight);
         int footerHeight = DECISION_FOOTER_HEIGHT;
         int paddingHeight = 2 * DECISION_SURFACE_VERTICAL_PADDING + 4;
         return Math.max(86, textHeight + footerHeight + paddingHeight);
@@ -438,12 +443,12 @@ public class HelperPanel extends JPanel {
     }
 
     public static int getRequiredHeightForCurrentSize() {
-        return getDecisionSurfaceHeightForCurrentSize() + 14;
+        return getDecisionSurfaceHeightForCurrentSize() + 14 + 2 * DECISION_SURFACE_OUTER_VERTICAL_GAP;
     }
 
     public int getRequiredHeight() {
         Insets insets = getInsets();
-        return getDecisionSurfaceHeight() + insets.top + insets.bottom;
+        return getDecisionSurfaceHeight() + insets.top + insets.bottom + 2 * DECISION_SURFACE_OUTER_VERTICAL_GAP;
     }
 
     private static class CenteredDecisionLayout implements LayoutManager {

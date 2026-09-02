@@ -170,7 +170,10 @@ public class HelperPanel extends JPanel {
 
         buttonGrid = new JPanel(); // buttons layout auto changes by autoSizeButtonsAndFeedbackState
         buttonGrid.setOpaque(false);
-        buttonContainer.add(buttonGrid, BorderLayout.CENTER);
+        JPanel buttonGridContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        buttonGridContainer.setOpaque(false);
+        buttonGridContainer.add(buttonGrid);
+        buttonContainer.add(buttonGridContainer, BorderLayout.CENTER);
 
         btnSpecial = new JButton("Special");
         btnSpecial.setVisible(false);

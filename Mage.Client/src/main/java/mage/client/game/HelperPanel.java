@@ -417,7 +417,10 @@ public class HelperPanel extends JPanel {
 
         // search max const size
         // TODO: research and test sizing - need improve (e.g. for long messages)?
-        int constButtonSizeW = GUISizeHelper.gameFeedbackPanelButtonWidth * 200 / 100;
+        int constButtonSizeW = Math.max(
+                GUISizeHelper.gameFeedbackPanelButtonWidth * 200 / 100,
+                needButtonSizeW + 16
+        );
         int constGridSizeW = buttons.size() * constButtonSizeW + BUTTONS_H_GAP * (buttons.size() - 1);
         int constGridSizeH = Math.round(GUISizeHelper.gameFeedbackPanelButtonHeight * 150 / 100);
 

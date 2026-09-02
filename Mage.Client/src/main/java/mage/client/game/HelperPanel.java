@@ -41,6 +41,8 @@ public class HelperPanel extends JPanel {
     private static final int DECISION_FOOTER_VERTICAL_PADDING = 3;
     private static final int DECISION_BADGE_SIDE_GAP = 10;
     private static final int DECISION_MIN_TEXT_HEIGHT = 33;
+    // Reserve a stable text area so phase refreshes cannot move the bottom-anchored row.
+    private static final int DECISION_STABLE_EXTRA_TEXT_LINES = 2;
 
     private javax.swing.JButton btnLeft;
     private javax.swing.JButton btnRight;
@@ -510,12 +512,27 @@ public class HelperPanel extends JPanel {
     }
 
     public static int getRequiredHeightForCurrentSize() {
-        return getDecisionSurfaceHeightForCurrentSize() + 4;
+        return getStableDecisionSurfaceHeightForCurrentSize() + 4;
     }
 
     public int getRequiredHeight() {
         Insets insets = getInsets();
-        return getDecisionSurfaceHeight() + insets.top + insets.bottom;
+        return Math.max(getDecisionSurfaceHeight(), getStableDecisionSurfaceHeightForCurrentSize())
+                + insets.top + insets.bottom;
+    }
+
+    private static int getStableDecisionSurfaceHeightForCurrentSize() {
+        int lineHeight = Math.max(
+                GUISizeHelper.gameFeedbackPanelMainMessageFontSize,
+                GUISizeHelper.gameFeedbackPanelExtraMessageFontSize
+        ) + 4;
+        int stableMessageHeight = getDecisionMessageHeightForCurrentSize()
+                + DECISION_STABLE_EXTRA_TEXT_LINES * lineHeight;
+        return stableMessageHeight
+                + getFallbackFooterHeightForCurrentSize()
+                + DECISION_SURFACE_TOP_PADDING
+                + DECISION_SURFACE_BOTTOM_PADDING
+                + DECISION_CONTENT_GAP;
     }
 
     private static class CenteredDecisionLayout implements LayoutManager {

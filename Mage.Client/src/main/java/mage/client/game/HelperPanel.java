@@ -153,7 +153,7 @@ public class HelperPanel extends JPanel {
         mainPanel.add(textAreaScrollPane);
 
         buttonContainer = new JPanel();
-        buttonContainer.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        buttonContainer.setLayout(new BorderLayout());
         buttonContainer.setOpaque(false);
         mainPanel.add(buttonContainer);
 
@@ -166,11 +166,11 @@ public class HelperPanel extends JPanel {
                 BorderFactory.createLineBorder(new Color(113, 128, 151, 220), 1, true),
                 BorderFactory.createEmptyBorder(4, 10, 4, 10)
         ));
-        buttonContainer.add(turnBadge);
+        buttonContainer.add(turnBadge, BorderLayout.EAST);
 
         buttonGrid = new JPanel(); // buttons layout auto changes by autoSizeButtonsAndFeedbackState
         buttonGrid.setOpaque(false);
-        buttonContainer.add(buttonGrid);
+        buttonContainer.add(buttonGrid, BorderLayout.CENTER);
 
         btnSpecial = new JButton("Special");
         btnSpecial.setVisible(false);

@@ -2124,7 +2124,7 @@ extends JPanel {
     public void ask(int messageId, GameView gameView, String question, Map<String, Serializable> options) {
         this.updateGame(messageId, gameView, false, options, null);
         this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.QUESTION, question, "", false, options, true, gameView.getPhase());
-        this.helper.setTurnInfo(gameView.getActivePlayerName(), gameView.getTurn(), gameView.getActivePlayerId().equals(this.playerId));
+        this.helper.setTurnInfo(gameView.getActivePlayerName(), gameView.getTurn(), this.playerId != null && this.playerId.equals(gameView.getActivePlayerId()));
     }
 
     public boolean isMissGameData() {
@@ -2468,14 +2468,14 @@ extends JPanel {
             panelOptions.putAll(this.lastGameData.options);
         }
         panelOptions.put("your_turn", Boolean.valueOf(true));
-        String activePlayerText = gameView.getActivePlayerId().equals(this.playerId) ? "Your turn" : gameView.getActivePlayerName() + "'s turn";
+        String activePlayerText = this.playerId != null && this.playerId.equals(gameView.getActivePlayerId()) ? "Your turn" : gameView.getActivePlayerName() + "'s turn";
         String priorityPlayerText = "";
         if (controllingPlayer) {
             priorityPlayerText = " / priority " + gameView.getPriorityPlayerName();
         }
         String additionalMessage = activePlayerText + " / " + gameView.getStep().toString() + priorityPlayerText;
         this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.SELECT, message, additionalMessage, gameView.getSpecial(), panelOptions, true, gameView.getPhase());
-        this.helper.setTurnInfo(gameView.getActivePlayerName(), gameView.getTurn(), gameView.getActivePlayerId().equals(this.playerId));
+        this.helper.setTurnInfo(gameView.getActivePlayerName(), gameView.getTurn(), this.playerId != null && this.playerId.equals(gameView.getActivePlayerId()));
     }
 
     public void playMana(int messageId, GameView gameView, Map<String, Serializable> options, String message) {

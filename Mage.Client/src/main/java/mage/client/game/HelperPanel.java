@@ -76,6 +76,7 @@ public class HelperPanel extends JPanel {
     private TurnPhase gameTurnPhase = null;
     private String turnPlayerName;
     private int turnNumber;
+    private boolean ownTurn;
 
     private Timer needFeedbackTimer;
 
@@ -434,12 +435,14 @@ public class HelperPanel extends JPanel {
                 int badgeWidth = Math.min(metrics.stringWidth(badgeText) + 18, surfaceWidth - 24);
                 if (badgeWidth > 40) {
                     int badgeX = surfaceX + surfaceWidth - badgeWidth - 12;
-                    int badgeY = inset + 7;
-                    g.setColor(new Color(53, 63, 78, 235));
+                    int badgeY = inset + height - 29;
+                    Color badgeColor = ownTurn ? new Color(38, 105, 68, 235) : new Color(122, 102, 35, 235);
+                    Color badgeBorder = ownTurn ? new Color(99, 190, 133, 230) : new Color(227, 198, 87, 230);
+                    g.setColor(badgeColor);
                     g.fillRoundRect(badgeX, badgeY, badgeWidth, 22, 11, 11);
-                    g.setColor(new Color(151, 170, 198, 220));
+                    g.setColor(badgeBorder);
                     g.drawRoundRect(badgeX, badgeY, badgeWidth, 22, 11, 11);
-                    g.setColor(new Color(226, 233, 243));
+                    g.setColor(new Color(246, 248, 240));
                     g.drawString(badgeText, badgeX + 9, badgeY + 15);
                 }
             }
@@ -459,9 +462,10 @@ public class HelperPanel extends JPanel {
         this.originalId = originalId;
     }
 
-    public void setTurnInfo(String playerName, int turnNumber) {
+    public void setTurnInfo(String playerName, int turnNumber, boolean ownTurn) {
         this.turnPlayerName = playerName;
         this.turnNumber = turnNumber;
+        this.ownTurn = ownTurn;
         repaint();
     }
 

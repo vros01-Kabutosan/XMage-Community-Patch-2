@@ -14,6 +14,7 @@ import mage.constants.TurnPhase;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -27,6 +28,10 @@ import static mage.constants.PlayerAction.*;
  * @author ayrat, JayDi85
  */
 public class HelperPanel extends JPanel {
+
+    private static final Color DECISION_SURFACE_TOP = new Color(28, 32, 40, 248);
+    private static final Color DECISION_SURFACE_BOTTOM = new Color(12, 15, 21, 248);
+    private static final Color DECISION_BORDER = new Color(91, 103, 122, 210);
 
     private javax.swing.JButton btnLeft;
     private javax.swing.JButton btnRight;
@@ -124,6 +129,7 @@ public class HelperPanel extends JPanel {
 
         this.setLayout(new BorderLayout());
         this.setOpaque(false);
+        this.setBorder(BorderFactory.createEmptyBorder(7, 14, 7, 14));
 
         mainPanel = new JPanel();
         mainPanel.setLayout(new GridLayout(0, 1));
@@ -166,6 +172,11 @@ public class HelperPanel extends JPanel {
         btnUndo = new JButton("Undo");
         btnUndo.setVisible(false);
         buttonGrid.add(btnUndo);
+
+        styleDecisionButton(btnSpecial);
+        styleDecisionButton(btnLeft);
+        styleDecisionButton(btnRight);
+        styleDecisionButton(btnUndo);
 
         MouseListener checkPopupAdapter = new MouseAdapter() {
             @Override
@@ -318,9 +329,6 @@ public class HelperPanel extends JPanel {
         // also colorize feedback panel on player's priority and enable sound notification
 
         int BUTTONS_H_GAP = 15;
-        Color ACTIVE_FEEDBACK_BACKGROUND_COLOR_MAIN = new Color(0, 0, 255, 50);
-        Color ACTIVE_FEEDBACK_BACKGROUND_COLOR_BATTLE = new Color(255, 0, 0, 50);
-        Color ACTIVE_FEEDBACK_BACKGROUND_COLOR_OTHER = new Color(0, 255, 0, 50);
 
         // cleanup current settings to default (flow layout - different sizes)
         this.buttonGrid.setLayout(new FlowLayout(FlowLayout.CENTER, BUTTONS_H_GAP, 0));
@@ -340,30 +348,9 @@ public class HelperPanel extends JPanel {
             buttons.add(this.btnUndo);
         }
 
-        // color panel on player's feedback waiting
-        if (this.gameNeedFeedback) {
-
-            // wait player's action - colorize feedback panel (depends on current phase)
-            this.mainPanel.setOpaque(true);
-            Color backColor = ACTIVE_FEEDBACK_BACKGROUND_COLOR_OTHER;
-            if (this.gameTurnPhase != null) {
-                switch (this.gameTurnPhase) {
-                    case PRECOMBAT_MAIN:
-                    case POSTCOMBAT_MAIN:
-                        backColor = ACTIVE_FEEDBACK_BACKGROUND_COLOR_MAIN;
-                        break;
-                    case COMBAT:
-                        backColor = ACTIVE_FEEDBACK_BACKGROUND_COLOR_BATTLE;
-                        break;
-                    default:
-                        break;
-                }
-            }
-            this.mainPanel.setBackground(backColor);
-        } else {
-            // inform about other players
-            this.mainPanel.setOpaque(false);
-        }
+        // Keep the parent transparent: the decision surface is painted by this panel.
+        this.mainPanel.setOpaque(false);
+        this.mainPanel.setBackground(new Color(0, 0, 0, 0));
 
         if (buttons.isEmpty()) {
             return;
@@ -404,6 +391,40 @@ public class HelperPanel extends JPanel {
             // different size mode (flow) -- already used by default
             //FlowLayout fl = new FlowLayout(FlowLayout.CENTER, BUTTONS_H_GAP, 0);
             //this.buttonGrid.setLayout(fl);
+        }
+    }
+
+    private void styleDecisionButton(JButton button) {
+        button.setFocusPainted(false);
+        button.setFocusable(true);
+        button.setForeground(new Color(238, 242, 248));
+        button.setBackground(new Color(48, 56, 70));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(113, 128, 151, 220), 1, true),
+                BorderFactory.createEmptyBorder(5, 16, 5, 16)
+        ));
+    }
+
+    @Override
+    protected void paintComponent(Graphics graphics) {
+        super.paintComponent(graphics);
+        int inset = 2;
+        int width = getWidth() - inset * 2;
+        int height = getHeight() - inset * 2;
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        Graphics2D g = (Graphics2D) graphics.create();
+        try {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            Shape surface = new RoundRectangle2D.Double(inset, inset, width - 1, height - 1, 18, 18);
+            g.setPaint(new GradientPaint(0, inset, DECISION_SURFACE_TOP, 0, height, DECISION_SURFACE_BOTTOM));
+            g.fill(surface);
+            g.setColor(DECISION_BORDER);
+            g.draw(surface);
+        } finally {
+            g.dispose();
         }
     }
 

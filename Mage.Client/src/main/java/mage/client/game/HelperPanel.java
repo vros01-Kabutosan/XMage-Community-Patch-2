@@ -74,6 +74,8 @@ public class HelperPanel extends JPanel {
     private UUID gameId;
     private boolean gameNeedFeedback = false;
     private TurnPhase gameTurnPhase = null;
+    private String turnPlayerName;
+    private int turnNumber;
 
     private Timer needFeedbackTimer;
 
@@ -409,20 +411,38 @@ public class HelperPanel extends JPanel {
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
         int inset = 2;
-        int width = getWidth() - inset * 2;
         int height = getHeight() - inset * 2;
-        if (width <= 0 || height <= 0) {
+        int surfaceWidth = Math.min(getWidth() - inset * 2, 760);
+        if (surfaceWidth <= 0 || height <= 0) {
             return;
         }
+        int surfaceX = (getWidth() - surfaceWidth) / 2;
 
         Graphics2D g = (Graphics2D) graphics.create();
         try {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            Shape surface = new RoundRectangle2D.Double(inset, inset, width - 1, height - 1, 18, 18);
+            Shape surface = new RoundRectangle2D.Double(surfaceX, inset, surfaceWidth - 1, height - 1, 18, 18);
             g.setPaint(new GradientPaint(0, inset, DECISION_SURFACE_TOP, 0, height, DECISION_SURFACE_BOTTOM));
             g.fill(surface);
             g.setColor(DECISION_BORDER);
             g.draw(surface);
+
+            if (turnPlayerName != null && !turnPlayerName.isEmpty() && turnNumber > 0) {
+                String badgeText = "Turn " + turnNumber + " · " + turnPlayerName;
+                g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+                FontMetrics metrics = g.getFontMetrics();
+                int badgeWidth = Math.min(metrics.stringWidth(badgeText) + 18, surfaceWidth - 24);
+                if (badgeWidth > 40) {
+                    int badgeX = surfaceX + surfaceWidth - badgeWidth - 12;
+                    int badgeY = inset + 7;
+                    g.setColor(new Color(53, 63, 78, 235));
+                    g.fillRoundRect(badgeX, badgeY, badgeWidth, 22, 11, 11);
+                    g.setColor(new Color(151, 170, 198, 220));
+                    g.drawRoundRect(badgeX, badgeY, badgeWidth, 22, 11, 11);
+                    g.setColor(new Color(226, 233, 243));
+                    g.drawString(badgeText, badgeX + 9, badgeY + 15);
+                }
+            }
         } finally {
             g.dispose();
         }
@@ -437,6 +457,12 @@ public class HelperPanel extends JPanel {
 
     public void setOriginalId(UUID originalId) {
         this.originalId = originalId;
+    }
+
+    public void setTurnInfo(String playerName, int turnNumber) {
+        this.turnPlayerName = playerName;
+        this.turnNumber = turnNumber;
+        repaint();
     }
 
     public void setMessages(String basicMessage, String secondaryMessage) {

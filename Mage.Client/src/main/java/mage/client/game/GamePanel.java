@@ -2124,6 +2124,7 @@ extends JPanel {
     public void ask(int messageId, GameView gameView, String question, Map<String, Serializable> options) {
         this.updateGame(messageId, gameView, false, options, null);
         this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.QUESTION, question, "", false, options, true, gameView.getPhase());
+        this.helper.setTurnInfo(gameView.getActivePlayerName(), gameView.getTurn());
     }
 
     public boolean isMissGameData() {
@@ -2474,6 +2475,7 @@ extends JPanel {
         }
         String additionalMessage = activePlayerText + " / " + gameView.getStep().toString() + priorityPlayerText;
         this.feedbackPanel.prepareFeedback(FeedbackPanel.FeedbackMode.SELECT, message, additionalMessage, gameView.getSpecial(), panelOptions, true, gameView.getPhase());
+        this.helper.setTurnInfo(gameView.getActivePlayerName(), gameView.getTurn());
     }
 
     public void playMana(int messageId, GameView gameView, Map<String, Serializable> options, String message) {

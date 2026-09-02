@@ -194,19 +194,19 @@ public class HelperPanel extends JPanel {
         buttonConstraints.anchor = GridBagConstraints.CENTER;
         buttonContainer.add(buttonGridContainer, buttonConstraints);
 
-        btnSpecial = new JButton("Special");
+        btnSpecial = new RoundedDecisionButton("Special");
         btnSpecial.setVisible(false);
         buttonGrid.add(btnSpecial);
 
-        btnLeft = new JButton("OK");
+        btnLeft = new RoundedDecisionButton("OK");
         btnLeft.setVisible(false);
         buttonGrid.add(btnLeft);
 
-        btnRight = new JButton("Cancel");
+        btnRight = new RoundedDecisionButton("Cancel");
         btnRight.setVisible(false);
         buttonGrid.add(btnRight);
 
-        btnUndo = new JButton("Undo");
+        btnUndo = new RoundedDecisionButton("Undo");
         btnUndo.setVisible(false);
         buttonGrid.add(btnUndo);
 
@@ -431,15 +431,53 @@ public class HelperPanel extends JPanel {
         }
     }
 
+    private static class RoundedDecisionButton extends JButton {
+
+        RoundedDecisionButton(String text) {
+            super(text);
+            setContentAreaFilled(false);
+            setOpaque(false);
+            setBorderPainted(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g = (Graphics2D) graphics.create();
+            try {
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int arc = Math.min(getHeight() - 1, 18);
+                Color fill = getModel().isPressed() ? new Color(65, 78, 96)
+                        : getModel().isRollover() ? new Color(60, 72, 90) : getBackground();
+                if (!isEnabled()) {
+                    fill = new Color(46, 52, 62);
+                }
+                g.setColor(fill);
+                g.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, arc, arc);
+            } finally {
+                g.dispose();
+            }
+            super.paintComponent(graphics);
+        }
+
+        @Override
+        protected void paintBorder(Graphics graphics) {
+            Graphics2D g = (Graphics2D) graphics.create();
+            try {
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setColor(new Color(133, 149, 174, 225));
+                int arc = Math.min(getHeight() - 1, 18);
+                g.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, arc, arc);
+            } finally {
+                g.dispose();
+            }
+        }
+    }
     private void styleDecisionButton(JButton button) {
         button.setFocusPainted(false);
         button.setFocusable(true);
         button.setForeground(new Color(238, 242, 248));
         button.setBackground(new Color(48, 56, 70));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(113, 128, 151, 220), 1, true),
-                BorderFactory.createEmptyBorder(5, 16, 5, 16)
-        ));
+        button.setBorder(BorderFactory.createEmptyBorder(5, 16, 5, 16));
     }
 
     @Override

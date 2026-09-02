@@ -36,12 +36,6 @@ public class HelperPanel extends JPanel {
     private static final int DECISION_SURFACE_HORIZONTAL_PADDING = 16;
     private static final int DECISION_SURFACE_VERTICAL_PADDING = 8;
     private static final int DECISION_FOOTER_HEIGHT = 40;
-    /**
-     * The phase summary is painted in the layered game pane and intentionally
-     * overlaps the top of the hand area. Keep the decision surface above that
-     * overlay so its rounded border and footer remain fully visible.
-     */
-    private static final int DECISION_PHASE_BAR_CLEARANCE = 24;
 
     private javax.swing.JButton btnLeft;
     private javax.swing.JButton btnRight;
@@ -486,10 +480,7 @@ public class HelperPanel extends JPanel {
             int availableWidth = Math.max(0, parent.getWidth() - insets.left - insets.right);
             int availableHeight = Math.max(0, parent.getHeight() - insets.top - insets.bottom);
             int width = Math.min(preferred.width, availableWidth);
-            int height = Math.min(
-                    preferred.height,
-                    Math.max(0, availableHeight - DECISION_PHASE_BAR_CLEARANCE)
-            );
+            int height = Math.min(preferred.height, availableHeight);
             int x = insets.left + Math.max(0, (availableWidth - width) / 2);
             int y = insets.top;
             child.setBounds(x, y, width, height);

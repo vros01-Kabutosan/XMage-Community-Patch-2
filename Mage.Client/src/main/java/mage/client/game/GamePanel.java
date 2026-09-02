@@ -349,7 +349,11 @@ extends JPanel {
         JPanel pnlCommandsFeedbackAndHand = new JPanel(new BorderLayout());
         pnlCommandsFeedbackAndHand.setOpaque(false);
         pnlCommandsFeedbackAndHand.add((Component)this.feedbackPanel, "North");
-        pnlCommandsFeedbackAndHand.add((Component)this.handContainer, "Center");
+        JPanel pnlPhaseAndHand = new JPanel(new BorderLayout());
+        pnlPhaseAndHand.setOpaque(false);
+        pnlPhaseAndHand.add((Component)this.phaseSummaryBar, "North");
+        pnlPhaseAndHand.add((Component)this.handContainer, "Center");
+        pnlCommandsFeedbackAndHand.add((Component)pnlPhaseAndHand, "Center");
         JPanel pnlCommandsSkipAndStack = new JPanel(new BorderLayout());
         pnlCommandsSkipAndStack.setOpaque(false);
         pnlCommandsSkipAndStack.add((Component)this.pnlShortCuts, "South");
@@ -631,11 +635,9 @@ extends JPanel {
         int feedbackButtonRowHeight = Math.round((float)(GUISizeHelper.gameFeedbackPanelButtonHeight * 150) / 100.0f);
         int feedbackTextRowHeight = GUISizeHelper.gameFeedbackPanelMainMessageFontSize + GUISizeHelper.gameFeedbackPanelExtraMessageFontSize + 30;
         int feedbackRowHeight = Math.max(feedbackButtonRowHeight, feedbackTextRowHeight);
-        // The phase summary is a fixed layered overlay whose bottom edge
-        // extends 20px into the hand area. Reserve its 24px overlap here so
-        // the rounded decision surface can keep its full height without
-        // being painted underneath the phase bar.
-        int feedbackPanelHeight = Math.max(upperPanelsHeight, feedbackRowHeight * 2 + 24);
+        // The phase summary now has its own fixed row between the decision
+        // surface and the hand, so it cannot cover or resize the feedback UI.
+        int feedbackPanelHeight = Math.max(upperPanelsHeight, feedbackRowHeight * 2);
         this.feedbackPanel.setPreferredSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
         this.feedbackPanel.setMinimumSize(new Dimension(0, feedbackPanelHeight));
         this.feedbackPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
@@ -1752,23 +1754,17 @@ extends JPanel {
     }
 
     private void updatePhaseSummaryBounds() {
-        if (this.jLayeredPane == null || !this.handContainer.isShowing() || this.handContainer.getWidth() < 280) {
-            this.phaseSummaryBar.setVisible(false);
-            return;
+        boolean visible = this.handContainer != null
+                && this.handContainer.isShowing()
+                && this.handContainer.getWidth() >= 280;
+        if (this.phaseSummaryBar.isVisible() != visible) {
+            this.phaseSummaryBar.setVisible(visible);
+            Container parent = this.phaseSummaryBar.getParent();
+            if (parent != null) {
+                parent.revalidate();
+                parent.repaint();
+            }
         }
-        Point origin = SwingUtilities.convertPoint(this.handContainer, 0, 0, this.jLayeredPane);
-        int areaWidth = this.pnlHelperHandButtonsStackArea.getWidth();
-        Point areaOrigin = SwingUtilities.convertPoint(this.pnlHelperHandButtonsStackArea, 0, 0, this.jLayeredPane);
-        int barWidth = Math.max(320, areaWidth - 16);
-        int barHeight = 44;
-        int x = areaOrigin.x + Math.max(0, (areaWidth - barWidth) / 2);
-        int y = origin.y - barHeight + 20;
-        if (y < 0) {
-            this.phaseSummaryBar.setVisible(false);
-            return;
-        }
-        this.phaseSummaryBar.setBounds(x, y, barWidth, barHeight);
-        this.phaseSummaryBar.setVisible(true);
     }
 
     public void onDeactivated() {
@@ -3257,7 +3253,7 @@ extends JPanel {
 
     public void installComponents() {
         this.jLayeredPane.setOpaque(false);
-        this.jLayeredPane.add(this.phaseSummaryBar, JLayeredPane.PALETTE_LAYER);
+
         this.updatePhaseSummaryBounds();
         this.jLayeredPane.add(DialogManager.getManager(this.gameId), JLayeredPane.MODAL_LAYER, 0);
         this.installAbilityPicker();
@@ -3270,7 +3266,6 @@ extends JPanel {
 
     private void uninstallComponents() {
         if (this.jLayeredPane != null) {
-            this.jLayeredPane.remove(this.phaseSummaryBar);
             this.jLayeredPane.remove(DialogManager.getManager(this.gameId));
         }
         DialogManager.removeGame(this.gameId);

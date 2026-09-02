@@ -153,9 +153,9 @@ public class HelperPanel extends JPanel {
         mainPanel.add(textAreaScrollPane);
 
         buttonContainer = new JPanel();
-        buttonContainer.setLayout(new BorderLayout());
+        buttonContainer.setLayout(new GridBagLayout());
         buttonContainer.setOpaque(false);
-        buttonContainer.setPreferredSize(new Dimension(760, 46));
+        buttonContainer.setPreferredSize(new Dimension(760, 54));
         JPanel buttonHost = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         buttonHost.setOpaque(false);
         buttonHost.add(buttonContainer);
@@ -170,14 +170,29 @@ public class HelperPanel extends JPanel {
                 BorderFactory.createLineBorder(new Color(113, 128, 151, 220), 1, true),
                 BorderFactory.createEmptyBorder(4, 10, 4, 10)
         ));
-        buttonContainer.add(turnBadge, BorderLayout.EAST);
+        GridBagConstraints badgeConstraints = new GridBagConstraints();
+        badgeConstraints.gridx = 0;
+        badgeConstraints.gridy = 0;
+        badgeConstraints.weightx = 1.0;
+        badgeConstraints.weighty = 1.0;
+        badgeConstraints.anchor = GridBagConstraints.NORTHEAST;
+        badgeConstraints.insets = new Insets(4, 4, 4, 8);
+        buttonContainer.add(turnBadge, badgeConstraints);
 
         buttonGrid = new JPanel(); // buttons layout auto changes by autoSizeButtonsAndFeedbackState
         buttonGrid.setOpaque(false);
         JPanel buttonGridContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         buttonGridContainer.setOpaque(false);
+        buttonGridContainer.setAlignmentX(0.5f);
+        buttonGridContainer.setAlignmentY(0.5f);
         buttonGridContainer.add(buttonGrid);
-        buttonContainer.add(buttonGridContainer, BorderLayout.CENTER);
+        GridBagConstraints buttonConstraints = new GridBagConstraints();
+        buttonConstraints.gridx = 0;
+        buttonConstraints.gridy = 0;
+        buttonConstraints.weightx = 1.0;
+        buttonConstraints.weighty = 1.0;
+        buttonConstraints.anchor = GridBagConstraints.CENTER;
+        buttonContainer.add(buttonGridContainer, buttonConstraints);
 
         btnSpecial = new JButton("Special");
         btnSpecial.setVisible(false);

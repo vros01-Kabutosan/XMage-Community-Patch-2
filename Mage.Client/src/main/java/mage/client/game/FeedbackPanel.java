@@ -244,7 +244,8 @@ public class FeedbackPanel extends javax.swing.JPanel {
         btnUndo = new javax.swing.JButton();
         btnUndo.setVisible(true);
 
-        setBackground(new java.awt.Color(0, 0, 0, 80));
+        setOpaque(false);
+        setBackground(new java.awt.Color(0, 0, 0, 0));
 
         btnRight.setText("Cancel");
         btnRight.addActionListener(evt -> btnRightActionPerformed(evt));

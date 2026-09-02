@@ -631,7 +631,11 @@ extends JPanel {
         int feedbackButtonRowHeight = Math.round((float)(GUISizeHelper.gameFeedbackPanelButtonHeight * 150) / 100.0f);
         int feedbackTextRowHeight = GUISizeHelper.gameFeedbackPanelMainMessageFontSize + GUISizeHelper.gameFeedbackPanelExtraMessageFontSize + 30;
         int feedbackRowHeight = Math.max(feedbackButtonRowHeight, feedbackTextRowHeight);
-        int feedbackPanelHeight = Math.max(upperPanelsHeight, feedbackRowHeight * 2);
+        // The phase summary is a fixed layered overlay whose bottom edge
+        // extends 20px into the hand area. Reserve its 24px overlap here so
+        // the rounded decision surface can keep its full height without
+        // being painted underneath the phase bar.
+        int feedbackPanelHeight = Math.max(upperPanelsHeight, feedbackRowHeight * 2 + 24);
         this.feedbackPanel.setPreferredSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
         this.feedbackPanel.setMinimumSize(new Dimension(0, feedbackPanelHeight));
         this.feedbackPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));

@@ -122,10 +122,11 @@ public class HelperPanel extends JPanel {
     private void setGUISize() {
         //this.setMaximumSize(new Dimension(getParent().getWidth(), Integer.MAX_VALUE));
         int contentWidth = DECISION_SURFACE_WIDTH - 2 * DECISION_SURFACE_HORIZONTAL_PADDING;
-        // The fixed decision surface owns the available height; do not let the
-        // HTML view request extra height and introduce a visible scrollbar.
+        // The fixed decision surface owns the available height. Let the HTML
+        // view keep its natural preferred size so its text is laid out before
+        // the viewport clips it; the scrollbar itself remains disabled below.
         dialogTextArea.setMinimumSize(new Dimension(0, 0));
-        dialogTextArea.setPreferredSize(new Dimension(contentWidth, 0));
+        dialogTextArea.setPreferredSize(null);
         textAreaScrollPane.setMaximumSize(new Dimension(contentWidth, GUISizeHelper.gameFeedbackPanelMaxHeight));
         textAreaScrollPane.setPreferredSize(new Dimension(contentWidth, GUISizeHelper.gameFeedbackPanelMaxHeight));
 

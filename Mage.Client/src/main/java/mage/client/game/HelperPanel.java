@@ -155,7 +155,11 @@ public class HelperPanel extends JPanel {
         buttonContainer = new JPanel();
         buttonContainer.setLayout(new BorderLayout());
         buttonContainer.setOpaque(false);
-        mainPanel.add(buttonContainer);
+        buttonContainer.setPreferredSize(new Dimension(760, 46));
+        JPanel buttonHost = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        buttonHost.setOpaque(false);
+        buttonHost.add(buttonContainer);
+        mainPanel.add(buttonHost);
 
         turnBadge = new JLabel();
         turnBadge.setVisible(false);

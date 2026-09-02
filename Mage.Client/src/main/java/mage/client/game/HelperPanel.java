@@ -34,9 +34,12 @@ public class HelperPanel extends JPanel {
     private static final Color DECISION_BORDER = new Color(91, 103, 122, 210);
     private static final int DECISION_SURFACE_WIDTH = 760;
     private static final int DECISION_SURFACE_HORIZONTAL_PADDING = 16;
-    private static final int DECISION_SURFACE_TOP_PADDING = 4;
-    private static final int DECISION_SURFACE_BOTTOM_PADDING = 24;
-    private static final int DECISION_FOOTER_HEIGHT = 40;
+    private static final int DECISION_SURFACE_TOP_PADDING = 8;
+    private static final int DECISION_SURFACE_BOTTOM_PADDING = 8;
+    private static final int DECISION_CONTENT_GAP = 4;
+    private static final int DECISION_FOOTER_MIN_HEIGHT = 40;
+    private static final int DECISION_FOOTER_VERTICAL_PADDING = 3;
+    private static final int DECISION_BADGE_SIDE_GAP = 10;
     private static final int DECISION_MIN_TEXT_HEIGHT = 33;
 
     private javax.swing.JButton btnLeft;
@@ -44,7 +47,6 @@ public class HelperPanel extends JPanel {
     private javax.swing.JButton btnSpecial;
     private javax.swing.JButton btnUndo;
 
-    private JScrollPane textAreaScrollPane;
     private MageTextArea dialogTextArea;
     JPanel mainPanel;
     JPanel buttonGrid;
@@ -116,15 +118,9 @@ public class HelperPanel extends JPanel {
     }
 
     private void setGUISize() {
-        //this.setMaximumSize(new Dimension(getParent().getWidth(), Integer.MAX_VALUE));
-        int contentWidth = DECISION_SURFACE_WIDTH - 2 * DECISION_SURFACE_HORIZONTAL_PADDING;
-        // The fixed decision surface owns the available height. Let the HTML
-        // view keep its natural preferred size so its text is laid out before
-        // the viewport clips it; the scrollbar itself remains disabled below.
+        // Size every child from its real, scaled font metrics. Fixed footer
+        // heights clip buttons when the user increases the GUI scale.
         dialogTextArea.setMinimumSize(new Dimension(0, 0));
-        dialogTextArea.setPreferredSize(null);
-        textAreaScrollPane.setMaximumSize(new Dimension(contentWidth, GUISizeHelper.gameFeedbackPanelMaxHeight));
-        textAreaScrollPane.setPreferredSize(new Dimension(contentWidth, GUISizeHelper.gameFeedbackPanelMaxHeight));
 
         btnLeft.setFont(GUISizeHelper.gameFeedbackPanelFont);
         btnRight.setFont(GUISizeHelper.gameFeedbackPanelFont);
@@ -132,10 +128,8 @@ public class HelperPanel extends JPanel {
         btnUndo.setFont(GUISizeHelper.gameFeedbackPanelFont);
 
         this.redrawMessages();
-
-        this.buttonContainer.setPreferredSize(new Dimension(contentWidth, DECISION_FOOTER_HEIGHT));
-        this.decisionSurface.setPreferredSize(new Dimension(DECISION_SURFACE_WIDTH, getDecisionSurfaceHeight()));
         autoSizeButtonsAndFeedbackState();
+        refreshDecisionGeometry();
 
         GUISizeHelper.changePopupMenuFont(popupMenuAskNo);
         GUISizeHelper.changePopupMenuFont(popupMenuAskYes);
@@ -160,12 +154,9 @@ public class HelperPanel extends JPanel {
         dialogTextArea.setText("<Empty>");
         dialogTextArea.setOpaque(false);
 
-        textAreaScrollPane = new JScrollPane(dialogTextArea, ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        textAreaScrollPane.setOpaque(false);
-        textAreaScrollPane.setBackground(new Color(0, 0, 0, 0));
-        textAreaScrollPane.getViewport().setOpaque(false);
-        textAreaScrollPane.setBorder(null);
-        textAreaScrollPane.setViewportBorder(null);
+        // No JScrollPane here: the rounded surface owns exact content bounds,
+        // therefore no accidental scroll bar can be introduced.
+        dialogTextArea.setBorder(null);
 
         turnBadge = new RoundedTurnBadge();
         turnBadge.setVisible(false);
@@ -180,15 +171,11 @@ public class HelperPanel extends JPanel {
 
         buttonContainer = new DecisionFooterPanel();
         buttonContainer.setOpaque(false);
-        buttonContainer.setPreferredSize(new Dimension(
-                DECISION_SURFACE_WIDTH - 2 * DECISION_SURFACE_HORIZONTAL_PADDING,
-                DECISION_FOOTER_HEIGHT
-        ));
         buttonContainer.add(buttonGrid);
         buttonContainer.add(turnBadge);
 
         decisionSurface = new RoundedDecisionSurface();
-        decisionSurface.setLayout(new BorderLayout(0, 4));
+        decisionSurface.setLayout(new BorderLayout(0, DECISION_CONTENT_GAP));
         decisionSurface.setOpaque(false);
         decisionSurface.setBorder(BorderFactory.createEmptyBorder(
                 DECISION_SURFACE_TOP_PADDING,
@@ -196,8 +183,7 @@ public class HelperPanel extends JPanel {
                 DECISION_SURFACE_BOTTOM_PADDING,
                 DECISION_SURFACE_HORIZONTAL_PADDING
         ));
-        decisionSurface.setPreferredSize(new Dimension(DECISION_SURFACE_WIDTH, getDecisionSurfaceHeight()));
-        decisionSurface.add(textAreaScrollPane, BorderLayout.CENTER);
+        decisionSurface.add(dialogTextArea, BorderLayout.CENTER);
         decisionSurface.add(buttonContainer, BorderLayout.SOUTH);
         mainPanel.add(decisionSurface);
 
@@ -221,6 +207,7 @@ public class HelperPanel extends JPanel {
         styleDecisionButton(btnLeft);
         styleDecisionButton(btnRight);
         styleDecisionButton(btnUndo);
+        refreshDecisionGeometry();
 
         MouseListener checkPopupAdapter = new MouseAdapter() {
             @Override
@@ -398,6 +385,7 @@ public class HelperPanel extends JPanel {
 
         this.buttonGrid.removeAll();
         if (buttons.isEmpty()) {
+            refreshDecisionGeometry();
             this.buttonGrid.revalidate();
             this.buttonContainer.revalidate();
             this.decisionSurface.revalidate();
@@ -422,6 +410,7 @@ public class HelperPanel extends JPanel {
         // smaller cell during a refresh and clip the first character of a label.
         this.buttonGrid.setLayout(new FlowLayout(FlowLayout.CENTER, BUTTONS_H_GAP, 0));
         this.buttonGrid.setPreferredSize(null);
+        refreshDecisionGeometry();
         this.buttonGrid.revalidate();
         this.buttonContainer.revalidate();
         this.decisionSurface.revalidate();
@@ -431,19 +420,76 @@ public class HelperPanel extends JPanel {
     }
 
     private static int getDecisionSurfaceHeightForCurrentSize() {
-        // Reserve one main line and one compact secondary line. The former global
-        // maximum reserved four lines and unnecessarily reduced the battlefield.
-        int textHeight = Math.max(
+        return getDecisionMessageHeightForCurrentSize()
+                + getFallbackFooterHeightForCurrentSize()
+                + DECISION_SURFACE_TOP_PADDING
+                + DECISION_SURFACE_BOTTOM_PADDING
+                + DECISION_CONTENT_GAP;
+    }
+
+    private static int getDecisionMessageHeightForCurrentSize() {
+        return Math.max(
                 DECISION_MIN_TEXT_HEIGHT,
                 GUISizeHelper.gameFeedbackPanelMainMessageFontSize
                         + GUISizeHelper.gameFeedbackPanelExtraMessageFontSize + 12
         );
-        int footerHeight = DECISION_FOOTER_HEIGHT;
-        int paddingHeight = DECISION_SURFACE_TOP_PADDING + DECISION_SURFACE_BOTTOM_PADDING + 4;
-        return textHeight + footerHeight + paddingHeight;
+    }
+
+    private static int getFallbackFooterHeightForCurrentSize() {
+        return Math.max(
+                DECISION_FOOTER_MIN_HEIGHT,
+                GUISizeHelper.gameFeedbackPanelButtonHeight
+                        + 2 * DECISION_FOOTER_VERTICAL_PADDING
+        );
+    }
+
+    private void refreshDecisionGeometry() {
+        if (dialogTextArea == null || buttonGrid == null || buttonContainer == null || decisionSurface == null) {
+            return;
+        }
+
+        Dimension buttonsSize = buttonGrid.getPreferredSize();
+        Dimension badgeSize = turnBadge != null && turnBadge.isVisible()
+                ? turnBadge.getPreferredSize()
+                : new Dimension();
+
+        int footerContentHeight = Math.max(buttonsSize.height, badgeSize.height);
+        int footerHeight = Math.max(
+                DECISION_FOOTER_MIN_HEIGHT,
+                footerContentHeight + 2 * DECISION_FOOTER_VERTICAL_PADDING
+        );
+
+        // Keeping an equally wide lane on both sides preserves the exact visual
+        // centre of the action buttons while leaving the turn badge in the corner.
+        int requiredFooterWidth = buttonsSize.width;
+        if (badgeSize.width > 0) {
+            requiredFooterWidth = Math.max(
+                    requiredFooterWidth,
+                    buttonsSize.width + 2 * (badgeSize.width + DECISION_BADGE_SIDE_GAP)
+            );
+        }
+
+        int minimumContentWidth = DECISION_SURFACE_WIDTH - 2 * DECISION_SURFACE_HORIZONTAL_PADDING;
+        int contentWidth = Math.max(minimumContentWidth, requiredFooterWidth);
+        int messageHeight = getDecisionMessageHeightForCurrentSize();
+        int surfaceHeight = messageHeight
+                + footerHeight
+                + DECISION_SURFACE_TOP_PADDING
+                + DECISION_SURFACE_BOTTOM_PADDING
+                + DECISION_CONTENT_GAP;
+
+        dialogTextArea.setPreferredSize(new Dimension(contentWidth, messageHeight));
+        buttonContainer.setPreferredSize(new Dimension(contentWidth, footerHeight));
+        decisionSurface.setPreferredSize(new Dimension(
+                contentWidth + 2 * DECISION_SURFACE_HORIZONTAL_PADDING,
+                surfaceHeight
+        ));
     }
 
     private int getDecisionSurfaceHeight() {
+        if (decisionSurface != null && decisionSurface.getPreferredSize().height > 0) {
+            return decisionSurface.getPreferredSize().height;
+        }
         return getDecisionSurfaceHeightForCurrentSize();
     }
 
@@ -521,20 +567,19 @@ public class HelperPanel extends JPanel {
             Dimension buttonsSize = buttonGrid.getPreferredSize();
             Dimension badgeSize = turnBadge.getPreferredSize();
             int badgeWidth = turnBadge.isVisible() ? Math.min(badgeSize.width, Math.max(0, width - 8)) : 0;
-            int badgeHeight = turnBadge.isVisible() ? Math.min(badgeSize.height, Math.max(0, height - 4)) : 0;
+            int availableHeight = Math.max(0, height - 2 * DECISION_FOOTER_VERTICAL_PADDING);
+            int badgeHeight = turnBadge.isVisible() ? Math.min(badgeSize.height, availableHeight) : 0;
             // Reserve an equal side lane for the badge on both sides. The controls
             // remain exactly centred and the badge stays fully inside the corner.
-            int badgeSide = badgeWidth > 0 ? badgeWidth + 8 : 0;
+            int badgeSide = badgeWidth > 0 ? badgeWidth + DECISION_BADGE_SIDE_GAP : 0;
             int centralWidth = Math.max(0, width - 2 * badgeSide);
             int buttonWidth = Math.min(buttonsSize.width, centralWidth);
-            int buttonHeight = Math.min(buttonsSize.height, Math.max(0, height - 4));
+            int buttonHeight = Math.min(buttonsSize.height, availableHeight);
             int buttonX = badgeSide + Math.max(0, (centralWidth - buttonWidth) / 2);
             int buttonY = Math.max(0, (height - buttonHeight) / 2);
 
-            int badgeX = Math.max(0, width - badgeWidth - 6);
+            int badgeX = Math.max(0, width - badgeWidth);
             int badgeY = Math.max(0, (height - badgeHeight) / 2);
-
-
             buttonGrid.setBounds(buttonX, buttonY, buttonWidth, buttonHeight);
             turnBadge.setBounds(badgeX, badgeY, badgeWidth, badgeHeight);
         }
@@ -718,6 +763,7 @@ public class HelperPanel extends JPanel {
             }
             turnBadge.setVisible(validTurnInfo);
         }
+        refreshDecisionGeometry();
         revalidate();
         repaint();
     }

@@ -66,6 +66,33 @@ class HelperPanelLayoutTest {
         }
     }
 
+    @Test
+    void outerFeedbackRowGrowsWhenHtmlWrapsAfterResize() throws Exception {
+        AtomicReference<FeedbackPanel> reference = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            FeedbackPanel feedback = new FeedbackPanel();
+            HelperPanel helper = new HelperPanel();
+            feedback.setHelperPanel(helper);
+            feedback.setLayout(new BorderLayout());
+            feedback.add(helper, BorderLayout.CENTER);
+            helper.setMessages("A deliberately long decision message that must wrap onto a second line without clipping", "Additional context");
+            helper.setLeft("Yes", true);
+            helper.setRight("No", true);
+            helper.setTurnInfo("Opponent", 4, false);
+            helper.changeGUISize();
+            helper.setSize(1000, helper.getRequiredHeight());
+            feedback.setSize(1000, helper.getRequiredHeight());
+            layoutTree(feedback);
+            reference.set(feedback);
+        });
+        SwingUtilities.invokeAndWait(() -> layoutTree(reference.get()));
+
+        FeedbackPanel feedback = reference.get();
+        HelperPanel helper = (HelperPanel) feedback.getComponent(0);
+        Assertions.assertTrue(feedback.getHeight() >= helper.getRequiredHeight(), "outer feedback row must contain helper");
+        Assertions.assertTrue(feedback.getPreferredSize().height >= helper.getRequiredHeight(), "outer preferred height must follow helper");
+    }
+
     private static void layoutTree(Container container) {
         container.doLayout();
         for (Component component : container.getComponents()) {

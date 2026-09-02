@@ -68,6 +68,23 @@ public class FeedbackPanel extends javax.swing.JPanel {
         helper.changeGUISize();
     }
 
+    /**
+     * Re-apply the outer row size after the helper has measured a new message.
+     * Messages are rendered asynchronously by MageTextArea, so the original
+     * GamePanel resize pass may have happened before the final line wrapping.
+     */
+    public void refreshLayoutSize() {
+        if (helper == null) {
+            return;
+        }
+        int height = helper.getRequiredHeight();
+        setPreferredSize(new Dimension(Short.MAX_VALUE, height));
+        setMinimumSize(new Dimension(0, height));
+        setMaximumSize(new Dimension(Short.MAX_VALUE, height));
+        revalidate();
+        repaint();
+    }
+
     private void setGUISize() {
     }
 

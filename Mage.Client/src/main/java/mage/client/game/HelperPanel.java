@@ -484,6 +484,10 @@ public class HelperPanel extends JPanel {
                 contentWidth + 2 * DECISION_SURFACE_HORIZONTAL_PADDING,
                 surfaceHeight
         ));
+        Container parent = getParent();
+        if (parent instanceof FeedbackPanel) {
+            ((FeedbackPanel) parent).refreshLayoutSize();
+        }
     }
 
     private int getDecisionMessageHeight(int contentWidth) {

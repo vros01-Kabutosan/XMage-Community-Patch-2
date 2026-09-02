@@ -1964,6 +1964,16 @@ extends JPanel {
                 return true;
             }
         }
+        // After resolution the spell is normally in its owner's graveyard.
+        // Keep matching by its stable object name and zone-change suffix.
+        for (PlayerView player : game.getPlayers()) {
+            for (CardView graveyardCard : player.getGraveyard().values()) {
+                if (graveyardCard.getMageObjectType() == MageObjectType.SPELL
+                        && revealName.startsWith(graveyardCard.getName())) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 

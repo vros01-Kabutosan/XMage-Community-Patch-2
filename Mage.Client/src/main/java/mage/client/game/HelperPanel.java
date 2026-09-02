@@ -41,7 +41,7 @@ public class HelperPanel extends JPanel {
      * overlaps the top of the hand area. Keep the decision surface above that
      * overlay so its rounded border and footer remain fully visible.
      */
-    private static final int DECISION_PHASE_BAR_CLEARANCE = 18;
+    private static final int DECISION_PHASE_BAR_CLEARANCE = 24;
 
     private javax.swing.JButton btnLeft;
     private javax.swing.JButton btnRight;
@@ -122,6 +122,10 @@ public class HelperPanel extends JPanel {
     private void setGUISize() {
         //this.setMaximumSize(new Dimension(getParent().getWidth(), Integer.MAX_VALUE));
         int contentWidth = DECISION_SURFACE_WIDTH - 2 * DECISION_SURFACE_HORIZONTAL_PADDING;
+        // The fixed decision surface owns the available height; do not let the
+        // HTML view request extra height and introduce a visible scrollbar.
+        dialogTextArea.setMinimumSize(new Dimension(0, 0));
+        dialogTextArea.setPreferredSize(new Dimension(contentWidth, 0));
         textAreaScrollPane.setMaximumSize(new Dimension(contentWidth, GUISizeHelper.gameFeedbackPanelMaxHeight));
         textAreaScrollPane.setPreferredSize(new Dimension(contentWidth, GUISizeHelper.gameFeedbackPanelMaxHeight));
 
@@ -157,7 +161,7 @@ public class HelperPanel extends JPanel {
         dialogTextArea.setText("<Empty>");
         dialogTextArea.setOpaque(false);
 
-        textAreaScrollPane = new JScrollPane(dialogTextArea, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        textAreaScrollPane = new JScrollPane(dialogTextArea, ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         textAreaScrollPane.setOpaque(false);
         textAreaScrollPane.setBackground(new Color(0, 0, 0, 0));
         textAreaScrollPane.getViewport().setOpaque(false);

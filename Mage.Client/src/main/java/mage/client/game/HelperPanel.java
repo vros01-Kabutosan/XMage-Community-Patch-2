@@ -471,7 +471,7 @@ public class HelperPanel extends JPanel {
 
         int minimumContentWidth = DECISION_SURFACE_WIDTH - 2 * DECISION_SURFACE_HORIZONTAL_PADDING;
         int contentWidth = Math.max(minimumContentWidth, requiredFooterWidth);
-        int messageHeight = getDecisionMessageHeightForCurrentSize();
+        int messageHeight = getDecisionMessageHeight(contentWidth);
         int surfaceHeight = messageHeight
                 + footerHeight
                 + DECISION_SURFACE_TOP_PADDING
@@ -484,6 +484,18 @@ public class HelperPanel extends JPanel {
                 contentWidth + 2 * DECISION_SURFACE_HORIZONTAL_PADDING,
                 surfaceHeight
         ));
+    }
+
+    private int getDecisionMessageHeight(int contentWidth) {
+        int fallbackHeight = getDecisionMessageHeightForCurrentSize();
+        Dimension oldPreferredSize = dialogTextArea.getPreferredSize();
+        dialogTextArea.setPreferredSize(null);
+        dialogTextArea.setSize(contentWidth, Integer.MAX_VALUE);
+        int naturalHeight = dialogTextArea.getPreferredSize().height;
+        dialogTextArea.setPreferredSize(oldPreferredSize);
+
+        int safeMaximum = Math.max(fallbackHeight, GUISizeHelper.gameFeedbackPanelMaxHeight);
+        return Math.min(safeMaximum, Math.max(fallbackHeight, naturalHeight + 2));
     }
 
     private int getDecisionSurfaceHeight() {
@@ -780,6 +792,7 @@ public class HelperPanel extends JPanel {
             panelText += "<div style='font-size:" + GUISizeHelper.gameFeedbackPanelExtraMessageFontSize + "pt'>" + secondaryMessage + "</div>";
         }
         this.dialogTextArea.setText(panelText, DECISION_SURFACE_WIDTH - 2 * DECISION_SURFACE_HORIZONTAL_PADDING);
+        SwingUtilities.invokeLater(this::refreshDecisionGeometry);
     }
 
     public void setAutoAnswerMessage(String autoAnswerMessage) {

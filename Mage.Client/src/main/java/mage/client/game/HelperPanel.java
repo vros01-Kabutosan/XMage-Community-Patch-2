@@ -426,13 +426,24 @@ public class HelperPanel extends JPanel {
         this.repaint();
     }
 
+    private static int getDecisionSurfaceHeightForCurrentSize() {
+        int textHeight = Math.max(0, GUISizeHelper.gameFeedbackPanelMaxHeight);
+        int footerHeight = DECISION_FOOTER_HEIGHT;
+        int paddingHeight = 2 * DECISION_SURFACE_VERTICAL_PADDING + 4;
+        return Math.max(86, textHeight + footerHeight + paddingHeight);
+    }
+
     private int getDecisionSurfaceHeight() {
-        int feedbackRowHeight = Math.max(
-                Math.round(GUISizeHelper.gameFeedbackPanelButtonHeight * 150 / 100.0f),
-                GUISizeHelper.gameFeedbackPanelMainMessageFontSize
-                        + GUISizeHelper.gameFeedbackPanelExtraMessageFontSize + 30
-        );
-        return Math.max(86, feedbackRowHeight * 2 - 2 * getInsets().top);
+        return getDecisionSurfaceHeightForCurrentSize();
+    }
+
+    public static int getRequiredHeightForCurrentSize() {
+        return getDecisionSurfaceHeightForCurrentSize() + 14;
+    }
+
+    public int getRequiredHeight() {
+        Insets insets = getInsets();
+        return getDecisionSurfaceHeight() + insets.top + insets.bottom;
     }
 
     private static class CenteredDecisionLayout implements LayoutManager {
@@ -482,7 +493,7 @@ public class HelperPanel extends JPanel {
             int width = Math.min(preferred.width, availableWidth);
             int height = Math.min(preferred.height, availableHeight);
             int x = insets.left + Math.max(0, (availableWidth - width) / 2);
-            int y = insets.top;
+            int y = insets.top + Math.max(0, (availableHeight - height) / 2);
             child.setBounds(x, y, width, height);
         }
     }

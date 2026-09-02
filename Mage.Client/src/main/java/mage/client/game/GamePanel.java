@@ -632,12 +632,10 @@ extends JPanel {
         this.txtHoldPriority.setFont(new Font(GUISizeHelper.gameFeedbackPanelFont.getFontName(), 1, GUISizeHelper.gameFeedbackPanelFont.getSize()));
         GUISizeHelper.changePopupMenuFont(this.popupMenuTriggerOrder);
         int upperPanelsHeight = this.getSkipButtonsPanelDefaultHeight();
-        int feedbackButtonRowHeight = Math.round((float)(GUISizeHelper.gameFeedbackPanelButtonHeight * 150) / 100.0f);
-        int feedbackTextRowHeight = GUISizeHelper.gameFeedbackPanelMainMessageFontSize + GUISizeHelper.gameFeedbackPanelExtraMessageFontSize + 30;
-        int feedbackRowHeight = Math.max(feedbackButtonRowHeight, feedbackTextRowHeight);
-        // The phase summary now has its own fixed row between the decision
-        // surface and the hand, so it cannot cover or resize the feedback UI.
-        int feedbackPanelHeight = Math.max(upperPanelsHeight, feedbackRowHeight * 2);
+        // Reserve the complete decision surface: message viewport, footer,
+        // rounded-surface padding and the HelperPanel outer insets. This keeps
+        // the buttons and lower rounded corners inside the feedback row.
+        int feedbackPanelHeight = Math.max(upperPanelsHeight, HelperPanel.getRequiredHeightForCurrentSize());
         this.feedbackPanel.setPreferredSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
         this.feedbackPanel.setMinimumSize(new Dimension(0, feedbackPanelHeight));
         this.feedbackPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));

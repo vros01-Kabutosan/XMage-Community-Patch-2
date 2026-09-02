@@ -2998,7 +2998,9 @@ extends JPanel {
         this.phaseSummaryBar.setOpaque(false);
         this.phaseSummaryBar.setBackground(new Color(24, 27, 34));
         this.phaseSummaryBar.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
-        this.phaseSummaryBar.setPreferredSize(new Dimension(1600, 44));
+        this.phaseSummaryBar.setPreferredSize(new Dimension(0, 44));
+        this.phaseSummaryBar.setMinimumSize(new Dimension(0, 44));
+        this.phaseSummaryBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         this.phaseSummaryBar.setVisible(false);
         String[] summaryPhases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"};
         for (String phaseName : summaryPhases) {

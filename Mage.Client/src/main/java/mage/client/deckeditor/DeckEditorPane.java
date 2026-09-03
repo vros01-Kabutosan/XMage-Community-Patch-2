@@ -1,6 +1,7 @@
 package mage.client.deckeditor;
 
 import mage.cards.decks.Deck;
+import mage.cards.decks.DeckCardLists;
 import mage.client.MagePane;
 import mage.client.constants.Constants.DeckEditorMode;
 import mage.client.plugins.impl.Plugins;
@@ -17,6 +18,8 @@ import java.util.UUID;
  * @author BetaSteward_at_googlemail.com, JayDi85
  */
 public class DeckEditorPane extends MagePane {
+
+    private static DeckEditorPane activeFreeBuildingEditor;
 
     private UUID currentTableId = null;
     private UUID parentTableId = null;
@@ -47,6 +50,11 @@ public class DeckEditorPane extends MagePane {
     }
 
     public void show(DeckEditorMode mode, Deck deck, String name, UUID currentTableId, UUID parentTableId, int visibleTimer) {
+        if (mode == DeckEditorMode.FREE_BUILDING) {
+            activeFreeBuildingEditor = this;
+        } else if (activeFreeBuildingEditor == this) {
+            activeFreeBuildingEditor = null;
+        }
         this.currentTableId = currentTableId;
         this.parentTableId = parentTableId;
         this.setTitle(name);
@@ -61,6 +69,24 @@ public class DeckEditorPane extends MagePane {
 
     public DeckEditorMode getDeckEditorMode() {
         return this.deckEditorPanel1.getDeckEditorMode();
+    }
+
+    public DeckCardLists getDeckForPlay() {
+        return this.deckEditorPanel1.getDeckForPlay();
+    }
+
+    public String getDeckName() {
+        return this.deckEditorPanel1.getDeckName();
+    }
+
+    public static DeckCardLists getActiveDeckForPlay() {
+        DeckEditorPane editor = activeFreeBuildingEditor;
+        return editor == null ? null : editor.getDeckForPlay();
+    }
+
+    public static String getActiveDeckName() {
+        DeckEditorPane editor = activeFreeBuildingEditor;
+        return editor == null ? null : editor.getDeckName();
     }
 
     @Override

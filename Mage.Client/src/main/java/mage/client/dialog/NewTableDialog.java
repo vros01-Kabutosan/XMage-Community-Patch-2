@@ -1,7 +1,9 @@
 package mage.client.dialog;
 
 import mage.cards.decks.importer.DeckImporter;
+import mage.cards.decks.DeckCardLists;
 import mage.client.MageFrame;
+import mage.client.deckeditor.DeckEditorPane;
 import mage.client.SessionHandler;
 import mage.client.components.MageComponents;
 import mage.client.table.TablePlayerPanel;
@@ -45,6 +47,7 @@ public class NewTableDialog extends MageDialog {
     private TableView table;
     private UUID playerId;
     private UUID roomId;
+    private DeckCardLists editorDeck;
     private String lastSessionId;
     private final List<TablePlayerPanel> players = new ArrayList<>();
 
@@ -532,7 +535,8 @@ public class NewTableDialog extends MageDialog {
                     table.getTableId(),
                     this.player1Panel.getPlayerName(),
                     PlayerType.HUMAN, 1,
-                    DeckImporter.importDeckFromFile(this.player1Panel.getDeckFile(), true),
+                    (this.player1Panel.getDeckFile().startsWith("[Deck Editor] ") && this.editorDeck != null
+                            ? this.editorDeck : DeckImporter.importDeckFromFile(this.player1Panel.getDeckFile(), true)),
                     this.txtPassword.getText())) {
                 // all fine, can close create dialog (join dialog will be opened after feedback from server)
                 doClose();
@@ -851,6 +855,7 @@ public class NewTableDialog extends MageDialog {
 
         // auto-load last settings
         onLoadSettings(0);
+        applyEditorDeck();
 
         this.setVisible(true);
     }
@@ -861,6 +866,28 @@ public class NewTableDialog extends MageDialog {
 
     public UUID getPlayerId() {
         return playerId;
+    }
+
+    private void applyEditorDeck() {
+        this.editorDeck = DeckEditorPane.getActiveDeckForPlay();
+        if (this.editorDeck != null) {
+            String label = DeckEditorPane.getActiveDeckName();
+            this.player1Panel.setDeckFile("[Deck Editor] "
+                    + (label == null || label.trim().isEmpty() ? "Current deck" : label));
+            if (LIMITED.equals(this.cbDeckType.getSelectedItem())) {
+                for (int i = 0; i < this.cbDeckType.getItemCount(); i++) {
+                    Object item = this.cbDeckType.getItemAt(i);
+                    if (item != null && !LIMITED.equals(item.toString())) {
+                        this.cbDeckType.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            }
+            return;
+        }
+        if (this.player1Panel.getDeckFile().startsWith("[Deck Editor] ")) {
+            this.player1Panel.setDeckFile("");
+        }
     }
 
     private void selectLimitedByDefault() {

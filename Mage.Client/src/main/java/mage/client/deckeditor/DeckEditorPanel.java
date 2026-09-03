@@ -723,6 +723,18 @@ public class DeckEditorPanel extends javax.swing.JPanel {
         return mode;
     }
 
+    /** Returns a cards-only snapshot for starting a constructed game. */
+    public DeckCardLists getDeckForPlay() {
+        if (mode != DeckEditorMode.FREE_BUILDING) {
+            return null;
+        }
+        return deck.prepareCardsOnlyDeck();
+    }
+
+    public String getDeckName() {
+        return deck.getName();
+    }
+
     private BigCard getBigCard() {
         return this.bigCard;
     }

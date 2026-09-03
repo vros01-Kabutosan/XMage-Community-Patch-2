@@ -1,8 +1,10 @@
 package mage.client.dialog;
 
 import mage.cards.decks.importer.DeckImporter;
+import mage.cards.decks.DeckCardLists;
 import mage.client.MageFrame;
 import mage.client.SessionHandler;
+import mage.client.deckeditor.DeckEditorPane;
 import mage.players.PlayerType;
 import mage.remote.Session;
 import org.apache.log4j.Logger;
@@ -23,6 +25,7 @@ public class JoinTableDialog extends MageDialog {
     private UUID roomId;
     private boolean joined = false;
     private boolean isTournament;
+    private DeckCardLists editorDeck;
 
     /**
      * Creates new form JoinTableDialog
@@ -39,11 +42,39 @@ public class JoinTableDialog extends MageDialog {
         this.isTournament = isTournament;
         this.newPlayerPanel.setPlayerName(SessionHandler.getUserName());
         this.newPlayerPanel.showDeckElements(!isLimited);
+        this.editorDeck = null;
+        if (!isLimited) {
+            DeckEditorPane deckEditor = findFreeDeckEditor();
+            if (deckEditor != null) {
+                this.editorDeck = deckEditor.getDeckForPlay();
+                if (this.editorDeck != null && this.newPlayerPanel.getDeckFile().trim().isEmpty()) {
+                    String label = this.editorDeck.getName();
+                    this.newPlayerPanel.setDeckFile("[Deck Editor] "
+                            + (label == null || label.trim().isEmpty() ? "Current deck" : label));
+                }
+            }
+        }
+        if (this.editorDeck == null && this.newPlayerPanel.getDeckFile().startsWith("[Deck Editor] ")) {
+            this.newPlayerPanel.setDeckFile("");
+        }
         this.setModal(true);
         this.setLocation(100, 100);
         this.setVisible(true);
     }
 
+
+    private DeckEditorPane findFreeDeckEditor() {
+        for (java.awt.Component frame : MageFrame.getDesktop().getComponentsInLayer(javax.swing.JLayeredPane.DEFAULT_LAYER)) {
+            if (frame instanceof DeckEditorPane) {
+                DeckEditorPane deckEditor = (DeckEditorPane) frame;
+                if (deckEditor.isVisible()
+                        && deckEditor.getDeckEditorMode() == mage.client.constants.Constants.DeckEditorMode.FREE_BUILDING) {
+                    return deckEditor;
+                }
+            }
+        }
+        return null;
+    }
 
     /**
      * This method is called from within the constructor to
@@ -122,10 +153,13 @@ public class JoinTableDialog extends MageDialog {
         try {
             // remember pass for next joins
             PreferencesDialog.saveValue(PreferencesDialog.KEY_NEW_TABLE_PASSWORD_JOIN, txtPassword.getText());
+            String selectedDeck = this.newPlayerPanel.getDeckFile();
+            DeckCardLists deckToJoin = selectedDeck.startsWith("[Deck Editor] ") && this.editorDeck != null
+                    ? this.editorDeck : DeckImporter.importDeckFromFile(selectedDeck, true);
             if (isTournament) {
-                joined = session.joinTournamentTable(roomId, tableId, this.newPlayerPanel.getPlayerName(), PlayerType.HUMAN, 1, DeckImporter.importDeckFromFile(this.newPlayerPanel.getDeckFile(), true), this.txtPassword.getText());
+                joined = session.joinTournamentTable(roomId, tableId, this.newPlayerPanel.getPlayerName(), PlayerType.HUMAN, 1, deckToJoin, this.txtPassword.getText());
             } else {
-                joined = session.joinTable(roomId, tableId, this.newPlayerPanel.getPlayerName(), PlayerType.HUMAN, 1, DeckImporter.importDeckFromFile(this.newPlayerPanel.getDeckFile(), true), this.txtPassword.getText());
+                joined = session.joinTable(roomId, tableId, this.newPlayerPanel.getPlayerName(), PlayerType.HUMAN, 1, deckToJoin, this.txtPassword.getText());
             }
 
         } catch (Exception ex) {

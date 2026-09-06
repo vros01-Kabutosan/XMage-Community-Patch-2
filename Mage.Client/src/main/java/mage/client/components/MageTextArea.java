@@ -15,6 +15,7 @@ public class MageTextArea extends MageEditorPane {
     private String currentText;
     private int currentPanelWidth;
 
+    private long textUpdateGeneration;
     public MageTextArea() {
         super();
         setEditable(false);
@@ -38,6 +39,7 @@ public class MageTextArea extends MageEditorPane {
 
         currentText = text;
         currentPanelWidth = panelWidth;
+        final long updateGeneration = ++textUpdateGeneration;
 
         // prepare text format as header and details texts
 
@@ -60,6 +62,9 @@ public class MageTextArea extends MageEditorPane {
 
         SwingUtilities.invokeLater(() -> {
             String promptText = buffer.toString();
+            if (updateGeneration != textUpdateGeneration) {
+                return;
+            }
             MageTextArea.super.setText(promptText);
             // in case the text don't fit in the panel a tooltip with the text is added
             if (panelWidth > 0 && MageTextArea.this.getPreferredSize().getWidth() > panelWidth) {

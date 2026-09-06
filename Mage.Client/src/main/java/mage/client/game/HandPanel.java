@@ -8,9 +8,12 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
+import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import mage.client.cards.BigCard;
@@ -21,16 +24,14 @@ import mage.view.CardsView;
 
 public class HandPanel
 extends JPanel {
-    private static final double XCP_HAND_SCALE = 1.12;
+
     private JPanel jPanel;
     private JScrollPane jScrollPane1;
     private static final Border EMPTY_BORDER = new EmptyBorder(0, 0, 0, 0);
     private Cards hand;
+    private final AtomicLong loadSequence = new AtomicLong();
 
-    private Dimension getCommunityHandCardDimension() {
-        Dimension base = GUISizeHelper.handCardDimension;
-        return new Dimension(Math.max(base.width, (int)Math.round((double)base.width * 1.12)), Math.max(base.height, (int)Math.round((double)base.height * 1.12)));
-    }
+
 
     public HandPanel() {
         this.initComponents();
@@ -42,7 +43,7 @@ extends JPanel {
         this.jScrollPane1 = new JScrollPane(this.jPanel);
         this.jScrollPane1.getViewport().setBackground(new Color(0, 0, 0, 0));
         this.hand = new Cards(true, this.jScrollPane1);
-        this.hand.setCardDimension(this.getCommunityHandCardDimension());
+        this.hand.setCardDimension(GUISizeHelper.handCardDimension);
         this.jPanel.setLayout(new GridBagLayout());
         this.jPanel.setBackground(new Color(0, 0, 0, 0));
         this.jPanel.add(this.hand);
@@ -64,6 +65,7 @@ extends JPanel {
     }
 
     public void cleanUp() {
+        this.loadSequence.incrementAndGet();
         this.hand.cleanUp();
     }
 
@@ -74,12 +76,28 @@ extends JPanel {
     private void setGUISize() {
         this.jScrollPane1.getVerticalScrollBar().setPreferredSize(new Dimension(GUISizeHelper.scrollBarSize, 0));
         this.jScrollPane1.getHorizontalScrollBar().setPreferredSize(new Dimension(0, GUISizeHelper.scrollBarSize));
-        this.jScrollPane1.getHorizontalScrollBar().setUnitIncrement(GUISizeHelper.getCardsScrollbarUnitInc(this.getCommunityHandCardDimension().width));
-        this.hand.setCardDimension(this.getCommunityHandCardDimension());
+        this.jScrollPane1.getHorizontalScrollBar().setUnitIncrement(GUISizeHelper.getCardsScrollbarUnitInc(GUISizeHelper.handCardDimension.width));
+        this.hand.setCardDimension(GUISizeHelper.handCardDimension);
         this.hand.changeGUISize();
     }
 
     public void loadCards(CardsView cards, BigCard bigCard, UUID gameId) {
-        this.hand.loadCards(cards, bigCard, gameId, false);
+        // Game updates arrive from the network thread, while card dragging and
+        // painting run on Swing's EDT.  Never mutate the hand component tree
+        // from both threads, and discard an older queued update if a newer
+        // game snapshot has already arrived.
+        CardsView snapshot = new CardsView(new ArrayList<>(cards.values()));
+        long sequence = this.loadSequence.incrementAndGet();
+        Runnable update = () -> {
+            if (sequence != this.loadSequence.get()) {
+                return;
+            }
+            this.hand.loadCards(snapshot, bigCard, gameId, false);
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            update.run();
+        } else {
+            SwingUtilities.invokeLater(update);
+        }
     }
 }

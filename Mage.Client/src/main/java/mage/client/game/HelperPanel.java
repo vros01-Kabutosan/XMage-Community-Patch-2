@@ -40,6 +40,7 @@ public class HelperPanel extends JPanel {
     private static final int DECISION_FOOTER_MIN_HEIGHT = 40;
     private static final int DECISION_FOOTER_VERTICAL_PADDING = 3;
     private static final int DECISION_BADGE_SIDE_GAP = 10;
+    private static final int DECISION_TURN_BADGE_WIDTH = 180;
     private static final int DECISION_MIN_TEXT_HEIGHT = 33;
     // Reserve a stable text area so phase refreshes cannot move the bottom-anchored row.
     private static final int DECISION_STABLE_EXTRA_TEXT_LINES = 2;
@@ -88,6 +89,8 @@ public class HelperPanel extends JPanel {
     private String turnPlayerName;
     private int turnNumber;
     private boolean ownTurn;
+    private int largestDecisionSurfaceHeight;
+    private int largestDecisionSurfaceWidth;
     private JLabel turnBadge;
 
     private Timer needFeedbackTimer;
@@ -116,6 +119,7 @@ public class HelperPanel extends JPanel {
     }
 
     public void changeGUISize() {
+        largestDecisionSurfaceHeight = 0;
         setGUISize();
     }
 
@@ -167,6 +171,7 @@ public class HelperPanel extends JPanel {
         turnBadge.setHorizontalAlignment(SwingConstants.CENTER);
         turnBadge.setOpaque(false);
         turnBadge.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+        turnBadge.setPreferredSize(new Dimension(DECISION_TURN_BADGE_WIDTH, 34));
 
         buttonGrid = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
         buttonGrid.setOpaque(false);
@@ -472,13 +477,19 @@ public class HelperPanel extends JPanel {
         }
 
         int minimumContentWidth = DECISION_SURFACE_WIDTH - 2 * DECISION_SURFACE_HORIZONTAL_PADDING;
-        int contentWidth = Math.max(minimumContentWidth, requiredFooterWidth);
+        largestDecisionSurfaceWidth = Math.max(largestDecisionSurfaceWidth, Math.max(minimumContentWidth, requiredFooterWidth));
+        int contentWidth = largestDecisionSurfaceWidth;
         int messageHeight = getDecisionMessageHeight(contentWidth);
         int surfaceHeight = messageHeight
                 + footerHeight
                 + DECISION_SURFACE_TOP_PADDING
                 + DECISION_SURFACE_BOTTOM_PADDING
                 + DECISION_CONTENT_GAP;
+        // Reserve the stable envelope from the first layout so phase text changes
+        // cannot move the centered decision surface by a pixel.
+        surfaceHeight = Math.max(surfaceHeight, getStableDecisionSurfaceHeightForCurrentSize());
+        largestDecisionSurfaceHeight = Math.max(largestDecisionSurfaceHeight, surfaceHeight);
+        surfaceHeight = largestDecisionSurfaceHeight;
 
         dialogTextArea.setPreferredSize(new Dimension(contentWidth, messageHeight));
         buttonContainer.setPreferredSize(new Dimension(contentWidth, footerHeight));
@@ -789,15 +800,23 @@ public class HelperPanel extends JPanel {
         this.turnNumber = turnNumber;
         this.ownTurn = ownTurn;
         boolean validTurnInfo = playerName != null && !playerName.isEmpty() && turnNumber > 0;
+        boolean badgeVisibilityChanged = false;
         if (turnBadge != null) {
+            badgeVisibilityChanged = turnBadge.isVisible() != validTurnInfo;
             turnBadge.setText(validTurnInfo ? "Turn " + turnNumber + " · " + playerName : "");
             if (validTurnInfo) {
                 turnBadge.setBackground(ownTurn ? new Color(38, 105, 68, 235) : new Color(122, 102, 35, 235));
             }
             turnBadge.setVisible(validTurnInfo);
         }
-        refreshDecisionGeometry();
-        revalidate();
+        // Keep the decision surface fixed while only the turn text changes.
+        if (badgeVisibilityChanged) {
+            refreshDecisionGeometry();
+            revalidate();
+        }
+        if (turnBadge != null) {
+            turnBadge.repaint();
+        }
         repaint();
     }
 

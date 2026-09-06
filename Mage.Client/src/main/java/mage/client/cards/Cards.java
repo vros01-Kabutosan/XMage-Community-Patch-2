@@ -307,10 +307,10 @@ implements CardEventProducer {
     private void addCard(CardView card, BigCard bigCard, UUID gameId) {
         MageCard mageCard = Plugins.instance.getMageCard(card, bigCard, new CardIconRenderSettings(), this.getCardDimension(), gameId, true, true, PreferencesDialog.getRenderMode(), true);
         mageCard.setCardContainerRef((Container)(this.verticalStackLayout ? this : this.cardArea));
+        mageCard.update(card);
         if (this.zone != null) {
             mageCard.setZone(this.zone);
         }
-        mageCard.update(card);
         this.cards.put(card.getId(), mageCard);
         this.cardArea.add((Component)mageCard);
         this.definePosition(mageCard);

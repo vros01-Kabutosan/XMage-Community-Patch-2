@@ -280,7 +280,9 @@ implements ActionCallback {
         }
         Point mouse = new Point(e.getX(), e.getY());
         SwingUtilities.convertPointToScreen(mouse, (Component)data.getComponent());
-        if (!this.isDragging && Math.abs(mouse.x - this.initialMousePos.x) < 20 && Math.abs(mouse.y - this.initialMousePos.y) < 20) {
+        if (!this.isDragging
+                && Math.abs(mouse.x - this.initialMousePos.x) < HAND_CARDS_MIN_DISTANCE_TO_START_DRAGGING
+                && Math.abs(mouse.y - this.initialMousePos.y) < HAND_CARDS_MIN_DISTANCE_TO_START_DRAGGING) {
             return;
         }
         this.isDragging = true;
@@ -335,11 +337,11 @@ implements ActionCallback {
             MageCard realCard = (MageCard)comp;
             if (!realCard.equals(card)) {
                 if (!this.draggingCards.contains(realCard)) {
-                    realCard.setCardLocation(realCard.getCardLocation().getCardX(), realCard.getCardLocation().getCardY() + 0);
+                    realCard.setCardLocation(realCard.getCardLocation().getCardX(), realCard.getCardLocation().getCardY() + GO_DOWN_ON_DRAG_Y_OFFSET);
                 }
                 this.draggingCards.add(realCard);
             } else if (!this.startedDragging) {
-                realCard.setCardLocation(realCard.getCardLocation().getCardX(), realCard.getCardLocation().getCardY() - 0);
+                realCard.setCardLocation(realCard.getCardLocation().getCardX(), realCard.getCardLocation().getCardY() - GO_DOWN_ON_DRAG_Y_OFFSET);
             }
             cards.add(realCard);
         }
@@ -354,18 +356,22 @@ implements ActionCallback {
         boolean createdGapForSource = false;
         for (MageCard component : cards) {
             if (!includeSource) {
-                if (component.equals(source)) continue;
+                if (!component.equals(source)) {
+                    component.setCardLocation(dx, component.getCardLocation().getCardY());
+                    dx += component.getCardLocation().getCardWidth() + MageActionCallback.getHandOrStackBetweenGapX(source.getZone());
+                    if (!createdGapForSource && (dx + HAND_CARDS_COMPARE_GAP_X) > source.getCardLocation().getCardX()) {
+                        createdGapForSource = true;
+                        int gapOffset = component.getCardLocation().getCardWidth() + MageActionCallback.getHandOrStackBetweenGapX(source.getZone());
+                        dx += gapOffset;
+                        if (cards.get(0).equals(source) && cards.size() > 1 && cards.get(1).equals(component)) {
+                            component.setCardLocation(component.getCardLocation().getCardX() + gapOffset, component.getCardLocation().getCardY());
+                        }
+                    }
+                }
+            } else {
                 component.setCardLocation(dx, component.getCardLocation().getCardY());
-                if (createdGapForSource || (dx += component.getCardLocation().getCardWidth() + MageActionCallback.getHandOrStackBetweenGapX(source.getZone())) + 30 <= source.getCardLocation().getCardX()) continue;
-                createdGapForSource = true;
-                int gapOffset = component.getCardLocation().getCardWidth() + MageActionCallback.getHandOrStackBetweenGapX(source.getZone());
-                dx += gapOffset;
-                if (!cards.get(0).equals(source) || cards.size() <= 1 || !cards.get(1).equals(component)) continue;
-                component.setCardLocation(component.getCardLocation().getCardX() + gapOffset, component.getCardLocation().getCardY());
-                continue;
+                dx += component.getCardLocation().getCardWidth() + MageActionCallback.getHandOrStackBetweenGapX(source.getZone());
             }
-            component.setCardLocation(dx, component.getCardLocation().getCardY());
-            dx += component.getCardLocation().getCardWidth() + MageActionCallback.getHandOrStackBetweenGapX(source.getZone());
         }
     }
 

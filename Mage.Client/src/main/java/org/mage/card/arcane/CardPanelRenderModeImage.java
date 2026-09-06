@@ -507,8 +507,14 @@ extends CardPanel {
 
     @Override
     public void setCardBounds(int x, int y, int cardWidth, int cardHeight) {
+        int previousCardWidth = this.getCardWidth();
+        int previousCardHeight = this.getCardHeight();
         super.setCardBounds(x, y, cardWidth, cardHeight);
-        if (this.imagePanel != null && this.imagePanel.getSrcImage() != null) {
+        // Moving a card only changes its coordinates. Re-loading the image for
+        // every coordinate update races the image worker and can briefly clear
+        // the card while the hand is being reordered.
+        boolean sizeChanged = previousCardWidth != cardWidth || previousCardHeight != cardHeight;
+        if (sizeChanged && this.imagePanel != null && this.imagePanel.getSrcImage() != null) {
             this.updateArtImage();
         }
     }
@@ -579,19 +585,37 @@ extends CardPanel {
     }
 
     public void updateArtImage() {
+        if (!javax.swing.SwingUtilities.isEventDispatchThread()) {
+            javax.swing.SwingUtilities.invokeLater(this::updateArtImage);
+            return;
+        }
         this.setTappedAngle(this.isTapped() ? 1.5707963267948966 : 0.0);
         this.setFlippedAngle(this.isFlipped() ? Math.PI : 0.0);
+        final CardView requestedCard = this.getGameCard();
+        if (requestedCard == null) {
+            return;
+        }
+        final UUID requestedCardId = requestedCard.getId();
+        final int requestedWidth = this.getCardWidth();
+        final int requestedHeight = this.getCardHeight();
         int stamp = ++this.updateArtImageStamp;
         Util.threadPool.submit(() -> {
             try {
-                ImageCacheData data = ImageCache.getCardImage(this.getGameCard(), this.getCardWidth(), this.getCardHeight());
-                if (data.getImage() == null) {
-                    this.setFullPath(data.getPath());
-                }
+                ImageCacheData data = ImageCache.getCardImage(requestedCard, requestedWidth, requestedHeight);
                 UI.invokeLater(() -> {
-                    if (stamp == this.updateArtImageStamp) {
+                    CardView currentCard = this.getGameCard();
+                    if (stamp == this.updateArtImageStamp
+                            && currentCard != null
+                            && Objects.equals(requestedCardId, currentCard.getId())) {
+                        if (requestedWidth != this.getCardWidth() || requestedHeight != this.getCardHeight()) {
+                            this.updateArtImage();
+                            return;
+                        }
+                        if (data.getImage() == null) {
+                            this.setFullPath(data.getPath());
+                        }
                         this.hasImage = data.getImage() != null;
-                        this.setTitle(this.getGameCard());
+                        this.setTitle(currentCard);
                         if (this.fullImageText != null) {
                             this.fullImageText.setVisible(this.fullImagePath != null && this.displayFullImagePath && this.getZone() != Zone.STACK);
                         }

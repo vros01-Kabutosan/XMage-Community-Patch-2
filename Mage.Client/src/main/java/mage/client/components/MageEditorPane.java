@@ -43,6 +43,8 @@ import java.util.*;
  */
 public class MageEditorPane extends JEditorPane {
 
+    private String lastBodyRule;
+
     private static final int CHAT_TOOLTIP_DELAY_MS = 50; // cards popup from chat must be fast all time
     private static Element lastUrlElementEntered = null; // for cursor changes
 
@@ -69,7 +71,10 @@ public class MageEditorPane extends JEditorPane {
                 + " font-family: " + font.getFamily() + "; "
                 + " font-size: " + font.getSize() + "pt; "
                 + "}";
-        kit.getStyleSheet().addRule(bodyRule);
+        if (!bodyRule.equals(lastBodyRule)) {
+            kit.getStyleSheet().addRule(bodyRule);
+            lastBodyRule = bodyRule;
+        }
     }
 
     /**
@@ -221,6 +226,10 @@ public class MageEditorPane extends JEditorPane {
     }
 
     private void setCursorToDefault() {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(this::setCursorToDefault);
+            return;
+        }
         Window parent = SwingUtilities.windowForComponent(this);
         if (parent != null) {
             parent.setCursor(Cursor.getDefaultCursor());
@@ -228,6 +237,10 @@ public class MageEditorPane extends JEditorPane {
     }
 
     private void setCursorToHand() {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(this::setCursorToHand);
+            return;
+        }
         Window parent = SwingUtilities.windowForComponent(this);
         if (parent != null) {
             parent.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -251,6 +264,10 @@ public class MageEditorPane extends JEditorPane {
     }
 
     private void changeUrlTextDecoration(Element el, String decoration) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> changeUrlTextDecoration(el, decoration));
+            return;
+        }
         if (lastUrlElementEntered != null) {
             HTMLDocument doc = (HTMLDocument) this.getDocument();
             int start = el.getStartOffset();

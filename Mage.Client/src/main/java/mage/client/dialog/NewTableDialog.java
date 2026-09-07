@@ -7,6 +7,7 @@ import mage.client.deckeditor.DeckEditorPane;
 import mage.client.SessionHandler;
 import mage.client.components.MageComponents;
 import mage.client.table.TablePlayerPanel;
+import mage.client.util.AiDeckLibrary;
 import mage.client.util.Event;
 import mage.client.util.IgnoreList;
 import mage.client.util.Listener;
@@ -517,6 +518,8 @@ public class NewTableDialog extends MageDialog {
             return;
         }
         try {
+            assignRandomAiDecks(options);
+
             // join AI
             for (TablePlayerPanel player : players) {
                 if (player.getPlayerType() != PlayerType.HUMAN) {
@@ -549,6 +552,17 @@ public class NewTableDialog extends MageDialog {
         SessionHandler.removeTable(roomId, table.getTableId());
         table = null;
     }//GEN-LAST:event_btnOKActionPerformed
+
+    private void assignRandomAiDecks(MatchOptions options) {
+        for (TablePlayerPanel player : players) {
+            if (player.getPlayerType() == PlayerType.HUMAN) continue;
+            String deck = AiDeckLibrary.nextDeck(options.getDeckType());
+            if (deck != null) {
+                player.setPlayerDeck(deck);
+                logger.info("AI deck selected for " + options.getDeckType() + ": " + deck);
+            }
+        }
+    }
 
     private void cbGameTypeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbGameTypeActionPerformed
         setGameOptions();

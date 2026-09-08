@@ -18,7 +18,8 @@ public class SimulationNode2 implements Serializable {
     private static final ThreadLocal<Integer> nodeCount = ThreadLocal.withInitial(() -> 0);
 
     protected Game game;
-    protected int gameValue; // game state hash to monitor changes
+    protected int gameValue; // legacy game state hash to monitor changes
+    protected String gameStateValue; // exact game state used to avoid hash collisions
     protected int score;
     protected List<Ability> abilities;
     protected int depth;
@@ -67,6 +68,14 @@ public class SimulationNode2 implements Serializable {
 
     public void setGameValue(int value) {
         this.gameValue = value;
+    }
+
+    public String getGameStateValue() {
+        return this.gameStateValue;
+    }
+
+    public void setGameStateValue(String value) {
+        this.gameStateValue = value;
     }
 
     public List<Ability> getAbilities() {

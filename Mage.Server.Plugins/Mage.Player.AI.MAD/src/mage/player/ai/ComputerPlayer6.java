@@ -330,10 +330,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
                 test = root;
                 root = root.children.get(0);
             }
-            logger.trace("Sim getNextAction -- game value:" + game.getState().getValue(true) + " test value:" + test.gameValue);
+            logger.trace("Sim getNextAction -- game value:" + game.getState().getValue(true) + " test value:" + test.getGameStateValue());
             if (root.playerId.equals(playerId)
                     && root.abilities != null
-                    && game.getState().getValue(true).hashCode() == test.gameValue) {
+                    && game.getState().getValue(true).equals(test.getGameStateValue())) {
                 logger.info("simulating -- continuing previous actions chain");
                 actions = new LinkedList<>(root.abilities);
                 combat = root.combat;
@@ -341,7 +341,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
             } else {
                 if (root.abilities == null || root.abilities.isEmpty()) {
                     logger.info("simulating -- need re-calculation (no more actions)");
-                } else if (game.getState().getValue(true).hashCode() != test.gameValue) {
+                } else if (!game.getState().getValue(true).equals(test.getGameStateValue())) {
                     logger.info("simulating -- need re-calculation (game state changed between actions)");
                 } else if (!root.playerId.equals(playerId)) {
                     // TODO: need research, why need playerId and why it taken from stack objects as controller
@@ -540,6 +540,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
             return GameStateEvaluator2.evaluate(playerId, game).getTotalScore();
         }
         node.setGameValue(game.getState().getValue(true).hashCode());
+        node.setGameStateValue(game.getState().getValue(true));
         SimulatedPlayer2 currentPlayer = (SimulatedPlayer2) game.getPlayer(game.getPlayerList().get());
         SimulationNode2 bestNode = null;
         List<Ability> allActions = currentPlayer.simulatePriority(game);

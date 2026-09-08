@@ -24,6 +24,27 @@ public final class GameStateEvaluator2 {
 
     public static final int HAND_CARD_SCORE = 5;
 
+    private static UUID findMostThreateningOpponent(UUID playerId, Game game) {
+        UUID selectedOpponent = null;
+        int highestThreat = Integer.MIN_VALUE;
+        for (UUID opponentId : game.getOpponents(playerId, false)) {
+            Player opponent = game.getPlayer(opponentId);
+            if (opponent == null) {
+                continue;
+            }
+            int threat = ArtificialScoringSystem.getLifeScore(opponent.getLife())
+                    + opponent.getHand().size() * HAND_CARD_SCORE;
+            for (Permanent permanent : game.getBattlefield().getAllActivePermanents(opponentId)) {
+                threat += evaluatePermanent(permanent, game, true);
+            }
+            if (selectedOpponent == null || threat > highestThreat) {
+                selectedOpponent = opponentId;
+                highestThreat = threat;
+            }
+        }
+        return selectedOpponent;
+    }
+
     public static PlayerEvaluateScore evaluate(UUID playerId, Game game) {
         return evaluate(playerId, game, true);
     }
@@ -32,7 +53,7 @@ public final class GameStateEvaluator2 {
         // TODO: add multi opponents support, so AI can take better actions
         Player player = game.getPlayer(playerId);
         // must find all leaved opponents
-        Player opponent = game.getPlayer(game.getOpponents(playerId, false).stream().findFirst().orElse(null));
+        Player opponent = game.getPlayer(findMostThreateningOpponent(playerId, game));
         if (opponent == null) {
             return new PlayerEvaluateScore(playerId, WIN_GAME_SCORE);
         }

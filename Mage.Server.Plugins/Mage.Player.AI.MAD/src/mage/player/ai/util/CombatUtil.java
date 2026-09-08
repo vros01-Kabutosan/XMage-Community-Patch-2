@@ -175,8 +175,15 @@ public final class CombatUtil {
             return canBlock;
         }
         for (Permanent blocker : blockersList) {
-            if (blocker != null && blocker.canBlock(attacker.getId(), game)) {
-                canBlock.add(blocker);
+            if (blocker == null) {
+                continue;
+            }
+            try {
+                if (blocker.canBlock(attacker.getId(), game)) {
+                    canBlock.add(blocker);
+                }
+            } catch (RuntimeException ex) {
+                // Ignore malformed candidates and keep evaluating the combat.
             }
         }
         return canBlock;

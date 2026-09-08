@@ -935,14 +935,19 @@ public class ComputerPlayer6 extends ComputerPlayer {
 
         UUID abilityControllerId = target.getAffectedAbilityControllerId(getId());
         if (!target.isChoiceCompleted(abilityControllerId, source, game, cards)) {
+            Set<UUID> legalTargets = target.possibleTargets(abilityControllerId, source, game, cards);
             for (UUID targetId : targets) {
+                if (!legalTargets.contains(targetId)) {
+                    continue;
+                }
                 target.addTarget(targetId, source, game);
                 if (target.isChoiceCompleted(abilityControllerId, source, game, cards)) {
                     targets.clear();
                     return true;
                 }
             }
-            return false;
+            targets.clear();
+            return super.chooseTarget(outcome, cards, target, source, game);
         }
         return true;
     }
@@ -955,14 +960,19 @@ public class ComputerPlayer6 extends ComputerPlayer {
 
         UUID abilityControllerId = target.getAffectedAbilityControllerId(getId());
         if (!target.isChoiceCompleted(abilityControllerId, source, game, cards)) {
+            Set<UUID> legalTargets = target.possibleTargets(abilityControllerId, source, game);
             for (UUID targetId : targets) {
+                if (!legalTargets.contains(targetId)) {
+                    continue;
+                }
                 target.add(targetId, game);
                 if (target.isChoiceCompleted(abilityControllerId, source, game, cards)) {
                     targets.clear();
                     return true;
                 }
             }
-            return false;
+            targets.clear();
+            return super.choose(outcome, cards, target, source, game);
         }
         return true;
     }

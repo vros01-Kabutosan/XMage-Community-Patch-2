@@ -53,7 +53,6 @@ public final class GameStateEvaluator2 {
     }
 
     public static PlayerEvaluateScore evaluate(UUID playerId, Game game, boolean useCombatPermanentScore) {
-        // TODO: add multi opponents support, so AI can take better actions
         Player player = game.getPlayer(playerId);
         // must find all leaved opponents
         Player opponent = game.getPlayer(findMostThreateningOpponent(playerId, game));

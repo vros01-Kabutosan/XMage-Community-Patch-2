@@ -26,8 +26,14 @@ public class DebugUtil {
     // SERVER
     // data collectors - enable additional logs and data collection for better AI and human games debugging
     public static boolean TESTS_DATA_COLLECTORS_ENABLE_SAVE_GAME_HISTORY = false; // WARNING, for debug only, can generate too much files
-    public static boolean SERVER_DATA_COLLECTORS_ENABLE_PRINT_GAME_LOGS = false;
-    public static boolean SERVER_DATA_COLLECTORS_ENABLE_SAVE_GAME_HISTORY = false;
+    /**
+     * Optional server diagnostics. Disabled by default; enable explicitly with
+     * -Dmage.debug.printGameLogs=true / -Dmage.debug.saveGameHistory=true.
+     */
+    public static boolean SERVER_DATA_COLLECTORS_ENABLE_PRINT_GAME_LOGS =
+            Boolean.getBoolean("mage.debug.printGameLogs");
+    public static boolean SERVER_DATA_COLLECTORS_ENABLE_SAVE_GAME_HISTORY =
+            Boolean.getBoolean("mage.debug.saveGameHistory");
 
     // GAME
     // print detail target info for activate/cast/trigger only, not a single choose dialog

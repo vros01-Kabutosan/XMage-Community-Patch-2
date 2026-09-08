@@ -410,6 +410,7 @@ public final class CombatUtil {
         combat.setAttacker(attackingPlayerId);
         combat.setDefenders(sim);
         int startScore = GameStateEvaluator2.evaluate(defendingPlayerId, sim).getTotalScore();
+        int simulationSteps = 0;
 
         // real game simulation
         // TODO: need debug and testing, old code from 2012
@@ -420,6 +421,9 @@ public final class CombatUtil {
         sim.fireEvent(GameEvent.getEvent(GameEvent.EventType.DECLARED_BLOCKERS, defendingPlayerId, defendingPlayerId));
         sim.checkStateAndTriggered();
         while (!sim.getStack().isEmpty()) {
+            if (++simulationSteps > 1000) {
+                return null;
+            }
             sim.getStack().resolve(sim);
             sim.applyEffects();
         }
@@ -433,6 +437,9 @@ public final class CombatUtil {
         // after
         sim.checkStateAndTriggered();
         while (!sim.getStack().isEmpty()) {
+            if (++simulationSteps > 1000) {
+                return null;
+            }
             sim.getStack().resolve(sim);
             sim.applyEffects();
         }

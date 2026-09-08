@@ -30,6 +30,9 @@ public class CombatEvaluator {
             if (creature.canAttack(null, game)) {
                 value += 2;
             }
+            if (!creature.canBlockAny(game)) {
+                value -= 2;
+            }
             value += creature.getPower().getValue();
             value += creature.getToughness().getValue();
             value += creature.getAbilities().getEvasionAbilities().size();

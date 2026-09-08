@@ -154,7 +154,9 @@ public final class CombatUtil {
         if (attacker.getAbilities().contains(InfectAbility.getInstance())) {
             multiplier++;
         }
-        return power * multiplier;
+        int evasion = attacker.getAbilities().getEvasionAbilities().size();
+        int protection = attacker.getAbilities().getProtectionAbilities().size();
+        return power * multiplier + evasion * 2 + protection * 2;
     }
     public static void removeWorstCreature(Permanent permanent, List<Permanent>... lists) {
         for (List<Permanent> list : lists) {

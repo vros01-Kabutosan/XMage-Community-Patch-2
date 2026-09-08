@@ -239,6 +239,11 @@ public final class CombatUtil {
                 // TODO: add multiple use case support with min/max blockedBy conditional and other
                 //   see all possible use cases in checkBlockRestrictions, checkBlockRequirementsAfter and checkBlockRestrictionsAfter
 
+                // Respect a hard upper bound before adding another blocker.
+                if (attacker.getMaxBlockedBy() > 0 && blockedCount >= attacker.getMaxBlockedBy()) {
+                    break;
+                }
+
                 // effects support: can't be blocked except by xxx or more creatures
                 if (blockedCount > 0 && attacker.getMinBlockedBy() > blockedCount) {
                     // it already has 1 blocker (killer in best use case), so no needs in second killer

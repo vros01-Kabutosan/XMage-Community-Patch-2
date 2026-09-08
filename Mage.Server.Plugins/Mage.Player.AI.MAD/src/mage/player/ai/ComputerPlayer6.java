@@ -98,7 +98,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
         } else {
             maxDepth = skill;
         }
-        maxThinkTimeSecs = skill * 3;
+        maxThinkTimeSecs = Math.max(1, skill * 3);
         maxNodes = calculateMaxNodes(skill);
         this.actionCache = new HashSet<>();
         this.transpositionTable = new HashMap<>();
@@ -112,6 +112,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
     public ComputerPlayer6(final ComputerPlayer6 player) {
         super(player);
         this.maxDepth = player.maxDepth;
+        this.maxNodes = player.maxNodes;
+        this.maxThinkTimeSecs = player.maxThinkTimeSecs;
         this.currentScore = player.currentScore;
         if (player.combat != null) {
             this.combat = player.combat.copy();
@@ -119,7 +121,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
         this.actions.addAll(player.actions);
         this.targets.addAll(player.targets);
         this.choices.addAll(player.choices);
-        this.actionCache = player.actionCache;
+        this.actionCache = new HashSet<>(player.actionCache);
+        this.transpositionTable = new HashMap<>();
     }
 
     /**

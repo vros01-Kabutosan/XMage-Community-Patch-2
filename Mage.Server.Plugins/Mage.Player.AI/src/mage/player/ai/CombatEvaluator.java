@@ -9,6 +9,7 @@ import mage.abilities.keyword.DoubleStrikeAbility;
 import mage.abilities.keyword.FirstStrikeAbility;
 import mage.abilities.keyword.IndestructibleAbility;
 import mage.abilities.keyword.LifelinkAbility;
+import mage.abilities.keyword.ReachAbility;
 import mage.abilities.keyword.VigilanceAbility;
 import mage.abilities.keyword.TrampleAbility;
 import mage.game.Game;
@@ -44,6 +45,7 @@ public class CombatEvaluator {
             value += creature.getAbilities().containsKey(IndestructibleAbility.getInstance().getId()) ? 3 : 0;
             value += creature.getAbilities().containsKey(LifelinkAbility.getInstance().getId()) ? 1 : 0;
             value += creature.getAbilities().containsKey(VigilanceAbility.getInstance().getId()) ? 1 : 0;
+            value += creature.getAbilities().containsKey(ReachAbility.getInstance().getId()) ? 1 : 0;
             values.put(creature.getId(), value);
         }
         return values.get(creature.getId());

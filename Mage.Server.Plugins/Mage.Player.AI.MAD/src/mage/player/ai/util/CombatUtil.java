@@ -213,7 +213,12 @@ public final class CombatUtil {
         Comparator<Permanent> stableOrder = Comparator.comparing(
                 permanent -> permanent == null || permanent.getId() == null
                         ? "" : permanent.getId().toString());
-        attackers.sort(stableOrder);
+        Comparator<Permanent> attackerOrder = Comparator
+                .comparingInt((Permanent permanent) -> permanent.getPower() == null
+                        ? Integer.MIN_VALUE : permanent.getPower().getValue())
+                .reversed()
+                .thenComparing(stableOrder);
+        attackers.sort(attackerOrder);
         blockers.sort(stableOrder);
 
         UUID attackerId = game.getCombat().getAttackingPlayerId();

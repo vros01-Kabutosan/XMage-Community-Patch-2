@@ -178,7 +178,7 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
 
         // remove invalid targets
         // TODO: is it useless cause it already filtered before?
-        options.removeIf(option -> !option.getTargets().isChosen(game));
+        options.removeIf(option -> option == null || option.getTargets() == null || !option.getTargets().isChosen(game));
 
         // Small option sets are cheap to search and may contain tactical
         // choices that do not match the effect's coarse good/bad outcome.
@@ -193,6 +193,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
 
         // TODO: add custom outcome from ability?
         for (Effect effect : ability.getEffects()) {
+            if (effect == null || effect.getOutcome() == null) {
+                continue;
+            }
             if (effect.getOutcome().isGood()) {
                 bad = false;
             } else {

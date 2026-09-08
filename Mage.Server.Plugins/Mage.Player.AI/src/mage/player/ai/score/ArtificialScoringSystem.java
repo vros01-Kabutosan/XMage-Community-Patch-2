@@ -43,7 +43,11 @@ public final class ArtificialScoringSystem {
         if (card.getCardType(game).contains(CardType.CREATURE)) {
             return score + (card.getPower().getValue() + card.getToughness().getValue()) * 10;
         } else {
-            return score + (/*card.getRemoval()*50*/+(card.getRarity() == null ? 0 : card.getRarity().getRating() * 30));
+            int rarityScore = card.getRarity() == null ? 0 : card.getRarity().getRating() * 30;
+            // Use effect outcomes as a restrained signal for non-creature spells.
+            int outcomeScore = card.getAbilities(game).getOutcomeTotal();
+            outcomeScore = Math.max(-3, Math.min(6, outcomeScore));
+            return score + rarityScore + outcomeScore * 20;
         }
     }
 

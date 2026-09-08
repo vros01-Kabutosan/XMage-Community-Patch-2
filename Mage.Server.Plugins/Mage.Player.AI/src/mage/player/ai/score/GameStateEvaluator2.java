@@ -37,7 +37,10 @@ public final class GameStateEvaluator2 {
             for (Permanent permanent : game.getBattlefield().getAllActivePermanents(opponentId)) {
                 threat += evaluatePermanentSafely(permanent, game, true);
             }
-            if (selectedOpponent == null || threat > highestThreat) {
+            if (selectedOpponent == null
+                    || threat > highestThreat
+                    || (threat == highestThreat
+                    && opponentId.toString().compareTo(selectedOpponent.toString()) < 0)) {
                 selectedOpponent = opponentId;
                 highestThreat = threat;
             }

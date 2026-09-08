@@ -4,8 +4,11 @@ package mage.player.ai;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import mage.abilities.keyword.DeathtouchAbility;
 import mage.abilities.keyword.DoubleStrikeAbility;
 import mage.abilities.keyword.FirstStrikeAbility;
+import mage.abilities.keyword.IndestructibleAbility;
+import mage.abilities.keyword.LifelinkAbility;
 import mage.abilities.keyword.TrampleAbility;
 import mage.game.Game;
 import mage.game.permanent.Permanent;
@@ -32,6 +35,9 @@ public class CombatEvaluator {
             value += creature.getAbilities().containsKey(FirstStrikeAbility.getInstance().getId()) ? 1 : 0;
             value += creature.getAbilities().containsKey(DoubleStrikeAbility.getInstance().getId()) ? 2 : 0;
             value += creature.getAbilities().containsKey(TrampleAbility.getInstance().getId()) ? 1 : 0;
+            value += creature.getAbilities().containsKey(DeathtouchAbility.getInstance().getId()) ? 2 : 0;
+            value += creature.getAbilities().containsKey(IndestructibleAbility.getInstance().getId()) ? 3 : 0;
+            value += creature.getAbilities().containsKey(LifelinkAbility.getInstance().getId()) ? 1 : 0;
             values.put(creature.getId(), value);
         }
         return values.get(creature.getId());

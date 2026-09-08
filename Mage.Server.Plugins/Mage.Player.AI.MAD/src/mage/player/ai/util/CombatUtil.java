@@ -132,6 +132,20 @@ public final class CombatUtil {
         return worst;
     }
 
+    private static int getAttackerPriorityScore(Permanent attacker) {
+        if (attacker == null || attacker.getPower() == null) {
+            return Integer.MIN_VALUE;
+        }
+        int power = Math.max(0, attacker.getPower().getValue());
+        int multiplier = 1;
+        if (attacker.getAbilities().contains(DoubleStrikeAbility.getInstance())) {
+            multiplier++;
+        }
+        if (attacker.getAbilities().contains(InfectAbility.getInstance())) {
+            multiplier++;
+        }
+        return power * multiplier;
+    }
     public static void removeWorstCreature(Permanent permanent, List<Permanent>... lists) {
         for (List<Permanent> list : lists) {
             if (!list.isEmpty()) {
@@ -214,8 +228,7 @@ public final class CombatUtil {
                 permanent -> permanent == null || permanent.getId() == null
                         ? "" : permanent.getId().toString());
         Comparator<Permanent> attackerOrder = Comparator
-                .comparingInt((Permanent permanent) -> permanent.getPower() == null
-                        ? Integer.MIN_VALUE : permanent.getPower().getValue())
+                .comparingInt(CombatUtil::getAttackerPriorityScore)
                 .reversed()
                 .thenComparing(stableOrder);
         attackers.sort(attackerOrder);

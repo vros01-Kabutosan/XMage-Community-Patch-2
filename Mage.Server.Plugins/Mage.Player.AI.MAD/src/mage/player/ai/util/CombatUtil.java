@@ -40,6 +40,7 @@ public final class CombatUtil {
             return emptyList;
         }
         List<Permanent> blockableAttackers = new ArrayList<>(attackersList);
+        blockableAttackers.removeIf(Objects::isNull);
         List<Permanent> unblockableAttackers = new ArrayList<>();
         for (Permanent attacker : attackersList) {
             if (!canBeBlocked(game, attacker, blockersList)) {
@@ -86,8 +87,15 @@ public final class CombatUtil {
             return false;
         }
         for (Permanent blocker : blockersList) {
-            if (blocker.canBlock(attacker.getId(), game)) {
-                return true;
+            if (blocker == null) {
+                continue;
+            }
+            try {
+                if (blocker.canBlock(attacker.getId(), game)) {
+                    return true;
+                }
+            } catch (RuntimeException ex) {
+                // Ignore malformed candidates and continue checking legality.
             }
         }
         return false;

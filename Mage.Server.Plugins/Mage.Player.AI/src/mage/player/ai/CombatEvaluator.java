@@ -41,6 +41,8 @@ public class CombatEvaluator {
             }
             value += creature.getPower().getValue();
             value += creature.getToughness().getValue();
+            // Damaged creatures are less reliable in multi-blocker exchanges.
+            value -= Math.max(0, creature.getDamage());
             value += creature.getAbilities().getEvasionAbilities().size();
             value += creature.getAbilities().getProtectionAbilities().size();
             value += creature.getAbilities().containsKey(FirstStrikeAbility.getInstance().getId()) ? 1 : 0;

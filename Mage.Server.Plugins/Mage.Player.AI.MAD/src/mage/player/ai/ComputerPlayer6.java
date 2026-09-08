@@ -1073,6 +1073,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
                     safeToAttack = true;
                     int attackerValue = eval.evaluate(attacker, game);
                     for (Permanent blocker : possibleBlockers) {
+                        // Only consider blockers that can legally block this attacker.
+                        if (!blocker.canBlock(attacker.getId(), game)) {
+                            continue;
+                        }
                         int blockerValue = eval.evaluate(blocker, game);
 
                         // blocker can kill attacker
@@ -1126,6 +1130,13 @@ public class ComputerPlayer6 extends ComputerPlayer {
                         attackersToCheck.add(attacker);
                     }
                 }
+
+                // Prefer high-impact attackers first so planeswalkers and battles are not overkilled.
+                attackersToCheck.sort((left, right) -> {
+                    int rightScore = eval.evaluate(right, game) + right.getPower().getValue() * 2;
+                    int leftScore = eval.evaluate(left, game) + left.getPower().getValue() * 2;
+                    return Integer.compare(rightScore, leftScore);
+                });
 
                 // find possible target for attack (priority: planeswalker -> battle -> player)
                 int totalPowerOfAttackers = 0;

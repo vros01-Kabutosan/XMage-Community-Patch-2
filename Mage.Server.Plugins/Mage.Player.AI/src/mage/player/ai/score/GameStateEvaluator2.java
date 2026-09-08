@@ -101,12 +101,15 @@ public final class GameStateEvaluator2 {
             }
 
             // add values of opponent
-            for (Permanent permanent : game.getBattlefield().getAllActivePermanents(opponent.getId())) {
+            // Add battlefield pressure from every active opponent in multiplayer games.
+            for (UUID opponentId : game.getOpponents(playerId, true)) {
+                for (Permanent permanent : game.getBattlefield().getAllActivePermanents(opponentId)) {
                 int onePermScore = evaluatePermanent(permanent, game, useCombatPermanentScore);
                 opponentPermanentsScore += onePermScore;
                 if (logger.isDebugEnabled()) {
                     sbOpponent.append(permanent.getName()).append('[').append(onePermScore).append("] ");
                 }
+            }
             }
             if (logger.isDebugEnabled()) {
                 sbOpponent.insert(0, opponentPermanentsScore + " - ");

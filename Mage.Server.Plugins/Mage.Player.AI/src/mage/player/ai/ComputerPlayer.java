@@ -27,6 +27,7 @@ import mage.players.Player;
 import mage.players.PlayerImpl;
 import mage.players.net.UserData;
 import mage.players.net.UserGroup;
+import mage.player.ai.score.ArtificialScoringSystem;
 import mage.target.Target;
 import mage.target.TargetAmount;
 import mage.target.TargetCard;
@@ -904,8 +905,31 @@ public class ComputerPlayer extends PlayerImpl {
 
     @Override
     public boolean choosePile(Outcome outcome, String message, List<? extends Card> pile1, List<? extends Card> pile2, Game game) {
-        //TODO: improve this
-        return true; // select left pile all the time
+        int pile1Score = scorePile(pile1, game);
+        int pile2Score = scorePile(pile2, game);
+
+        // For beneficial effects keep the stronger pile; for harmful effects
+        // prefer the weaker one. Equal piles keep the historical left choice.
+        if (outcome != null && outcome.isGood()) {
+            return pile1Score >= pile2Score;
+        }
+        if (outcome != null && !outcome.isGood()) {
+            return pile1Score <= pile2Score;
+        }
+        return true;
+    }
+
+    private int scorePile(List<? extends Card> pile, Game game) {
+        if (pile == null || pile.isEmpty() || game == null) {
+            return 0;
+        }
+        int score = 0;
+        for (Card card : pile) {
+            if (card != null) {
+                score += ArtificialScoringSystem.getCardDefinitionScore(game, card);
+            }
+        }
+        return score;
     }
 
     @Override

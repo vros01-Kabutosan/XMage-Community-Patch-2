@@ -18,6 +18,7 @@ public class PermanentEvaluator {
     private final CombatEvaluator combat = new CombatEvaluator();
 
     public int evaluate(Permanent permanent, Game game) {
+        values.clear();
         // more score -- more valueable/powerfull permanent
         if (!values.containsKey(permanent.getId())) {
             int value = 0;

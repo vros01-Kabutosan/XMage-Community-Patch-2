@@ -23,6 +23,7 @@ public class CombatEvaluator {
     private Map<UUID, Integer> values = new HashMap<>();
 
     public int evaluate(Permanent creature, Game game) {
+        values.clear();
         if (!values.containsKey(creature.getId())) {
             int value = 0;
             if (creature.canAttack(null, game)) {

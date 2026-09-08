@@ -101,7 +101,9 @@ public final class CombatUtil {
         for (List<Permanent> list : lists) {
             for (Permanent permanent : list) {
                 int score = evaluator.evaluate(permanent, game);
-                if (worst == null || score < worstScore) {
+                if (worst == null || score < worstScore
+                        || (score == worstScore
+                        && permanent.getId().compareTo(worst.getId()) < 0)) {
                     worst = permanent;
                     worstScore = score;
                 }

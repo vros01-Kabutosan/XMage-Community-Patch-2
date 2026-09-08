@@ -19,6 +19,7 @@ import mage.players.Player;
 import org.apache.log4j.Logger;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Base helper methods for combat.
@@ -298,12 +299,11 @@ public final class CombatUtil {
                 if (!survivedAndKillBlocker.contains(blocker)) {
                     final Permanent chosenBlocker = blocker;
                     int combinedPower = chosenBlocker.getPower().getValue();
-                    Permanent support = survivedBlockers.stream()
+                    List<Permanent> supportCandidates = survivedBlockers.stream()
                             .filter(candidate -> candidate != chosenBlocker)
                             .filter(candidate -> combinedPower + candidate.getPower().getValue() >= attacker.getToughness().getValue())
-                            .sorted(stableOrder)
-                            .findFirst()
-                            .orElse(null);
+                            .collect(Collectors.toList());
+                    Permanent support = getWorstCreature(game, supportCandidates);
                     if (support != null) {
                         combatInfo.addPair(attacker, support);
                         removeWorstCreature(support, blockers, survivedBlockers);

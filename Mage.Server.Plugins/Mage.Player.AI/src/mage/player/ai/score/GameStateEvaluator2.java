@@ -2,6 +2,7 @@ package mage.player.ai.score;
 
 import mage.game.Game;
 import mage.game.permanent.Permanent;
+import mage.game.stack.StackObject;
 import mage.players.Player;
 import org.apache.log4j.Logger;
 
@@ -153,7 +154,8 @@ public final class GameStateEvaluator2 {
             }
         }
 
-        int score = (playerLifeScore - opponentLifeScore)
+        int stackScore = evaluateStack(playerId, game);
+        int score = stackScore + (playerLifeScore - opponentLifeScore)
                 + (playerPermanentsScore - opponentPermanentsScore)
                 + (playerHandScore - opponentHandScore)
                 + (playerGraveyardScore - opponentGraveyardScore)
@@ -193,6 +195,26 @@ public final class GameStateEvaluator2 {
             }
         }
         return Math.min(24, score);
+    }
+
+    private static int evaluateStack(UUID playerId, Game game) {
+        int score = 0;
+        for (StackObject stackObject : game.getStack()) {
+            Ability ability = stackObject.getStackAbility();
+            if (ability == null || stackObject.getControllerId() == null) {
+                continue;
+            }
+            boolean ours = playerId.equals(stackObject.getControllerId());
+            for (Effect effect : ability.getEffects()) {
+                Outcome outcome = effect.getOutcome();
+                if (outcome == null || outcome == Outcome.Neutral) {
+                    continue;
+                }
+                int effectScore = outcome.isGood() ? 100 : -100;
+                score += ours ? effectScore : -effectScore;
+            }
+        }
+        return Math.max(-600, Math.min(600, score));
     }
 
     private static int evaluateGraveyard(Player player, Game game) {

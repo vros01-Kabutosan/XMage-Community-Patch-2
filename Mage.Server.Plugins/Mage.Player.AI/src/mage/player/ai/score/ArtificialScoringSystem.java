@@ -1,6 +1,7 @@
 package mage.player.ai.score;
 
 import mage.MageObject;
+import mage.Mana;
 import mage.abilities.Ability;
 import mage.abilities.keyword.HasteAbility;
 import mage.cards.Card;
@@ -36,6 +37,7 @@ public final class ArtificialScoringSystem {
              score += 50;
              }*/
             score += card.getMana().size() * 50;
+            score += getLandColorDiversityBonus(card);
             return score;
         }
 
@@ -50,6 +52,20 @@ public final class ArtificialScoringSystem {
             outcomeScore = Math.max(-3, Math.min(6, outcomeScore));
             return score + rarityScore + outcomeScore * 20;
         }
+    }
+
+    private static int getLandColorDiversityBonus(final Card card) {
+        boolean white = false, blue = false, black = false, red = false, green = false;
+        for (Mana mana : card.getMana()) {
+            white |= mana.getWhite() > 0;
+            blue |= mana.getBlue() > 0;
+            black |= mana.getBlack() > 0;
+            red |= mana.getRed() > 0;
+            green |= mana.getGreen() > 0;
+        }
+        int colors = (white ? 1 : 0) + (blue ? 1 : 0) + (black ? 1 : 0)
+                + (red ? 1 : 0) + (green ? 1 : 0);
+        return Math.min(30, Math.max(0, colors - 1) * 10);
     }
 
     private static int getCreatureAbilityBonus(final Game game, final Card card) {

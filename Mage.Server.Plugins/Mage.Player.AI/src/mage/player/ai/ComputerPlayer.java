@@ -747,7 +747,9 @@ public class ComputerPlayer extends PlayerImpl {
 
     private List<MageObject> sortByValue(Map<MageObject, Integer> map) {
         List<Entry<MageObject, Integer>> list = new LinkedList<>(map.entrySet());
-        Collections.sort(list, Comparator.comparing(Entry::getValue));
+        Collections.sort(list, Comparator.comparing(Entry<MageObject, Integer>::getValue)
+                .thenComparing(entry -> entry.getKey().getName())
+                .thenComparing(entry -> entry.getKey().getId()));
         List<MageObject> result = new ArrayList<>();
         for (Entry<MageObject, Integer> entry : list) {
             result.add(entry.getKey());
@@ -1062,7 +1064,12 @@ public class ComputerPlayer extends PlayerImpl {
         Collections.sort(sortedCards, (o1, o2) -> {
             Integer score1 = RateCard.rateCard(o1, colors);
             Integer score2 = RateCard.rateCard(o2, colors);
-            return score2.compareTo(score1);
+            int scoreOrder = score2.compareTo(score1);
+            if (scoreOrder != 0) {
+                return scoreOrder;
+            }
+            int nameOrder = o1.getName().compareTo(o2.getName());
+            return nameOrder != 0 ? nameOrder : o1.getId().compareTo(o2.getId());
         });
 
         // get top cards

@@ -36,6 +36,9 @@ public final class CombatUtil {
 
     public static List<Permanent> canKillOpponent(Game game, List<Permanent> attackersList, List<Permanent> blockersList,
                                                   Player defender) {
+        if (game == null || attackersList == null || blockersList == null || defender == null) {
+            return emptyList;
+        }
         List<Permanent> blockableAttackers = new ArrayList<>(attackersList);
         List<Permanent> unblockableAttackers = new ArrayList<>();
         for (Permanent attacker : attackersList) {
@@ -79,6 +82,9 @@ public final class CombatUtil {
      * @return true if attacker can be blocked by any blocker
      */
     public static boolean canBeBlocked(Game game, Permanent attacker, List<Permanent> blockersList) {
+        if (game == null || attacker == null || blockersList == null) {
+            return false;
+        }
         for (Permanent blocker : blockersList) {
             if (blocker.canBlock(attacker.getId(), game)) {
                 return true;

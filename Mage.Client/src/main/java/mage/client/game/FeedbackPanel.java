@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 
 import javax.swing.*;
 import java.awt.*;
+import java.lang.reflect.InvocationTargetException;
 import java.awt.event.ActionEvent;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -92,8 +93,15 @@ public class FeedbackPanel extends javax.swing.JPanel {
     public void prepareFeedback(FeedbackMode mode, String basicMessage, String additionalMessage, boolean special, Map<String, Serializable> options,
                                 boolean gameNeedUserFeedback, TurnPhase gameTurnPhase) {
         if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(() -> prepareFeedback(mode, basicMessage, additionalMessage, special, options,
-                    gameNeedUserFeedback, gameTurnPhase));
+            try {
+                SwingUtilities.invokeAndWait(() -> prepareFeedback(mode, basicMessage, additionalMessage, special, options,
+                        gameNeedUserFeedback, gameTurnPhase));
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                LOGGER.warn("Interrupted while updating feedback panel", ex);
+            } catch (InvocationTargetException ex) {
+                LOGGER.error("Unable to update feedback panel on EDT", ex.getCause());
+            }
             return;
         }
         synchronized (this) {

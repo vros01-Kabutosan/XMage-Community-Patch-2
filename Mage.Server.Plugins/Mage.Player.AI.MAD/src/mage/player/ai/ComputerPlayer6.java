@@ -1204,10 +1204,16 @@ public class ComputerPlayer6 extends ComputerPlayer {
                         throw new IllegalStateException("AI: can't find counters for defending permanent " + permanentDefender.getName(), new Throwable());
                     }
 
-                    // attack anyway (for kill or damage)
-                    // TODO: add attackers optimization here (1 powerfull + min number of additional permanents,
-                    //  current code uses random/etb order)
-                    for (Permanent attackingPermanent : attackersToCheck) {
+                    // Use the smallest attackers first to avoid overcommitting to permanents.
+                    List<Permanent> attackersForPermanentDefender = new ArrayList<>(attackersToCheck);
+                    attackersForPermanentDefender.sort((left, right) -> {
+                        int powerOrder = Integer.compare(left.getPower().getValue(), right.getPower().getValue());
+                        if (powerOrder != 0) {
+                            return powerOrder;
+                        }
+                        return Integer.compare(eval.evaluate(right, game), eval.evaluate(left, game));
+                    });
+                    for (Permanent attackingPermanent : attackersForPermanentDefender) {
                         if (attackingPermanent.isAttacking()) {
                             // already used for another target
                             continue;

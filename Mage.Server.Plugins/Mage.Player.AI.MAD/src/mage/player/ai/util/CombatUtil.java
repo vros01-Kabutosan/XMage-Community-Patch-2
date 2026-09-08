@@ -99,7 +99,13 @@ public final class CombatUtil {
         Permanent worst = null;
         int worstScore = Integer.MAX_VALUE;
         for (List<Permanent> list : lists) {
+            if (list == null) {
+                continue;
+            }
             for (Permanent permanent : list) {
+                if (permanent == null) {
+                    continue;
+                }
                 int score = evaluator.evaluate(permanent, game);
                 if (worst == null || score < worstScore
                         || (score == worstScore

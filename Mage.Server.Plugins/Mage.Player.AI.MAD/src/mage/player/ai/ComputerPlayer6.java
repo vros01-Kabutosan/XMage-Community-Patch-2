@@ -1113,6 +1113,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
                             continue;
                         }
                         int blockerValue = eval.evaluate(blocker, game);
+                        if (blocker.getAbilities().containsKey(DeathtouchAbility.getInstance().getId())
+                                && !attacker.getAbilities().containsKey(IndestructibleAbility.getInstance().getId())) {
+                            safeToAttack = false;
+                        }
 
                         // blocker can kill attacker
                         if (attacker.getPower().getValue() <= blocker.getToughness().getValue()

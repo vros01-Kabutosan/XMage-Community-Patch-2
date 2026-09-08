@@ -28,6 +28,9 @@ public final class ArtificialScoringSystem {
     private static final int LIFE_ABOVE_MULTIPLIER = 100;
 
     public static int getCardDefinitionScore(final Game game, final Card card) {
+        if (game == null || card == null) {
+            return 0;
+        }
         int value = 3; //TODO: add new rating system card value
         if (card.isLand(game)) {
             int score = (int) ((value / 2.0f) * 50);

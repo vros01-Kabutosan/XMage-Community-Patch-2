@@ -26,11 +26,14 @@ public final class MagicAbility {
         values.put(FlyingAbility.getInstance().getRule(), 50);
         values.put(new ForestwalkAbility().getRule(), 10);
         values.put(HasteAbility.getInstance().getRule(), 20);
+        values.put(HexproofAbility.getInstance().getRule(), 80);
         values.put(IndestructibleAbility.getInstance().getRule(), 150);
         values.put(InfectAbility.getInstance().getRule(), 60);
         values.put(IntimidateAbility.getInstance().getRule(), 50);
         values.put(new IslandwalkAbility().getRule(), 10);
+        values.put(LifelinkAbility.getInstance().getRule(), 35);
         values.put(new MountainwalkAbility().getRule(), 10);
+        values.put(new MenaceAbility().getRule(), 40);
         values.put(new PlainswalkAbility().getRule(), 10);
         values.put(ReachAbility.getInstance().getRule(), 20);
         values.put(ShroudAbility.getInstance().getRule(), 60);

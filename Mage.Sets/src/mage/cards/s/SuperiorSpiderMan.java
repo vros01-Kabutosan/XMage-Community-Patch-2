@@ -78,6 +78,11 @@ class SuperiorSpiderManCopyEffect extends OneShotEffect {
                 Card copyFromCard = game.getCard(target.getFirstTarget());
                 if (copyFromCard != null) {
                     Permanent newBluePrint = new PermanentCard(copyFromCard, source.getControllerId(), game);
+                    // Keep Superior Spider-Man as the visible name, but use the copied creature artwork
+                    // when the source card relies on the normal name-based image lookup.
+                    if (newBluePrint.getImageFileName().isEmpty()) {
+                        newBluePrint.setImageFileName(copyFromCard.getName());
+                    }
                     newBluePrint.assignNewId();
                     SuperiorSpiderManCopyApplier applier = new SuperiorSpiderManCopyApplier();
                     applier.apply(game, newBluePrint, source, source.getSourceId());

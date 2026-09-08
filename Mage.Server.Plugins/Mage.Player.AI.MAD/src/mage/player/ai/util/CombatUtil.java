@@ -14,6 +14,7 @@ import mage.game.turn.CombatDamageStep;
 import mage.game.turn.EndOfCombatStep;
 import mage.game.turn.Step;
 import mage.player.ai.score.GameStateEvaluator2;
+import mage.player.ai.PermanentEvaluator;
 import mage.players.Player;
 import org.apache.log4j.Logger;
 
@@ -93,14 +94,20 @@ public final class CombatUtil {
         }
     }
 
-    public static Permanent getWorstCreature(List<Permanent>... lists) {
+    public static Permanent getWorstCreature(Game game, List<Permanent>... lists) {
+        PermanentEvaluator evaluator = new PermanentEvaluator();
+        Permanent worst = null;
+        int worstScore = Integer.MAX_VALUE;
         for (List<Permanent> list : lists) {
-            if (!list.isEmpty()) {
-                list.sort(Comparator.comparingInt(p -> p.getPower().getValue()));
-                return list.get(0);
+            for (Permanent permanent : list) {
+                int score = evaluator.evaluate(permanent, game);
+                if (worst == null || score < worstScore) {
+                    worst = permanent;
+                    worstScore = score;
+                }
             }
         }
-        return null;
+        return worst;
     }
 
     public static void removeWorstCreature(Permanent permanent, List<Permanent>... lists) {
@@ -199,7 +206,7 @@ public final class CombatUtil {
             int blockedCount = 0;
 
             // find good blocker
-            Permanent blocker = getWorstCreature(survivedAndKillBlocker, survivedBlockers);
+            Permanent blocker = getWorstCreature(game, survivedAndKillBlocker, survivedBlockers);
             if (blocker != null) {
                 combatInfo.addPair(attacker, blocker);
                 removeWorstCreature(blocker, blockers, survivedAndKillBlocker, survivedBlockers);
@@ -210,7 +217,7 @@ public final class CombatUtil {
             // TODO: add chump blocking support here?
             // TODO: there are many triggers on damage, attack, etc - it can't be processed without real game simulations
             if (blocker == null) {
-                blocker = getWorstCreature(diedBlockers);
+                blocker = getWorstCreature(game, diedBlockers);
                 if (blocker != null) {
                     int diffBlockingScore = blockingDiffScore.getOrDefault(blocker, 0);
                     int diffNonBlockingScore = nonBlockingDiffScore.getOrDefault(blocker, 0);
@@ -235,7 +242,7 @@ public final class CombatUtil {
                 // effects support: can't be blocked except by xxx or more creatures
                 if (blockedCount > 0 && attacker.getMinBlockedBy() > blockedCount) {
                     // it already has 1 blocker (killer in best use case), so no needs in second killer
-                    blocker = getWorstCreature(survivedBlockers, survivedAndKillBlocker, diedBlockers);
+                    blocker = getWorstCreature(game, survivedBlockers, survivedAndKillBlocker, diedBlockers);
                     if (blocker != null) {
                         combatInfo.addPair(attacker, blocker);
                         removeWorstCreature(blocker, blockers, survivedBlockers, survivedAndKillBlocker, diedBlockers);

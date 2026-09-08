@@ -881,7 +881,16 @@ public class ComputerPlayer6 extends ComputerPlayer {
                     }
                 }
 
-                // default
+                // Explore higher-impact abilities first to improve alpha-beta pruning.
+                int cost1 = ability1.getManaCosts() == null ? 0 : ability1.getManaCosts().manaValue();
+                int cost2 = ability2.getManaCosts() == null ? 0 : ability2.getManaCosts().manaValue();
+                int priority1 = mage.player.ai.score.MagicAbility.getAbilityScore(ability1) * 10 - cost1;
+                int priority2 = mage.player.ai.score.MagicAbility.getAbilityScore(ability2) * 10 - cost2;
+                if (priority1 != priority2) {
+                    return Integer.compare(priority2, priority1);
+                }
+
+                // Keep ordering stable when the tactical priority is equal.
                 return ability1.getRule().compareTo(ability2.getRule());
             }
         });

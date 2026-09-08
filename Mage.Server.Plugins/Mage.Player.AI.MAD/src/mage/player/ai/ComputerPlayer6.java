@@ -221,12 +221,12 @@ public class ComputerPlayer6 extends ComputerPlayer {
             return GameStateEvaluator2.evaluate(playerId, game).getTotalScore();
         }
         // Condition to stop deeper simulation
-        if (SimulationNode2.nodeCount > MAX_SIMULATED_NODES_PER_ERROR) {
+        if (SimulationNode2.getCount() > MAX_SIMULATED_NODES_PER_ERROR) {
             // how-to fix: make sure you are disabled debug mode by COMPUTER_DISABLE_TIMEOUT_IN_GAME_SIMULATIONS = false
             throw new IllegalStateException("AI ERROR: too much nodes (possible actions)");
         }
         if (depth <= 0
-                || SimulationNode2.nodeCount > maxNodes
+                || SimulationNode2.getCount() > maxNodes
                 || game.checkIfGameIsOver()) {
             String transpositionKey = getTranspositionKey(game, depth);
             Integer cachedValue = transpositionTable == null ? null : transpositionTable.get(transpositionKey);
@@ -357,10 +357,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
             if (alpha >= beta) {
                 break;
             }
-            if (SimulationNode2.nodeCount > MAX_SIMULATED_NODES_PER_ERROR) {
+            if (SimulationNode2.getCount() > MAX_SIMULATED_NODES_PER_ERROR) {
                 throw new IllegalStateException("AI ERROR: too much nodes (possible actions)");
             }
-            if (SimulationNode2.nodeCount > maxNodes) {
+            if (SimulationNode2.getCount() > maxNodes) {
                 break;
             }
             int val = addActions(child, depth - 1, alpha, beta);
@@ -739,10 +739,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
                 if (alpha >= beta) {
                     break;
                 }
-                if (SimulationNode2.nodeCount > MAX_SIMULATED_NODES_PER_ERROR) {
+                if (SimulationNode2.getCount() > MAX_SIMULATED_NODES_PER_ERROR) {
                     throw new IllegalStateException("AI ERROR: too many nodes (possible actions)");
                 }
-                if (SimulationNode2.nodeCount > maxNodes) {
+                if (SimulationNode2.getCount() > maxNodes) {
                     logger.debug("Sim Prio -- reached end-state");
                     break;
                 }
@@ -751,7 +751,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
 
         if (depth == maxDepth) {
             // TODO: buggy? Why it ended with depth limit 6 on one Pass action?!
-            logger.info("Sim Prio [" + depth + "] ## Ended due max actions chain depth limit (" + maxDepth + ") -- Nodes calculated: " + SimulationNode2.nodeCount);
+            logger.info("Sim Prio [" + depth + "] ## Ended due max actions chain depth limit (" + maxDepth + ") -- Nodes calculated: " + SimulationNode2.getCount());
         }
         if (bestNode != null) {
             node.children.clear();

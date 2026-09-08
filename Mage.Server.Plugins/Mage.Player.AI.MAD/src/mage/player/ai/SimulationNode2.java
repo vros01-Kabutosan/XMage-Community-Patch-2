@@ -15,7 +15,7 @@ import mage.game.combat.Combat;
  */
 public class SimulationNode2 implements Serializable {
 
-    protected static int nodeCount;
+    private static final ThreadLocal<Integer> nodeCount = ThreadLocal.withInitial(() -> 0);
 
     protected Game game;
     protected int gameValue; // game state hash to monitor changes
@@ -35,7 +35,7 @@ public class SimulationNode2 implements Serializable {
         this.depth = depth;
         this.playerId = playerId;
         game.setCustomData(this);
-        nodeCount++;
+        nodeCount.set(nodeCount.get() + 1);
     }
 
     public SimulationNode2(SimulationNode2 parent, Game game, List<Ability> abilities, int depth, UUID playerId) {
@@ -50,11 +50,11 @@ public class SimulationNode2 implements Serializable {
     }
 
     public static void resetCount() {
-        nodeCount = 0;
+        nodeCount.set(0);
     }
 
     public static int getCount() {
-        return nodeCount;
+        return nodeCount.get();
     }
 
     public Game getGame() {

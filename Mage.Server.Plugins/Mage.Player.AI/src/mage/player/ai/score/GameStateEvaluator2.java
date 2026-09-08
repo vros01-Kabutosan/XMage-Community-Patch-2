@@ -136,11 +136,14 @@ public final class GameStateEvaluator2 {
         int opponentHandScore = opponent.getHand().size() * HAND_CARD_SCORE;
         int playerGraveyardScore = evaluateGraveyard(player, game);
         int opponentGraveyardScore = evaluateGraveyard(opponent, game);
+        int playerRevealedScore = evaluateRevealedCards(playerId, game);
+        int opponentRevealedScore = evaluateRevealedCards(opponent.getId(), game);
 
         int score = (playerLifeScore - opponentLifeScore)
                 + (playerPermanentsScore - opponentPermanentsScore)
                 + (playerHandScore - opponentHandScore)
-                + (playerGraveyardScore - opponentGraveyardScore);
+                + (playerGraveyardScore - opponentGraveyardScore)
+                + (playerRevealedScore - opponentRevealedScore);
         logger.debug(score
                 + " total Score (life:" + (playerLifeScore - opponentLifeScore)
                 + " permanents:" + (playerPermanentsScore - opponentPermanentsScore)
@@ -149,7 +152,8 @@ public final class GameStateEvaluator2 {
                 playerId,
                 playerLifeScore, playerHandScore, playerPermanentsScore,
                 opponentLifeScore, opponentHandScore, opponentPermanentsScore,
-                playerGraveyardScore, opponentGraveyardScore);
+                playerGraveyardScore, opponentGraveyardScore,
+                playerRevealedScore, opponentRevealedScore);
     }
 
     private static int evaluateOwnHand(Player player, Game game) {
@@ -161,6 +165,20 @@ public final class GameStateEvaluator2 {
             score += HAND_CARD_SCORE + Math.max(0, Math.min(30, definitionScore / 25));
         }
         return score;
+    }
+
+    /** Publicly revealed cards are useful information, but only as a small temporary signal. */
+    private static int evaluateRevealedCards(UUID ownerId, Game game) {
+        int score = 0;
+        for (mage.cards.Cards revealedCards : game.getState().getRevealed().values()) {
+            for (mage.cards.Card card : revealedCards.getCards(game)) {
+                if (ownerId.equals(card.getOwnerId())) {
+                    int definitionScore = ArtificialScoringSystem.getCardDefinitionScore(game, card);
+                    score += Math.max(0, Math.min(6, definitionScore / 100));
+                }
+            }
+        }
+        return Math.min(24, score);
     }
 
     private static int evaluateGraveyard(Player player, Game game) {
@@ -203,11 +221,13 @@ public final class GameStateEvaluator2 {
         private int playerHandScore = 0;
         private int playerPermanentsScore = 0;
         private int playerGraveyardScore = 0;
+        private int playerRevealedScore = 0;
 
         private int opponentLifeScore = 0;
         private int opponentHandScore = 0;
         private int opponentPermanentsScore = 0;
         private int opponentGraveyardScore = 0;
+        private int opponentRevealedScore = 0;
 
         private int specialScore = 0; // special score (ignore all others, e.g. for win/lose game states)
 
@@ -220,13 +240,23 @@ public final class GameStateEvaluator2 {
                        int playerLifeScore, int playerHandScore, int playerPermanentsScore,
                        int opponentLifeScore, int opponentHandScore, int opponentPermanentsScore) {
             this(playerId, playerLifeScore, playerHandScore, playerPermanentsScore,
-                    opponentLifeScore, opponentHandScore, opponentPermanentsScore, 0, 0);
+                    opponentLifeScore, opponentHandScore, opponentPermanentsScore, 0, 0, 0, 0);
         }
 
         public PlayerEvaluateScore(UUID playerId,
                        int playerLifeScore, int playerHandScore, int playerPermanentsScore,
                        int opponentLifeScore, int opponentHandScore, int opponentPermanentsScore,
                        int playerGraveyardScore, int opponentGraveyardScore) {
+            this(playerId, playerLifeScore, playerHandScore, playerPermanentsScore,
+                    opponentLifeScore, opponentHandScore, opponentPermanentsScore,
+                    playerGraveyardScore, opponentGraveyardScore, 0, 0);
+        }
+
+        public PlayerEvaluateScore(UUID playerId,
+                       int playerLifeScore, int playerHandScore, int playerPermanentsScore,
+                       int opponentLifeScore, int opponentHandScore, int opponentPermanentsScore,
+                       int playerGraveyardScore, int opponentGraveyardScore,
+                       int playerRevealedScore, int opponentRevealedScore) {
             this.playerId = playerId;
             this.playerLifeScore = playerLifeScore;
             this.playerHandScore = playerHandScore;
@@ -236,6 +266,8 @@ public final class GameStateEvaluator2 {
             this.opponentPermanentsScore = opponentPermanentsScore;
             this.playerGraveyardScore = playerGraveyardScore;
             this.opponentGraveyardScore = opponentGraveyardScore;
+            this.playerRevealedScore = playerRevealedScore;
+            this.opponentRevealedScore = opponentRevealedScore;
         }
 
         public UUID getPlayerId() {
@@ -243,11 +275,11 @@ public final class GameStateEvaluator2 {
         }
 
         public int getPlayerScore() {
-            return playerLifeScore + playerHandScore + playerPermanentsScore + playerGraveyardScore;
+            return playerLifeScore + playerHandScore + playerPermanentsScore + playerGraveyardScore + playerRevealedScore;
         }
 
         public int getOpponentScore() {
-            return opponentLifeScore + opponentHandScore + opponentPermanentsScore + opponentGraveyardScore;
+            return opponentLifeScore + opponentHandScore + opponentPermanentsScore + opponentGraveyardScore + opponentRevealedScore;
         }
 
         public int getTotalScore() {

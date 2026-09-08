@@ -35,7 +35,7 @@ public final class GameStateEvaluator2 {
             int threat = ArtificialScoringSystem.getLifeScore(opponent.getLife())
                     + opponent.getHand().size() * HAND_CARD_SCORE;
             for (Permanent permanent : game.getBattlefield().getAllActivePermanents(opponentId)) {
-                threat += evaluatePermanent(permanent, game, true);
+                threat += evaluatePermanentSafely(permanent, game, true);
             }
             if (selectedOpponent == null || threat > highestThreat) {
                 selectedOpponent = opponentId;
@@ -88,7 +88,7 @@ public final class GameStateEvaluator2 {
 
             // add values of player
             for (Permanent permanent : game.getBattlefield().getAllActivePermanents(playerId)) {
-                int onePermScore = evaluatePermanent(permanent, game, useCombatPermanentScore);
+                int onePermScore = evaluatePermanentSafely(permanent, game, useCombatPermanentScore);
                 playerPermanentsScore += onePermScore;
                 if (logger.isDebugEnabled()) {
                     sbPlayer.append(permanent.getName()).append('[').append(onePermScore).append("] ");
@@ -104,7 +104,7 @@ public final class GameStateEvaluator2 {
             // Add battlefield pressure from every active opponent in multiplayer games.
             for (UUID opponentId : game.getOpponents(playerId, true)) {
                 for (Permanent permanent : game.getBattlefield().getAllActivePermanents(opponentId)) {
-                int onePermScore = evaluatePermanent(permanent, game, useCombatPermanentScore);
+                int onePermScore = evaluatePermanentSafely(permanent, game, useCombatPermanentScore);
                 opponentPermanentsScore += onePermScore;
                 if (logger.isDebugEnabled()) {
                     sbOpponent.append(permanent.getName()).append('[').append(onePermScore).append("] ");
@@ -199,6 +199,15 @@ public final class GameStateEvaluator2 {
             score += Math.max(0, Math.min(12, definitionScore / 60));
         }
         return Math.min(60, score);
+    }
+
+    private static int evaluatePermanentSafely(Permanent permanent, Game game, boolean useCombatPermanentScore) {
+        try {
+            return evaluatePermanent(permanent, game, useCombatPermanentScore);
+        } catch (Throwable t) {
+            logger.warn("Unable to evaluate permanent " + (permanent == null ? "null" : permanent.getName()), t);
+            return 0;
+        }
     }
 
     public static int evaluatePermanent(Permanent permanent, Game game, boolean useCombatPermanentScore) {

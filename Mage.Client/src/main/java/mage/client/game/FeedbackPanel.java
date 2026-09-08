@@ -48,6 +48,7 @@ public class FeedbackPanel extends javax.swing.JPanel {
     private ChatPanelBasic connectedChatPanel;
     private Map<String, Serializable> lastOptions = new HashMap<>();
 
+    private static final boolean AUTO_CLOSE_END_DIALOG = false;
     private static final int AUTO_CLOSE_END_DIALOG_TIMEOUT_SECS = 8;
     private static final ScheduledExecutorService AUTO_CLOSE_EXECUTOR = Executors.newSingleThreadScheduledExecutor(
             new XmageThreadFactory(ThreadUtils.THREAD_PREFIX_CLIENT_AUTO_CLOSE_TIMER)
@@ -90,6 +91,11 @@ public class FeedbackPanel extends javax.swing.JPanel {
 
     public void prepareFeedback(FeedbackMode mode, String basicMessage, String additionalMessage, boolean special, Map<String, Serializable> options,
                                 boolean gameNeedUserFeedback, TurnPhase gameTurnPhase) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> prepareFeedback(mode, basicMessage, additionalMessage, special, options,
+                    gameNeedUserFeedback, gameTurnPhase));
+            return;
+        }
         synchronized (this) {
             this.lastOptions = options;
             this.mode = mode;
@@ -180,6 +186,9 @@ public class FeedbackPanel extends javax.swing.JPanel {
      */
     private void endWithTimeout() {
         // TODO: add auto-close disable, e.g. keep opened game and chat for longer period like 5 minutes
+        if (!AUTO_CLOSE_END_DIALOG) {
+            return;
+        }
         Runnable task = () -> {
             SwingUtilities.invokeLater(() -> {
                 LOGGER.info("Ending game...");

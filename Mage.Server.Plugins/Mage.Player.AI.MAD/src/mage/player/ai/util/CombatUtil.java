@@ -317,9 +317,20 @@ public final class CombatUtil {
      */
     private static List<SurviveInfo> getBlockersThatWillSurvive2(Game game, UUID attackerId, UUID defenderId, Permanent attacker, List<Permanent> possibleBlockers) {
         List<SurviveInfo> res = new ArrayList<>();
+        if (possibleBlockers == null) {
+            return res;
+        }
         for (Permanent blocker : possibleBlockers) {
-            // TODO: enable willItSurviveSimulation and check stability
-            SurviveInfo info = willItSurviveSimple(game, attackerId, defenderId, attacker, blocker);
+            if (blocker == null) {
+                continue;
+            }
+            // A broken simulation candidate must not abort the whole combat decision.
+            SurviveInfo info;
+            try {
+                info = willItSurviveSimple(game, attackerId, defenderId, attacker, blocker);
+            } catch (RuntimeException ex) {
+                continue;
+            }
             if (info == null) {
                 continue;
             }

@@ -314,7 +314,8 @@ public final class CombatUtil {
                         } catch (RuntimeException ex) {
                             pairKillsAttacker = null;
                         }
-                        if (pairKillsAttacker == null || pairKillsAttacker) {
+                        if ((attacker.getMaxBlockedBy() == 0 || attacker.getMaxBlockedBy() >= 2)
+                                && (pairKillsAttacker == null || pairKillsAttacker)) {
                             combatInfo.addPair(attacker, support);
                             removeWorstCreature(support, blockers, survivedBlockers);
                             blockedCount++;

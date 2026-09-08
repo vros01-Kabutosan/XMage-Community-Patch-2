@@ -979,11 +979,34 @@ public class ComputerPlayer extends PlayerImpl {
 
     @Override
     public TriggeredAbility chooseTriggeredAbility(List<TriggeredAbility> abilities, Game game) {
-        //TODO: improve this
-        if (!abilities.isEmpty()) {
-            return abilities.get(0); // select first trigger all the time
+        if (abilities == null || abilities.isEmpty()) {
+            return null;
         }
-        return null;
+
+        TriggeredAbility best = abilities.get(0);
+        int bestScore = triggeredAbilityScore(best, game);
+        for (int i = 1; i < abilities.size(); i++) {
+            TriggeredAbility candidate = abilities.get(i);
+            int candidateScore = triggeredAbilityScore(candidate, game);
+            if (candidateScore > bestScore) {
+                best = candidate;
+                bestScore = candidateScore;
+            }
+        }
+        return best;
+    }
+
+    private int triggeredAbilityScore(TriggeredAbility ability, Game game) {
+        if (ability == null || ability.getEffects() == null) {
+            return 0;
+        }
+        try {
+            int outcome = ability.getEffects().getOutcomeScore(ability);
+            return Math.max(-6, Math.min(6, outcome));
+        } catch (RuntimeException ex) {
+            // Trigger ordering must never prevent the game from resolving.
+            return 0;
+        }
     }
 
     @Override

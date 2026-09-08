@@ -49,11 +49,15 @@ public final class MagicAbility {
     }
 
     public static int getAbilityScore(Ability ability) {
-        if (!scores.containsKey(ability.getRule())) {
+        if (ability == null) {
+            return 0;
+        }
+        Integer score = scores.get(ability.getRule());
+        if (score == null) {
             //System.err.println("Couldn't find ability score: " + ability.getClass().getSimpleName() + " - " + ability.toString());
             //TODO: add handling protection from ..., levelup, kicker, etc. abilities
             return 2; // more abilities - more score in any use cases
         }
-        return scores.get(ability.getRule());
+        return score;
     }
 }

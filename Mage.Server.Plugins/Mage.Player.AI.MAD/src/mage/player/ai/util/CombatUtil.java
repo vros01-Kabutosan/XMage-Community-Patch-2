@@ -39,11 +39,13 @@ public final class CombatUtil {
         if (game == null || attackersList == null || blockersList == null || defender == null) {
             return emptyList;
         }
+        List<Permanent> validBlockers = new ArrayList<>(blockersList);
+        validBlockers.removeIf(Objects::isNull);
         List<Permanent> blockableAttackers = new ArrayList<>(attackersList);
         blockableAttackers.removeIf(Objects::isNull);
         List<Permanent> unblockableAttackers = new ArrayList<>();
         for (Permanent attacker : attackersList) {
-            if (!canBeBlocked(game, attacker, blockersList)) {
+            if (!canBeBlocked(game, attacker, validBlockers)) {
                 unblockableAttackers.add(attacker);
                 blockableAttackers.remove(attacker);
             }
@@ -53,7 +55,7 @@ public final class CombatUtil {
 
         // imagine that most powerful will be blocked as 1-vs-1
         List<Permanent> attackersThatWontBeBlocked = new ArrayList<>(blockableAttackers);
-        for (int i = 0; (i < blockersList.size() && i < blockableAttackers.size()); i++) {
+        for (int i = 0; (i < validBlockers.size() && i < blockableAttackers.size()); i++) {
             attackersThatWontBeBlocked.remove(blockableAttackers.get(i));
         }
         attackersThatWontBeBlocked.addAll(unblockableAttackers);

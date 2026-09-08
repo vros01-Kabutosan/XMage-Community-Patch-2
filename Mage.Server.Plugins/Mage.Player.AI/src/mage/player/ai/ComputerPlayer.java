@@ -1401,6 +1401,9 @@ public class ComputerPlayer extends PlayerImpl {
         Map<UUID, SpellAbility> usable = PlayerImpl.getCastableSpellAbilities(game, this.getId(), card, game.getState().getZone(card.getId()), noMana);
         return usable.values().stream()
                 .filter(a -> a.getTargets().canChoose(getId(), a, game))
+                .sorted(Comparator
+                        .comparingInt((SpellAbility a) -> a.getEffects().getOutcomeScore(a)).reversed()
+                        .thenComparing(a -> a.getId().toString()))
                 .findFirst()
                 .orElse(null);
     }

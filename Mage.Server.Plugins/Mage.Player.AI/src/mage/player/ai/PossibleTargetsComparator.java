@@ -37,7 +37,11 @@ public class PossibleTargetsComparator {
     private int getScoreFromBattlefield(MageItem item) {
         if (item instanceof Permanent) {
             // use battlefield score instead simple life
-            return GameStateEvaluator2.evaluatePermanent((Permanent) item, game, false);
+            try {
+                return GameStateEvaluator2.evaluatePermanent((Permanent) item, game, false);
+            } catch (Throwable ignored) {
+                return getScoreFromLife(item);
+            }
         } else {
             return getScoreFromLife(item);
         }

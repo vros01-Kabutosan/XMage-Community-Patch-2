@@ -52,7 +52,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
     // TODO: add and research maxNodes logs, is it good to increase from 5000 to 50000 for better results?
     // TODO: increase maxNodes due AI skill level like max depth?
     private static final int MAX_SIMULATED_NODES_PER_CALC = 5000;
-    private static final int MAX_SIMULATED_NODES_PER_ERROR = 5100; // TODO: debug only, set low value to find big calculations
+    private static final int MAX_SIMULATED_NODES_PER_ERROR = 8100; // safety ceiling for the highest skill budget
 
     // same params as Executors.newFixedThreadPool
     // no needs errors check in afterExecute here cause that pool used for FutureTask with result check already
@@ -99,9 +99,14 @@ public class ComputerPlayer6 extends ComputerPlayer {
             maxDepth = skill;
         }
         maxThinkTimeSecs = skill * 3;
-        maxNodes = MAX_SIMULATED_NODES_PER_CALC;
+        maxNodes = calculateMaxNodes(skill);
         this.actionCache = new HashSet<>();
         this.transpositionTable = new HashMap<>();
+    }
+
+    private static int calculateMaxNodes(int skill) {
+        int normalizedSkill = Math.max(1, Math.min(6, skill));
+        return MAX_SIMULATED_NODES_PER_CALC + Math.max(0, normalizedSkill - 3) * 1000;
     }
 
     public ComputerPlayer6(final ComputerPlayer6 player) {

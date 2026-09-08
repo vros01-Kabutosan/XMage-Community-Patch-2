@@ -315,7 +315,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
     }
 
     private String getTranspositionKey(Game game, int depth) {
-        return game.getState().getValue(true).hashCode() + "|" + depth + "|" + game.getPlayerList().get();
+        // Keep the complete state in the key: hashCode-only keys can collide and
+        // make the search reuse a score from a different position.
+        return game.getState().getValue(true) + "|" + depth + "|" + game.getPlayerList().get();
     }
 
     protected boolean getNextAction(Game game) {

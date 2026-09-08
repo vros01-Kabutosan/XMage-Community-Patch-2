@@ -112,6 +112,7 @@ public final class CombatUtil {
         PermanentEvaluator evaluator = new PermanentEvaluator();
         Permanent worst = null;
         int worstScore = Integer.MAX_VALUE;
+        int worstCombatBody = Integer.MAX_VALUE;
         for (List<Permanent> list : lists) {
             if (list == null) {
                 continue;
@@ -121,11 +122,16 @@ public final class CombatUtil {
                     continue;
                 }
                 int score = evaluator.evaluate(permanent, game);
+                int combatBody = permanent.getPower() == null || permanent.getToughness() == null
+                        ? Integer.MIN_VALUE
+                        : permanent.getPower().getValue() + permanent.getToughness().getValue();
                 if (worst == null || score < worstScore
-                        || (score == worstScore
+                        || (score == worstScore && combatBody < worstCombatBody)
+                        || (score == worstScore && combatBody == worstCombatBody
                         && permanent.getId().compareTo(worst.getId()) < 0)) {
                     worst = permanent;
                     worstScore = score;
+                    worstCombatBody = combatBody;
                 }
             }
         }

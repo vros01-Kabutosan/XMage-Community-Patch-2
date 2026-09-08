@@ -1123,17 +1123,19 @@ public class ComputerPlayer6 extends ComputerPlayer {
                         // attacker and blocker have the same P/T, check their overall value
                         if (attacker.getToughness().getValue() == blocker.getPower().getValue()
                                 && attacker.getPower().getValue() == blocker.getToughness().getValue()) {
-                            if (attackerValue > blockerValue
-                                    || blocker.getAbilities().containsKey(FirstStrikeAbility.getInstance().getId())
-                                    || blocker.getAbilities().containsKey(DoubleStrikeAbility.getInstance().getId())
-                                    || blocker.getAbilities().contains(new ExaltedAbility())
-                                    || blocker.getAbilities().containsKey(DeathtouchAbility.getInstance().getId())
-                                    || blocker.getAbilities().containsKey(IndestructibleAbility.getInstance().getId())
-                                    || !attacker.getAbilities().containsKey(FirstStrikeAbility.getInstance().getId())
-                                    || !attacker.getAbilities().containsKey(DoubleStrikeAbility.getInstance().getId())
-                                    || !attacker.getAbilities().contains(new ExaltedAbility())) {
-                                safeToAttack = false;
-                            }
+                            boolean blockerHasCombatAdvantage
+                                = blocker.getAbilities().containsKey(FirstStrikeAbility.getInstance().getId())
+                                || blocker.getAbilities().containsKey(DoubleStrikeAbility.getInstance().getId())
+                                || blocker.getAbilities().containsKey(DeathtouchAbility.getInstance().getId())
+                                || blocker.getAbilities().containsKey(IndestructibleAbility.getInstance().getId());
+                        boolean attackerHasCombatAdvantage
+                                = attacker.getAbilities().containsKey(FirstStrikeAbility.getInstance().getId())
+                                || attacker.getAbilities().containsKey(DoubleStrikeAbility.getInstance().getId())
+                                || attacker.getAbilities().containsKey(DeathtouchAbility.getInstance().getId())
+                                || attacker.getAbilities().containsKey(IndestructibleAbility.getInstance().getId());
+                        if (attackerValue > blockerValue || blockerHasCombatAdvantage || !attackerHasCombatAdvantage) {
+                            safeToAttack = false;
+                        }
                         }
 
                         // attacker can kill by deathtouch

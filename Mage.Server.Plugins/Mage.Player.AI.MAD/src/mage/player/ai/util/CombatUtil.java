@@ -104,10 +104,11 @@ public final class CombatUtil {
     }
 
     public static void sortByPower(List<Permanent> permanents, final boolean ascending) {
-        permanents.sort(Comparator.comparingInt(p -> p.getPower().getValue()));
+        Comparator<Permanent> order = Comparator.comparingInt(p -> p.getPower().getValue());
         if (!ascending) {
-            Collections.reverse(permanents);
+            order = order.reversed();
         }
+        permanents.sort(order.thenComparing(p -> p.getId().toString()));
     }
 
     public static Permanent getWorstCreature(Game game, List<Permanent>... lists) {

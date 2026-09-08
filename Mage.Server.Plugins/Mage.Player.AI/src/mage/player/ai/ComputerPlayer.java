@@ -980,11 +980,14 @@ public class ComputerPlayer extends PlayerImpl {
                 .map(m -> m.getId() + " [" + m.getEffects().getText(m) + "]")
                 .collect(Collectors.joining(" | ")));
 
-        Mode result = modes.getAvailableModes(source, game).stream()
+        List<Mode> availableModes = modes.getAvailableModes(source, game).stream()
                 .filter(mode -> modes.isMayChooseSameModeMoreThanOnce() || !modes.getSelectedModes().contains(mode.getId()))
                 .filter(mode -> mode.getTargets().canChoose(source.getControllerId(), source, game))
-                .findFirst()
-                .orElse(null);
+                .sorted(Comparator
+                        .comparingInt((Mode mode) -> mode.getEffects().getOutcomeScore(source)).reversed()
+                        .thenComparing(mode -> mode.getId().toString()))
+                .collect(Collectors.toList());
+        Mode result = availableModes.isEmpty() ? null : availableModes.get(0);
 
         logger.debug("  - fallback picked: " + (result == null ? "null" : result.getId() + " [" + result.getEffects().getText(result) + "]"));
         logger.debug("  - canChoose per mode: " + modes.getAvailableModes(source, game).stream()

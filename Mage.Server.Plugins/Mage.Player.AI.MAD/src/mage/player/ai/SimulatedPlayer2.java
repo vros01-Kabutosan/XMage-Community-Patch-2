@@ -180,7 +180,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         // TODO: is it useless cause it already filtered before?
         options.removeIf(option -> !option.getTargets().isChosen(game));
 
-        if (AI_SIMULATE_ALL_BAD_AND_GOOD_TARGETS) {
+        // Small option sets are cheap to search and may contain tactical
+        // choices that do not match the effect's coarse good/bad outcome.
+        if (AI_SIMULATE_ALL_BAD_AND_GOOD_TARGETS || options.size() <= 12) {
             return options;
         }
 

@@ -109,7 +109,9 @@ public final class GameStateEvaluator2 {
         // - additional improve: use revealed data to score opponent's hand:
         //   * known card by card evaluator;
         //   * unknown card by max value (so AI will use reveal to make opponent's total score lower -- is it helps???)
-        int playerHandScore = player.getHand().size() * HAND_CARD_SCORE;
+        // Keep opponent hand information hidden: only its size is observable.
+        // For our own hand, value cards by definition instead of treating all cards equally.
+        int playerHandScore = evaluateOwnHand(player, game);
         int opponentHandScore = opponent.getHand().size() * HAND_CARD_SCORE;
 
         int score = (playerLifeScore - opponentLifeScore)
@@ -123,6 +125,17 @@ public final class GameStateEvaluator2 {
                 playerId,
                 playerLifeScore, playerHandScore, playerPermanentsScore,
                 opponentLifeScore, opponentHandScore, opponentPermanentsScore);
+    }
+
+    private static int evaluateOwnHand(Player player, Game game) {
+        int score = 0;
+        for (mage.cards.Card card : player.getHand().getCards(game)) {
+            int definitionScore = ArtificialScoringSystem.getCardDefinitionScore(game, card);
+            // Hand cards are future resources, so keep them below battlefield
+            // permanents while distinguishing playable quality.
+            score += HAND_CARD_SCORE + Math.max(0, Math.min(30, definitionScore / 25));
+        }
+        return score;
     }
 
     public static int evaluatePermanent(Permanent permanent, Game game, boolean useCombatPermanentScore) {

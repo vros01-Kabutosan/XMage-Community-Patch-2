@@ -140,7 +140,7 @@ public class ComputerPlayer7 extends ComputerPlayer6 {
 
                 if (doThis) {
                     actions = new LinkedList<>(root.abilities);
-                    combat = root.combat; // TODO: must use copy?!
+                    combat = root.combat == null ? null : root.combat.copy();
                     for (Ability ability : actions) {
                         actionCache.add(ability.getRule() + '_' + ability.getSourceId());
                     }

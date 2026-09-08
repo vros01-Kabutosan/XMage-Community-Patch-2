@@ -898,8 +898,12 @@ public class ComputerPlayer6 extends ComputerPlayer {
                     return Integer.compare(priority2, priority1);
                 }
 
-                // Keep ordering stable when the tactical priority is equal.
-                return ability1.getRule().compareTo(ability2.getRule());
+                // Keep ordering deterministic when the tactical priority is equal.
+                int ruleOrder = ability1.getRule().compareTo(ability2.getRule());
+                if (ruleOrder != 0) {
+                    return ruleOrder;
+                }
+                return ability1.toString().compareTo(ability2.toString());
             }
         });
     }

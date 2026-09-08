@@ -1060,9 +1060,12 @@ public class ComputerPlayer6 extends ComputerPlayer {
         game.fireEvent(new GameEvent(GameEvent.EventType.DECLARE_ATTACKERS_STEP_PRE, null, null, activePlayerId));
         if (!game.replaceEvent(GameEvent.getEvent(GameEvent.EventType.DECLARING_ATTACKERS, activePlayerId, activePlayerId))) {
             Player attackingPlayer = game.getPlayer(activePlayerId);
+            List<UUID> attackTargets = new ArrayList<>(game.getOpponents(playerId, true));
+            attackTargets.sort((left, right) -> Integer.compare(
+                    game.getPlayer(left).getLife(), game.getPlayer(right).getLife()));
 
             // check alpha strike first (all in attack to kill a player)
-            for (UUID defenderId : game.getOpponents(playerId, true)) {
+            for (UUID defenderId : attackTargets) {
                 Player defender = game.getPlayer(defenderId);
                 if (!defender.isInGame()) {
                     continue;
@@ -1085,7 +1088,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
             // TODO: add game simulations here to find best attackers/blockers combination
 
             // find safe attackers (can't be killed by blockers)
-            for (UUID defenderId : game.getOpponents(playerId, true)) {
+            for (UUID defenderId : attackTargets) {
                 Player defender = game.getPlayer(defenderId);
                 if (!defender.isInGame()) {
                     continue;

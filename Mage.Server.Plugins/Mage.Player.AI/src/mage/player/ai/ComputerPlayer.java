@@ -606,22 +606,30 @@ public class ComputerPlayer extends PlayerImpl {
 
         // pay special mana like convoke cost (tap for pay)
         // GUI: user see "special" button while pay spell's cost
-        // TODO: AI can't prioritize special mana types to pay, e.g. it will use first available
-        SpecialAction specialAction = game.getState().getSpecialActions().getControlledBy(this.getId(), true).values()
-                .stream()
-                .findFirst()
-                .orElse(null);
-        ManaOptions specialMana = specialAction == null ? null : specialAction.getManaOptions(ability, game, unpaid);
-        if (specialMana != null) {
+        List<SpecialAction> specialActions = new ArrayList<>(
+                game.getState().getSpecialActions().getControlledBy(this.getId(), true).values());
+        specialActions.sort(Comparator.comparing(
+                action -> action.getId() == null ? "" : action.getId().toString()));
+
+        for (SpecialAction specialAction : specialActions) {
+            ManaOptions specialMana;
+            try {
+                specialMana = specialAction.getManaOptions(ability, game, unpaid);
+            } catch (RuntimeException ex) {
+                continue;
+            }
+            if (specialMana == null) {
+                continue;
+            }
             for (Mana netMana : specialMana) {
                 if (cost.testPay(netMana) || hasApprovingObject) {
-                    if (netMana instanceof ConditionalMana && !((ConditionalMana) netMana).apply(ability, game, getId(), cost)) {
+                    if (netMana instanceof ConditionalMana
+                            && !((ConditionalMana) netMana).apply(ability, game, getId(), cost)) {
                         continue;
                     }
                     if (activateAbility(specialAction, game)) {
                         return true;
                     }
-                    // only one time try to pay to skip infinite AI loop
                     break;
                 }
             }

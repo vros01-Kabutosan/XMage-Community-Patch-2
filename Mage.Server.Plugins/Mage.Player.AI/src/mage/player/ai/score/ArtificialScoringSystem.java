@@ -82,6 +82,9 @@ public final class ArtificialScoringSystem {
         int score = permanent.getCounters(game).getCount(CounterType.CHARGE) * 30;
         score += permanent.getCounters(game).getCount(CounterType.LEVEL) * 30;
         score -= permanent.getDamage() * 2;
+        int permanentOutcomeScore = permanent.getAbilities(game).getOutcomeTotal();
+        permanentOutcomeScore = Math.max(-3, Math.min(6, permanentOutcomeScore));
+        score += permanentOutcomeScore * 20;
         if (permanent.getCardType(game).contains(CardType.PLANESWALKER)) {
             score += permanent.getCounters(game).getCount(CounterType.LOYALTY) * 200;
         }

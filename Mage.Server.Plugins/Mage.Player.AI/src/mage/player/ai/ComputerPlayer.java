@@ -697,7 +697,16 @@ public class ComputerPlayer extends PlayerImpl {
                         a2Max = netMana.count();
                     }
                 }
-                return CardUtil.overflowDec(a2Max, a1Max);
+                int result = CardUtil.overflowDec(a2Max, a1Max);
+                if (result != 0) {
+                    return result;
+                }
+                UUID id1 = a1.getId();
+                UUID id2 = a2.getId();
+                if (id1 == null || id2 == null) {
+                    return id1 == id2 ? 0 : (id1 == null ? 1 : -1);
+                }
+                return id1.toString().compareTo(id2.toString());
             });
         }
         return manaAbilities;

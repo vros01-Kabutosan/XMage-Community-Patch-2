@@ -189,6 +189,16 @@ public final class CombatUtil {
         if (game == null || game.getCombat() == null || attackers == null || blockers == null) {
             return new CombatInfo();
         }
+        // Work on private, deterministic candidate lists. The caller may reuse
+        // these collections while the combat decision is being evaluated.
+        attackers = new ArrayList<>(attackers);
+        blockers = new ArrayList<>(blockers);
+        Comparator<Permanent> stableOrder = Comparator.comparing(
+                permanent -> permanent == null || permanent.getId() == null
+                        ? "" : permanent.getId().toString());
+        attackers.sort(stableOrder);
+        blockers.sort(stableOrder);
+
         UUID attackerId = game.getCombat().getAttackingPlayerId();
         if (attackerId == null || game.getCombat().getDefenders() == null
                 || game.getCombat().getDefenders().isEmpty()) {

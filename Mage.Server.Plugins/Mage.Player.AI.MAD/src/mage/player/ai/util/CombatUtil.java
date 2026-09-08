@@ -292,6 +292,23 @@ public final class CombatUtil {
                 combatInfo.addPair(attacker, blocker);
                 removeWorstCreature(blocker, blockers, survivedAndKillBlocker, survivedBlockers);
                 blockedCount++;
+
+                // Add a second survivor when the pair can finish the attacker.
+                if (!survivedAndKillBlocker.contains(blocker)) {
+                    final Permanent chosenBlocker = blocker;
+                    int combinedPower = chosenBlocker.getPower().getValue();
+                    Permanent support = survivedBlockers.stream()
+                            .filter(candidate -> candidate != chosenBlocker)
+                            .filter(candidate -> combinedPower + candidate.getPower().getValue() >= attacker.getToughness().getValue())
+                            .sorted(stableOrder)
+                            .findFirst()
+                            .orElse(null);
+                    if (support != null) {
+                        combatInfo.addPair(attacker, support);
+                        removeWorstCreature(support, blockers, survivedBlockers);
+                        blockedCount++;
+                    }
+                }
             }
 
             // find good sacrifices (chump blocks also supported due bad game score on loose)

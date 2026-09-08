@@ -15,10 +15,15 @@ import java.util.UUID;
 public class PermanentEvaluator {
 
     private final Map<UUID, Integer> values = new HashMap<>();
+    private String lastGameStateValue;
     private final CombatEvaluator combat = new CombatEvaluator();
 
     public int evaluate(Permanent permanent, Game game) {
-        values.clear();
+        String gameStateValue = game.getState().getValue(true);
+        if (!gameStateValue.equals(lastGameStateValue)) {
+            values.clear();
+            lastGameStateValue = gameStateValue;
+        }
         // more score -- more valueable/powerfull permanent
         if (!values.containsKey(permanent.getId())) {
             int value = 0;

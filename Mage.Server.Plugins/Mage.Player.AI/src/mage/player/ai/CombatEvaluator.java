@@ -23,9 +23,14 @@ public class CombatEvaluator {
 
     //preserve calculations for efficiency
     private Map<UUID, Integer> values = new HashMap<>();
+    private String lastGameStateValue;
 
     public int evaluate(Permanent creature, Game game) {
-        values.clear();
+        String gameStateValue = game.getState().getValue(true);
+        if (!gameStateValue.equals(lastGameStateValue)) {
+            values.clear();
+            lastGameStateValue = gameStateValue;
+        }
         if (!values.containsKey(creature.getId())) {
             int value = 0;
             if (creature.canAttack(null, game)) {

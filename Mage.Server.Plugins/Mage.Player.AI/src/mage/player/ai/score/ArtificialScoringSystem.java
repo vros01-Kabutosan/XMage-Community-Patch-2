@@ -41,7 +41,8 @@ public final class ArtificialScoringSystem {
 
         final int score = value * 100 - card.getManaCost().manaValue() * 20;
         if (card.getCardType(game).contains(CardType.CREATURE)) {
-            return score + (card.getPower().getValue() + card.getToughness().getValue()) * 10;
+            int creatureAbilityBonus = getCreatureAbilityBonus(game, card);
+            return score + (card.getPower().getValue() + card.getToughness().getValue()) * 10 + creatureAbilityBonus;
         } else {
             int rarityScore = card.getRarity() == null ? 0 : card.getRarity().getRating() * 30;
             // Use effect outcomes as a restrained signal for non-creature spells.
@@ -49,6 +50,15 @@ public final class ArtificialScoringSystem {
             outcomeScore = Math.max(-3, Math.min(6, outcomeScore));
             return score + rarityScore + outcomeScore * 20;
         }
+    }
+
+    private static int getCreatureAbilityBonus(final Game game, final Card card) {
+        int bonus = 0;
+        for (Ability ability : card.getAbilities(game)) {
+            int abilityScore = MagicAbility.getAbilityScore(ability);
+            bonus += Math.max(-2, Math.min(4, abilityScore / 25)) * 10;
+        }
+        return Math.max(-20, Math.min(100, bonus));
     }
 
     public static int getFixedPermanentScore(final Game game, final Permanent permanent) {

@@ -171,8 +171,11 @@ public final class CombatUtil {
      */
     public static List<Permanent> getPossibleBlockers(Game game, Permanent attacker, List<Permanent> blockersList) {
         List<Permanent> canBlock = new ArrayList<>();
+        if (game == null || attacker == null || blockersList == null) {
+            return canBlock;
+        }
         for (Permanent blocker : blockersList) {
-            if (blocker.canBlock(attacker.getId(), game)) {
+            if (blocker != null && blocker.canBlock(attacker.getId(), game)) {
                 canBlock.add(blocker);
             }
         }
@@ -187,8 +190,16 @@ public final class CombatUtil {
             return new CombatInfo();
         }
         UUID attackerId = game.getCombat().getAttackingPlayerId();
-        UUID defenderId = game.getCombat().getDefenders().iterator().next();
-        if (attackerId == null || defenderId == null) {
+        if (attackerId == null || game.getCombat().getDefenders() == null
+                || game.getCombat().getDefenders().isEmpty()) {
+            return new CombatInfo();
+        }
+        UUID defenderId = game.getCombat().getDefenders().stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(UUID::toString))
+                .findFirst()
+                .orElse(null);
+        if (defenderId == null) {
             return new CombatInfo();
         }
 

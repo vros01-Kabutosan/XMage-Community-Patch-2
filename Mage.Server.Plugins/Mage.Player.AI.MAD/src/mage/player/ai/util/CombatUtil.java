@@ -177,6 +177,9 @@ public final class CombatUtil {
      * AI related code, find better block combination for attackers
      */
     public static CombatInfo blockWithGoodTrade2(Game game, List<Permanent> attackers, List<Permanent> blockers) {
+        if (game == null || game.getCombat() == null || attackers == null || blockers == null) {
+            return new CombatInfo();
+        }
         UUID attackerId = game.getCombat().getAttackingPlayerId();
         UUID defenderId = game.getCombat().getDefenders().iterator().next();
         if (attackerId == null || defenderId == null) {

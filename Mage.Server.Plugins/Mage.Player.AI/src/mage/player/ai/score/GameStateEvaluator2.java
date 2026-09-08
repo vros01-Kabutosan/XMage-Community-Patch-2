@@ -169,7 +169,7 @@ public final class GameStateEvaluator2 {
             int definitionScore = ArtificialScoringSystem.getCardDefinitionScore(game, card);
             score += Math.max(0, Math.min(12, definitionScore / 60));
         }
-        return score;
+        return Math.min(60, score);
     }
 
     public static int evaluatePermanent(Permanent permanent, Game game, boolean useCombatPermanentScore) {

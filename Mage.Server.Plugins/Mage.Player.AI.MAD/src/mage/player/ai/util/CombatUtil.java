@@ -193,6 +193,8 @@ public final class CombatUtil {
         // these collections while the combat decision is being evaluated.
         attackers = new ArrayList<>(attackers);
         blockers = new ArrayList<>(blockers);
+        attackers.removeIf(Objects::isNull);
+        blockers.removeIf(Objects::isNull);
         Comparator<Permanent> stableOrder = Comparator.comparing(
                 permanent -> permanent == null || permanent.getId() == null
                         ? "" : permanent.getId().toString());

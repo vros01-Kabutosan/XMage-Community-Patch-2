@@ -846,9 +846,13 @@ public class ComputerPlayer extends PlayerImpl {
             }
         }
 
-        // choose by random
-        if (!choice.isChosen()) {
-            choice.setRandomChoice();
+        // Use a stable fallback for generic choices; avoid simulation-dependent randomness.
+        if (!choice.isChosen() && !choice.getChoices().isEmpty()) {
+            List<String> choices = new ArrayList<>(choice.getChoices());
+            String preferred = outcome != null && outcome.isGood()
+                    ? choices.stream().filter(value -> "yes".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value)).findFirst().orElse(null)
+                    : choices.stream().filter(value -> "no".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)).findFirst().orElse(null);
+            choice.setChoice(preferred != null ? preferred : choices.stream().sorted().findFirst().orElse(choices.get(0)));
         }
 
         return true;

@@ -7,6 +7,7 @@ import mage.constants.Zone;
 import mage.counters.CounterType;
 import mage.game.Game;
 import mage.game.permanent.Permanent;
+import mage.player.ai.score.ArtificialScoringSystem;
 import mage.player.ai.score.GameStateEvaluator2;
 import mage.players.PlayableObjectsList;
 import mage.players.Player;
@@ -39,6 +40,12 @@ public class PossibleTargetsComparator {
             // use battlefield score instead simple life
             try {
                 return GameStateEvaluator2.evaluatePermanent((Permanent) item, game, false);
+            } catch (Throwable ignored) {
+                return getScoreFromLife(item);
+            }
+        } else if (item instanceof Card) {
+            try {
+                return ArtificialScoringSystem.getCardDefinitionScore(game, (Card) item);
             } catch (Throwable ignored) {
                 return getScoreFromLife(item);
             }

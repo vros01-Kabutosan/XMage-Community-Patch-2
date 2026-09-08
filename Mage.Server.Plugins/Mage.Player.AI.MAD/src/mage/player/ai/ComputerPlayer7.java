@@ -58,8 +58,9 @@ public class ComputerPlayer7 extends ComputerPlayer6 {
                 if (actions.isEmpty()) {
                     calculateActions(game);
                 } else {
-                    // TODO: is it possible non empty actions without calculation?!
-                    throw new IllegalStateException("wtf");
+                    // Discard stale actions and recalculate for the current phase.
+                    actions.clear();
+                    calculateActions(game);
                 }
                 act(game);
                 return true;
@@ -71,8 +72,9 @@ public class ComputerPlayer7 extends ComputerPlayer6 {
                 if (actions.isEmpty()) {
                     calculateActions(game);
                 } else {
-                    // TODO: is it possible non empty actions without calculation?!
-                    throw new IllegalStateException("wtf");
+                    // Discard stale actions and recalculate for the current phase.
+                    actions.clear();
+                    calculateActions(game);
                 }
                 act(game);
                 return true;
@@ -81,8 +83,9 @@ public class ComputerPlayer7 extends ComputerPlayer6 {
                 if (actions.isEmpty()) {
                     calculateActions(game);
                 } else {
-                    // TODO: is it possible non empty actions without calculation?!
-                    throw new IllegalStateException("wtf");
+                    // Discard stale actions and recalculate for the current phase.
+                    actions.clear();
+                    calculateActions(game);
                 }
                 act(game);
                 return true;
@@ -96,8 +99,9 @@ public class ComputerPlayer7 extends ComputerPlayer6 {
                 if (actions.isEmpty()) {
                     calculateActions(game);
                 } else {
-                    // TODO: is it possible non empty actions without calculation?!
-                    throw new IllegalStateException("wtf");
+                    // Discard stale actions and recalculate for the current phase.
+                    actions.clear();
+                    calculateActions(game);
                 }
                 act(game);
                 return true;

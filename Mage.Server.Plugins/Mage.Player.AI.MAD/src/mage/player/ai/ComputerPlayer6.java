@@ -468,7 +468,11 @@ public class ComputerPlayer6 extends ComputerPlayer {
         // run new game simulation in parallel thread
         // Never reuse scores between turns: hidden information, triggers and mana change.
         transpositionTable = new HashMap<>();
-        FutureTask<Integer> task = new FutureTask<>(() -> addActions(root, maxDepth, Integer.MIN_VALUE, Integer.MAX_VALUE));
+        FutureTask<Integer> task = new FutureTask<>(() -> {
+            // Node counters are thread-local; reset them in the simulation worker.
+            SimulationNode2.resetCount();
+            return addActions(root, maxDepth, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        });
         threadPoolSimulations.execute(task);
         try {
             int maxSeconds = maxThinkTimeSecs;

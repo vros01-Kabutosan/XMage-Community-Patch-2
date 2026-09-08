@@ -214,6 +214,9 @@ public final class GameStateEvaluator2 {
     }
 
     public static int evaluatePermanent(Permanent permanent, Game game, boolean useCombatPermanentScore) {
+        if (permanent == null || game == null) {
+            return 0;
+        }
         // prevent AI from attaching bad auras to its own permanents ex: Brainwash and Demonic Torment (no immediate penalty on the battlefield)
         int value = 0;
         if (!permanent.getAttachments().isEmpty()) {

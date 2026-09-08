@@ -119,6 +119,7 @@ public final class GameStateEvaluator2 {
                 logger.debug(sbOpponent);
             }
         } catch (Throwable t) {
+            logger.warn("Unable to evaluate one or more battlefield permanents", t);
         }
 
         // TODO: add card evaluator like permanent evaluator

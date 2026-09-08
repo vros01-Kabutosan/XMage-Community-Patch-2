@@ -307,9 +307,18 @@ public final class CombatUtil {
                             .collect(Collectors.toList());
                     Permanent support = getWorstCreature(game, supportCandidates);
                     if (support != null) {
-                        combatInfo.addPair(attacker, support);
-                        removeWorstCreature(support, blockers, survivedBlockers);
-                        blockedCount++;
+                        Boolean pairKillsAttacker = null;
+                        try {
+                            SurviveInfo pairInfo = simulateBlockerCombination(game, attackerId, defenderId, attacker, Arrays.asList(chosenBlocker, support));
+                            pairKillsAttacker = pairInfo == null ? null : pairInfo.isAttackerDied();
+                        } catch (RuntimeException ex) {
+                            pairKillsAttacker = null;
+                        }
+                        if (pairKillsAttacker == null || pairKillsAttacker) {
+                            combatInfo.addPair(attacker, support);
+                            removeWorstCreature(support, blockers, survivedBlockers);
+                            blockedCount++;
+                        }
                     }
                 }
             }
@@ -401,6 +410,43 @@ public final class CombatUtil {
         return res;
     }
 
+    private static SurviveInfo simulateBlockerCombination(Game originalGame, UUID attackingPlayerId, UUID defendingPlayerId, Permanent attacker, List<Permanent> blockers) {
+        if (originalGame == null || attacker == null || blockers == null || blockers.isEmpty()) { return null; }
+        Game sim = originalGame.createSimulationForAI();
+        if (sim.getPlayer(defendingPlayerId) == null) { return null; }
+        List<Permanent> validBlockers = blockers.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        if (validBlockers.isEmpty()) { return null; }
+        Combat combat = sim.getCombat();
+        combat.setAttacker(attackingPlayerId);
+        combat.setDefenders(sim);
+        int startScore = GameStateEvaluator2.evaluate(defendingPlayerId, sim).getTotalScore();
+        int simulationSteps = 0;
+        for (Permanent blocker : validBlockers) {
+            sim.getPlayer(defendingPlayerId).declareBlocker(defendingPlayerId, blocker.getId(), attacker.getId(), sim);
+        }
+        sim.fireEvent(GameEvent.getEvent(GameEvent.EventType.DECLARED_BLOCKERS, defendingPlayerId, defendingPlayerId));
+        sim.checkStateAndTriggered();
+        while (!sim.getStack().isEmpty()) {
+            if (++simulationSteps > 1000) { return null; }
+            sim.getStack().resolve(sim);
+            sim.applyEffects();
+        }
+        sim.fireEvent(GameEvent.getEvent(GameEvent.EventType.DECLARE_BLOCKERS_STEP_POST, sim.getActivePlayerId(), sim.getActivePlayerId()));
+        simulateStep(sim, new CombatDamageStep(true));
+        simulateStep(sim, new CombatDamageStep(false));
+        simulateStep(sim, new EndOfCombatStep());
+        sim.checkStateAndTriggered();
+        while (!sim.getStack().isEmpty()) {
+            if (++simulationSteps > 1000) { return null; }
+            sim.getStack().resolve(sim);
+            sim.applyEffects();
+        }
+        int endBlockingScore = GameStateEvaluator2.evaluate(defendingPlayerId, sim).getTotalScore();
+        Permanent firstBlocker = validBlockers.get(0);
+        return new SurviveInfo(!sim.getBattlefield().containsPermanent(attacker.getId()),
+                !sim.getBattlefield().containsPermanent(firstBlocker.getId()),
+                endBlockingScore - startScore, 0);
+    }
     public static SurviveInfo willItSurviveSimulation(Game originalGame, UUID attackingPlayerId, UUID defendingPlayerId, Permanent attacker, Permanent blocker) {
         Game sim = originalGame.createSimulationForAI();
         if (blocker == null || attacker == null || sim.getPlayer(defendingPlayerId) == null) {

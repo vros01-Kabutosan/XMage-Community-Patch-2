@@ -318,6 +318,26 @@ public final class CombatUtil {
                             combatInfo.addPair(attacker, support);
                             removeWorstCreature(support, blockers, survivedBlockers);
                             blockedCount++;
+                        } else if (attacker.getMaxBlockedBy() == 0 || attacker.getMaxBlockedBy() >= 3) {
+                            List<Permanent> thirdCandidates = supportCandidates.stream()
+                                    .filter(candidate -> candidate != support)
+                                    .filter(candidate -> combinedPower + support.getPower().getValue() + candidate.getPower().getValue() >= attacker.getToughness().getValue())
+                                    .collect(Collectors.toList());
+                            Permanent third = getWorstCreature(game, thirdCandidates);
+                            if (third != null) {
+                                try {
+                                    SurviveInfo tripleInfo = simulateBlockerCombination(game, attackerId, defenderId, attacker, Arrays.asList(chosenBlocker, support, third));
+                                    if (tripleInfo != null && tripleInfo.isAttackerDied()) {
+                                        combatInfo.addPair(attacker, support);
+                                        combatInfo.addPair(attacker, third);
+                                        removeWorstCreature(support, blockers, survivedBlockers);
+                                        removeWorstCreature(third, blockers, survivedBlockers);
+                                        blockedCount += 2;
+                                    }
+                                } catch (RuntimeException ex) {
+                                    // Keep the legal pair-free fallback if the simulation is inconclusive.
+                                }
+                            }
                         }
                     }
                 }

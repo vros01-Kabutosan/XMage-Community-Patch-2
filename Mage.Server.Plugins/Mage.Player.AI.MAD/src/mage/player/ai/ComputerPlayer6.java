@@ -31,7 +31,6 @@ import mage.target.Target;
 import mage.target.TargetAmount;
 import mage.target.TargetCard;
 import mage.util.CardUtil;
-import mage.util.RandomUtil;
 import mage.util.ThreadUtils;
 import mage.util.XmageThreadFactory;
 import org.apache.log4j.Logger;
@@ -1088,8 +1087,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
         if (!game.replaceEvent(GameEvent.getEvent(GameEvent.EventType.DECLARING_ATTACKERS, activePlayerId, activePlayerId))) {
             Player attackingPlayer = game.getPlayer(activePlayerId);
             List<UUID> attackTargets = new ArrayList<>(game.getOpponents(playerId, true));
-            attackTargets.sort((left, right) -> Integer.compare(
-                    game.getPlayer(left).getLife(), game.getPlayer(right).getLife()));
+            attackTargets.sort((left, right) -> {
+                int lifeOrder = Integer.compare(game.getPlayer(left).getLife(), game.getPlayer(right).getLife());
+                return lifeOrder != 0 ? lifeOrder : left.toString().compareTo(right.toString());
+            });
 
             // check alpha strike first (all in attack to kill a player)
             for (UUID defenderId : attackTargets) {

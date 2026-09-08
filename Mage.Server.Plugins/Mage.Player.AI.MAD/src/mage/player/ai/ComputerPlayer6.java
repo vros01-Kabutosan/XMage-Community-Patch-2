@@ -713,10 +713,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
                             && action instanceof PassAbility) {
                         finalScore = finalScore - PASSIVITY_PENALTY; // passivity penalty
                     }
-                    if (finalScore > alpha
-                            || (depth == maxDepth
-                            && finalScore == alpha
-                            && RandomUtil.nextBoolean())) { // Adding random for equal value to get change sometimes
+                    if (finalScore > alpha) {
                         alpha = finalScore;
                         bestNode = newNode;
                         bestNode.setScore(finalScore);

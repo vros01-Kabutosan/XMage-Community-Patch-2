@@ -138,9 +138,17 @@ public final class GameStateEvaluator2 {
         int playerHandScore = evaluateOwnHand(player, game);
         int opponentHandScore = opponent.getHand().size() * HAND_CARD_SCORE;
         int playerGraveyardScore = evaluateGraveyard(player, game);
-        int opponentGraveyardScore = evaluateGraveyard(opponent, game);
+        int opponentGraveyardScore = 0;
         int playerRevealedScore = evaluateRevealedCards(playerId, game);
-        int opponentRevealedScore = evaluateRevealedCards(opponent.getId(), game);
+        int opponentRevealedScore = 0;
+        // Public zones from every active opponent matter in multiplayer games.
+        for (UUID opponentId : game.getOpponents(playerId, true)) {
+            Player publicOpponent = game.getPlayer(opponentId);
+            if (publicOpponent != null) {
+                opponentGraveyardScore += evaluateGraveyard(publicOpponent, game);
+                opponentRevealedScore += evaluateRevealedCards(opponentId, game);
+            }
+        }
 
         int score = (playerLifeScore - opponentLifeScore)
                 + (playerPermanentsScore - opponentPermanentsScore)

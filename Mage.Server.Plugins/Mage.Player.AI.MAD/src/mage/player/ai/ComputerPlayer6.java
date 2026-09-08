@@ -1220,6 +1220,30 @@ public class ComputerPlayer6 extends ComputerPlayer {
     }
 
     @Override
+    public boolean chooseMulligan(Game game) {
+        // Mantener el comportamiento seguro en tests, Momir y manos ya reducidas.
+        if (hand.size() < 6 || isTestMode() || game.getClass().getName().contains("Momir")) {
+            return false;
+        }
+
+        int landCount = hand.getCards(new mage.filter.common.FilterLandCard(), game).size();
+        int nonLandCount = hand.size() - landCount;
+        boolean hasEarlyPlay = false;
+        for (mage.cards.Card card : hand.getCards(game)) {
+            if (!card.isLand(game) && card.getManaCost() != null && card.getManaCost().manaValue() <= 2) {
+                hasEarlyPlay = true;
+                break;
+            }
+        }
+
+        // Evita manos sin tierras, con exceso de tierras o sin desarrollo temprano.
+        if (landCount < 2 || landCount > hand.size() - 2) {
+            return true;
+        }
+        return !hasEarlyPlay && nonLandCount > 0 && landCount < hand.size() - 1;
+    }
+
+    @Override
     public void selectAttackers(Game game, UUID attackingPlayerId) {
         logger.debug("selectAttackers");
         declareAttackers(game, playerId);

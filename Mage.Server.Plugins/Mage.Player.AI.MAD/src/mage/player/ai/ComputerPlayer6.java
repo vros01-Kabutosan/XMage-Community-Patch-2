@@ -480,7 +480,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
             if (res != null) {
                 return res;
             }
-        } catch (TimeoutException | InterruptedException e) {
+        } catch (TimeoutException e) {
             // AI thinks too long
             // how-to fix: look at stack info - it can contain bad ability with infinite choose dialog
             logger.warn("");
@@ -491,6 +491,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
             logger.warn(" - game: " + root.game);
             printFreezeNode(root);
             logger.warn("");
+            task.cancel(true);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.warn("AI simulation interrupted for " + getName());
             task.cancel(true);
         } catch (ExecutionException e) {
             // game error
@@ -506,8 +510,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
             logger.error("AI simulation catch unknown error: " + e, e);
             task.cancel(true);
         }
-        //TODO: timeout handling
-        return 0;
+        // Keep the baseline evaluation when search is interrupted or fails.
+        return currentScore;
     }
 
     private void printFreezeNode(SimulationNode2 root) {

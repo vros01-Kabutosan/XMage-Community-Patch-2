@@ -722,7 +722,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
                         bestNode.setScore(finalScore);
                         if (!newNode.getChildren().isEmpty()) {
                             // TODO: wtf, must review all code to remove shared objects
-                            bestNode.setCombat(newNode.getChildren().get(0).getCombat());
+                            Combat childCombat = newNode.getChildren().get(0).getCombat();
+                            bestNode.setCombat(childCombat == null ? null : childCombat.copy());
                         }
 
                         // keep only best node
@@ -745,7 +746,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
                         bestNode = newNode;
                         bestNode.setScore(finalScore);
                         if (!newNode.getChildren().isEmpty()) {
-                            bestNode.setCombat(newNode.getChildren().get(0).getCombat());
+                            Combat childCombat = newNode.getChildren().get(0).getCombat();
+                            bestNode.setCombat(childCombat == null ? null : childCombat.copy());
                         }
                     }
 

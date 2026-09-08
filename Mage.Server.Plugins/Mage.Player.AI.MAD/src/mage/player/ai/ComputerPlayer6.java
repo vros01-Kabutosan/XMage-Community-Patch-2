@@ -77,6 +77,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
     List<Permanent> attackersToCheck = new ArrayList<>();
 
     protected Set<String> actionCache;
+    // Per-calculation cache for repeated terminal positions in the search tree.
+    protected transient Map<String, Integer> transpositionTable;
     private static final List<TreeOptimizer> optimizers = new ArrayList<>();
     protected int lastLoggedTurn = 0; // for debug logs: mark start of the turn
     protected static final String BLANKS = "...............................................";
@@ -99,6 +101,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
         maxThinkTimeSecs = skill * 3;
         maxNodes = MAX_SIMULATED_NODES_PER_CALC;
         this.actionCache = new HashSet<>();
+        this.transpositionTable = new HashMap<>();
     }
 
     public ComputerPlayer6(final ComputerPlayer6 player) {
@@ -225,7 +228,16 @@ public class ComputerPlayer6 extends ComputerPlayer {
         if (depth <= 0
                 || SimulationNode2.nodeCount > maxNodes
                 || game.checkIfGameIsOver()) {
+            String transpositionKey = getTranspositionKey(game, depth);
+            Integer cachedValue = transpositionTable == null ? null : transpositionTable.get(transpositionKey);
+            if (cachedValue != null) {
+                node.setScore(cachedValue);
+                return cachedValue;
+            }
             val = GameStateEvaluator2.evaluate(playerId, game).getTotalScore();
+            if (transpositionTable != null) {
+                transpositionTable.put(transpositionKey, val);
+            }
             if (logger.isTraceEnabled()) {
                 StringBuilder sb = new StringBuilder("Add Actions -- reached end state  <").append(val).append('>');
                 SimulationNode2 logNode = node;
@@ -295,6 +307,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
         logger.trace("returning -- score: " + val + " depth:" + depth + " step:" + game.getTurnStepType() + " for player:" + game.getPlayer(node.getPlayerId()).getName());
         return val;
 
+    }
+
+    private String getTranspositionKey(Game game, int depth) {
+        return game.getState().getValue(true).hashCode() + "|" + depth + "|" + game.getPlayerList().get();
     }
 
     protected boolean getNextAction(Game game) {
@@ -443,6 +459,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
         // TODO: all actions added and calculated one by one,
         //  multithreading do not supported here
         // run new game simulation in parallel thread
+        // Never reuse scores between turns: hidden information, triggers and mana change.
+        transpositionTable = new HashMap<>();
         FutureTask<Integer> task = new FutureTask<>(() -> addActions(root, maxDepth, Integer.MIN_VALUE, Integer.MAX_VALUE));
         threadPoolSimulations.execute(task);
         try {

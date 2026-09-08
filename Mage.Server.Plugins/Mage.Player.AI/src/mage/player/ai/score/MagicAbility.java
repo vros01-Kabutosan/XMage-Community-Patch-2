@@ -3,6 +3,7 @@ package mage.player.ai.score;
 import mage.abilities.Ability;
 import mage.abilities.keyword.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,36 +13,37 @@ import java.util.Map;
  */
 public final class MagicAbility {
 
-    private static Map<String, Integer> scores = new HashMap<String, Integer>() {{
-        put(DeathtouchAbility.getInstance().getRule(), 60);
-        put(DefenderAbility.getInstance().getRule(), -100);
-        put(DoubleStrikeAbility.getInstance().getRule(), 100);
-        put(DoubleStrikeAbility.getInstance().getRule(), 100);
-        put(new ExaltedAbility().getRule(), 10);
-        put(FirstStrikeAbility.getInstance().getRule(), 50);
-        put(FlashAbility.getInstance().getRule(), 20);
-        put(FlyingAbility.getInstance().getRule(), 50);
-        put(new ForestwalkAbility().getRule(), 10);
-        put(HasteAbility.getInstance().getRule(), 20);
-        put(IndestructibleAbility.getInstance().getRule(), 150);
-        put(InfectAbility.getInstance().getRule(), 60);
-        put(IntimidateAbility.getInstance().getRule(), 50);
-        put(new IslandwalkAbility().getRule(), 10);
-        put(new MountainwalkAbility().getRule(), 10);
-        put(new PlainswalkAbility().getRule(), 10);
-        put(ReachAbility.getInstance().getRule(), 20);
-        put(ShroudAbility.getInstance().getRule(), 60);
-        put(new SwampwalkAbility().getRule(), 10);
-        put(TrampleAbility.getInstance().getRule(), 30);
-        put(new CantBeBlockedSourceAbility().getRule(), 100);
-        put(VigilanceAbility.getInstance().getRule(), 20);
-        put(WitherAbility.getInstance().getRule(), 30);
+    private static final Map<String, Integer> scores;
+
+    static {
+        Map<String, Integer> values = new HashMap<>();
+        values.put(DeathtouchAbility.getInstance().getRule(), 60);
+        values.put(DefenderAbility.getInstance().getRule(), -100);
+        values.put(DoubleStrikeAbility.getInstance().getRule(), 100);
+        values.put(new ExaltedAbility().getRule(), 10);
+        values.put(FirstStrikeAbility.getInstance().getRule(), 50);
+        values.put(FlashAbility.getInstance().getRule(), 20);
+        values.put(FlyingAbility.getInstance().getRule(), 50);
+        values.put(new ForestwalkAbility().getRule(), 10);
+        values.put(HasteAbility.getInstance().getRule(), 20);
+        values.put(IndestructibleAbility.getInstance().getRule(), 150);
+        values.put(InfectAbility.getInstance().getRule(), 60);
+        values.put(IntimidateAbility.getInstance().getRule(), 50);
+        values.put(new IslandwalkAbility().getRule(), 10);
+        values.put(new MountainwalkAbility().getRule(), 10);
+        values.put(new PlainswalkAbility().getRule(), 10);
+        values.put(ReachAbility.getInstance().getRule(), 20);
+        values.put(ShroudAbility.getInstance().getRule(), 60);
+        values.put(new SwampwalkAbility().getRule(), 10);
+        values.put(TrampleAbility.getInstance().getRule(), 30);
+        values.put(new CantBeBlockedSourceAbility().getRule(), 100);
+        values.put(VigilanceAbility.getInstance().getRule(), 20);
+        values.put(WitherAbility.getInstance().getRule(), 30);
         // gatecrash
-        put(new EvolveAbility().getRule(), 50);
-        put(new ExtortAbility().getRule(), 30);
-
-
-    }};
+        values.put(new EvolveAbility().getRule(), 50);
+        values.put(new ExtortAbility().getRule(), 30);
+        scores = Collections.unmodifiableMap(values);
+    }
 
     public static int getAbilityScore(Ability ability) {
         if (!scores.containsKey(ability.getRule())) {

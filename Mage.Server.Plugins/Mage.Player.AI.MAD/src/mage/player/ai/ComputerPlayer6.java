@@ -368,6 +368,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
         UUID currentPlayerId = node.getGame().getPlayerList().get();
         SimulationNode2 bestChild = null;
         for (SimulationNode2 child : node.getChildren()) {
+            if (!COMPUTER_DISABLE_TIMEOUT_IN_GAME_SIMULATIONS && Thread.currentThread().isInterrupted()) {
+                break;
+            }
             Combat _combat = child.getCombat();
             if (alpha >= beta) {
                 break;
@@ -442,6 +445,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
                 Target target = effect.getTarget();
                 if (!target.isChoiceCompleted(getId(), (StackAbility) stackObject, game, null)) {
                     for (UUID targetId : target.possibleTargets(stackObject.getControllerId(), stackObject.getStackAbility(), game)) {
+                        if (!COMPUTER_DISABLE_TIMEOUT_IN_GAME_SIMULATIONS && Thread.currentThread().isInterrupted()) {
+                            return;
+                        }
                         Game sim = game.createSimulationForAI();
                         StackAbility newAbility = (StackAbility) stackObject.copy();
                         SearchEffect newEffect = getSearchEffect(newAbility);
@@ -560,6 +566,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
         SimulatedPlayer2 currentPlayer = (SimulatedPlayer2) game.getPlayer(game.getPlayerList().get());
         SimulationNode2 bestNode = null;
         List<Ability> allActions = currentPlayer.simulatePriority(game);
+        if (!COMPUTER_DISABLE_TIMEOUT_IN_GAME_SIMULATIONS && Thread.currentThread().isInterrupted()) {
+            return GameStateEvaluator2.evaluate(playerId, game).getTotalScore();
+        }
         optimize(game, allActions);
         int startedScore = GameStateEvaluator2.evaluate(this.getId(), node.getGame()).getTotalScore();
         if (logger.isInfoEnabled()

@@ -108,6 +108,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
     private void simulateOptions(Game game) {
         List<ActivatedAbility> playables = game.getPlayer(playerId).getPlayable(game, isSimulatedPlayer);
         for (ActivatedAbility ability : playables) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             if (ability.isManaAbility()) {
                 continue;
             }
@@ -117,6 +120,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
                 allActions.add(ability);
             } else {
                 for (Ability option : options) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        return;
+                    }
                     allActions.add(option);
                 }
             }
@@ -141,6 +147,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
                 int xInstancesCount = variableManaCost.getXInstancesCount();
 
                 for (int mana = variableManaCost.getMinX(); mana <= numAvailable; mana++) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        break;
+                    }
                     if (mana % xInstancesCount == 0) { // use only values dependant from multiplier
                         // find possible X value to pay
                         int xAnnounceValue = mana / xInstancesCount;
@@ -248,6 +257,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         int powerElements = (int) Math.pow(2, attackersList.size());
         StringBuilder binary = new StringBuilder();
         for (int i = powerElements - 1; i >= 0; i--) {
+            if (Thread.currentThread().isInterrupted()) {
+                break;
+            }
             Game sim = game.createSimulationForAI();
             binary.setLength(0);
             binary.append(Integer.toBinaryString(i));
@@ -297,6 +309,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
     }
 
     protected void addBlocker(Game game, List<Permanent> blockers, Map<Integer, Combat> engagements) {
+        if (Thread.currentThread().isInterrupted()) {
+            return;
+        }
         if (blockers.isEmpty()) {
             return;
         }
@@ -306,6 +321,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         logger.debug("simulating -- block:" + blocker);
         List<Permanent> remaining = remove(blockers, blocker);
         for (int i = 0; i < numGroups; i++) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             if (game.getCombat().getGroups().get(i).canBlock(blocker, game)) {
                 Game sim = game.createSimulationForAI();
                 sim.getCombat().getGroups().get(i).addBlocker(blocker.getId(), playerId, sim);
@@ -341,6 +359,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
             }
             logger.debug("simulating -- triggered ability - adding children:" + options.size());
             for (Ability option : options) {
+                if (Thread.currentThread().isInterrupted()) {
+                    return true;
+                }
                 addAbilityNode(parent, option, depth, game);
             }
         }
@@ -348,6 +369,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
     }
 
     protected void addAbilityNode(SimulationNode2 parent, Ability ability, int depth, Game game) {
+        if (Thread.currentThread().isInterrupted()) {
+            return;
+        }
         Game sim = game.createSimulationForAI();
         sim.getStack().push(sim, new StackAbility(ability, playerId));
         if (ability.activate(sim, false) && ability.isUsesStack()) {

@@ -1293,11 +1293,15 @@ public class ComputerPlayer6 extends ComputerPlayer {
             }
         }
 
-        // Evita manos sin tierras, con exceso de tierras o sin desarrollo temprano.
-        if (landCount < 2 || landCount > hand.size() - 2) {
+        // Solo rechazar manos claramente injugables. La regla anterior exigía siempre
+        // dos tierras y tiraba manos de una tierra con una jugada temprana válida;
+        // eso hacía perder demasiadas cartas y dejaba a la IA sin desarrollo.
+        if (landCount == 0 || landCount >= hand.size() - 1) {
             return true;
         }
-        return !hasEarlyPlay && nonLandCount > 0 && landCount < hand.size() - 1;
+        // Una tierra sin una jugada barata suele ser una mano muerta; una tierra
+        // con una jugada temprana se conserva para no penalizar curvas agresivas.
+        return landCount == 1 && !hasEarlyPlay && nonLandCount > 0;
     }
 
     @Override

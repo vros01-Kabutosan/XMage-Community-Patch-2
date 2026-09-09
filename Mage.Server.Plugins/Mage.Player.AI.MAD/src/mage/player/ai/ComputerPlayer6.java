@@ -561,7 +561,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
         if (logger.isInfoEnabled()
                 && !allActions.isEmpty()
                 && depth == maxDepth) {
-            logger.info(String.format("POSSIBLE ACTION CHAINS for %s (%d, started score: %d)%s",
+            logger.debug(String.format("POSSIBLE ACTION CHAINS for %s (%d, started score: %d)%s",
                     getName(),
                     allActions.size(),
                     startedScore,
@@ -628,7 +628,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
 
                     // example: Sim Prio [6] #1 <diff -19, +4444> (Lightning Bolt [aa5]: Cast Lightning Bolt -> Balduvian Bears [c49])
                     // total
-                    logger.info(String.format("Sim Prio [%d] #%d <total score diff %s (from %s to %s)>",
+                    logger.debug(String.format("Sim Prio [%d] #%d <total score diff %s (from %s to %s)>",
                             depth,
                             actionNumber,
                             printDiffScore(finalScore - startedScore),
@@ -659,7 +659,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
                             if (!currentNode.getTargets().isEmpty() || !currentNode.getChoices().isEmpty()) {
                                 throw new IllegalStateException("WTF, simulated abilities with targets/choices");
                             }
-                            logger.info(String.format("Sim Prio [%d] -> next action: [%d]<diff %s> (%s)",
+                            logger.debug(String.format("Sim Prio [%d] -> next action: [%d]<diff %s> (%s)",
                                     depth,
                                     currentNode.getDepth(),
                                     printDiffScore(currentScore - prevScore),
@@ -681,7 +681,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
                                         return "unknown";
                                     })
                                     .collect(Collectors.joining(", "));
-                            logger.info(String.format("Sim Prio [%d] -> with possible choices: [%d]<diff %s> (%s)",
+                            logger.debug(String.format("Sim Prio [%d] -> with possible choices: [%d]<diff %s> (%s)",
                                     depth,
                                     currentNode.getDepth(),
                                     printDiffScore(currentScore - prevScore),
@@ -690,14 +690,14 @@ public class ComputerPlayer6 extends ComputerPlayer {
                         } else if (!currentNode.getChoices().isEmpty()) {
                             // ON CHOICES
                             String choicesInfo = String.join(", ", currentNode.getChoices());
-                            logger.info(String.format("Sim Prio [%d] -> with possible choices (must not see that code): [%d]<diff %s> (%s)",
+                            logger.debug(String.format("Sim Prio [%d] -> with possible choices (must not see that code): [%d]<diff %s> (%s)",
                                     depth,
                                     currentNode.getDepth(),
                                     printDiffScore(currentScore - prevScore),
                                     choicesInfo)
                             );
                         } else {
-                            logger.info(String.format("Sim Prio [%d] -> with do nothing: [%d]<diff %s>",
+                            logger.debug(String.format("Sim Prio [%d] -> with do nothing: [%d]<diff %s>",
                                     depth,
                                     currentNode.getDepth(),
                                     printDiffScore(currentScore - prevScore))

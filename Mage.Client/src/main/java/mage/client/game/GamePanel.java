@@ -274,6 +274,7 @@ extends JPanel {
     private Point floatingStackResizeOrigin;
     private Dimension floatingStackResizeStartSize;
     private boolean floatingStackHadObjects = false;
+    private Timer floatingStackHideTimer;
     private String floatingStackLastOrderLabel = "";
     private boolean floatingStackRestoringBounds = false;
     private static final String XCP_STACK_PREF_NODE = "xcpFloatingStackV5";
@@ -1598,6 +1599,10 @@ extends JPanel {
         this.floatingStackResizeOrigin = null;
         this.floatingStackResizeStartSize = null;
         this.floatingStackHadObjects = false;
+        if (this.floatingStackHideTimer != null) {
+            this.floatingStackHideTimer.stop();
+            this.floatingStackHideTimer = null;
+        }
         this.floatingStackLastOrderLabel = "";
     }
 
@@ -1668,12 +1673,33 @@ extends JPanel {
                 }
                 this.floatingStackOrderLabel.setVisible(hasObjects);
             }
-            if (hasObjects && !this.floatingStackHadObjects) {
-                this.floatingStackFrame.setVisible(true);
-                this.floatingStackFrame.toFront();
-            } else if (!hasObjects && this.floatingStackHadObjects) {
-                this.saveFloatingStackBounds();
-                this.floatingStackFrame.setVisible(false);
+            if (hasObjects) {
+                if (this.floatingStackHideTimer != null) {
+                    this.floatingStackHideTimer.stop();
+                    this.floatingStackHideTimer = null;
+                }
+                if (!this.floatingStackFrame.isVisible()) {
+                    this.floatingStackFrame.setVisible(true);
+                    this.floatingStackFrame.toFront();
+                }
+            } else if (this.floatingStackHadObjects) {
+                // Network updates can briefly report an empty stack between
+                // two resolution states. Delay hiding so the window does not
+                // disappear while known cards are still being refreshed.
+                if (this.floatingStackHideTimer == null) {
+                    this.floatingStackHideTimer = new Timer(600, event -> {
+                        if (this.floatingStackHideTimer != null) {
+                            this.floatingStackHideTimer.stop();
+                            this.floatingStackHideTimer = null;
+                        }
+                        if (this.floatingStackFrame != null && this.stackObjects.getNumberOfCards() == 0) {
+                            this.saveFloatingStackBounds();
+                            this.floatingStackFrame.setVisible(false);
+                        }
+                    });
+                    this.floatingStackHideTimer.setRepeats(false);
+                }
+                this.floatingStackHideTimer.restart();
             }
         }
         this.floatingStackHadObjects = hasObjects;

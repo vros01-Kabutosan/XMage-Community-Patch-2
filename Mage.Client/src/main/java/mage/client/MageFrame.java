@@ -1164,7 +1164,14 @@ implements MageClient {
         this.btnExitMatchToolbar.setFont(this.btnExitMatchToolbar.getFont().deriveFont(Font.BOLD));
         this.btnExitMatchToolbar.setMargin(new java.awt.Insets(2, 10, 2, 10));
         this.btnExitMatchToolbar.addActionListener(event -> this.btnExitMatchToolbarActionPerformed());
-        this.mageToolbar.add(this.btnExitMatchToolbar);
+        JPanel exitMatchToolbarPanel = new JPanel(new java.awt.BorderLayout());
+        exitMatchToolbarPanel.setOpaque(true);
+        exitMatchToolbarPanel.setBackground(new Color(45, 45, 45));
+        exitMatchToolbarPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(115, 115, 115)),
+                BorderFactory.createEmptyBorder(0, 4, 0, 4)));
+        exitMatchToolbarPanel.add(this.btnExitMatchToolbar, java.awt.BorderLayout.CENTER);
+        this.mageToolbar.add(exitMatchToolbarPanel);
         this.mageToolbar.add(this.jMemUsageLabel);
         GroupLayout layout = new GroupLayout(this.getContentPane());
         this.getContentPane().setLayout(layout);

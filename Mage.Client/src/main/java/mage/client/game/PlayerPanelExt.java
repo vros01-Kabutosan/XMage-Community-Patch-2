@@ -133,6 +133,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         this.playerId = playerId;
         this.bigCard = bigCard;
         this.isMe = controlled;
+        this.matchScoreLabel.setVisible(false);
         cheat.setVisible(SessionHandler.isTestMode() && this.isMe);
         cheat.setFocusable(false);
         toolHintsHelper.setVisible(this.isMe);
@@ -247,8 +248,30 @@ public class PlayerPanelExt extends javax.swing.JPanel {
                 .orElse(0);
     }
 
+    private void updateMatchScore(GameView game, PlayerView currentPlayer) {
+        if (this.matchScoreLabel == null) {
+            return;
+        }
+        if (!this.isMe || game == null || game.getPlayers().size() != 2) {
+            this.matchScoreLabel.setVisible(false);
+            return;
+        }
+        PlayerView opponent = game.getPlayers().stream()
+                .filter(other -> !other.getPlayerId().equals(currentPlayer.getPlayerId()))
+                .findFirst()
+                .orElse(null);
+        if (opponent == null) {
+            this.matchScoreLabel.setVisible(false);
+            return;
+        }
+        String score = currentPlayer.getWins() + "-" + opponent.getWins();
+        this.matchScoreLabel.setText(score);
+        this.matchScoreLabel.setToolTipText("Marcador del match: " + score);
+        this.matchScoreLabel.setVisible(true);
+    }
     public void update(GameView game, PlayerView player, Set<UUID> possibleTargets, Set<UUID> chosenTargets) {
         this.player = player;
+        updateMatchScore(game, player);
         int pastLife = player.getLife();
         if (playerLives != null) {
             if (playerLives.containsKey(player.getPlayerId())) {
@@ -704,6 +727,18 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         zonesPanel.setSize(sizeMod(100), sizeMod(60));
         zonesPanel.setLayout(null);
         zonesPanel.setOpaque(false);
+        // Match score: fixed in the existing lower zone, below exile.
+        matchScoreLabel = new JLabel("0-0");
+        matchScoreLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        matchScoreLabel.setFont(this.getFont().deriveFont(Font.BOLD, sizeMod(11f)));
+        matchScoreLabel.setForeground(Color.WHITE);
+        matchScoreLabel.setBackground(new Color(24, 27, 34, 220));
+        matchScoreLabel.setOpaque(true);
+        matchScoreLabel.setBorder(BorderFactory.createLineBorder(new Color(150, 160, 175)));
+        matchScoreLabel.setToolTipText("Marcador del match");
+        matchScoreLabel.setVisible(false);
+        matchScoreLabel.setBounds(sizeMod(70), 0, sizeMod(27), sizeMod(21));
+        zonesPanel.add(matchScoreLabel);
 
         // hints
         toolHintsHelper = new JButton();
@@ -1101,6 +1136,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
 
     private JLabel timerLabel;
     private JLabel lifeLabel;
+    private JLabel matchScoreLabel;
     private JLabel handLabel;
     private JLabel libraryLabel;
     private JLabel poisonLabel;

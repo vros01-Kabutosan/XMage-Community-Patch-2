@@ -370,6 +370,8 @@ extends JPanel {
         }
         this.pnlShortCuts.removeAll();
         this.pnlShortCuts.setLayout(null);
+        // Keep the match-exit control first so it remains visible on compact screens.
+        this.pnlShortCuts.add(this.btnExitMatch);
         this.pnlShortCuts.add(this.btnSkipToNextTurn);
         this.pnlShortCuts.add(this.btnSkipToEndTurn);
         this.pnlShortCuts.add(this.btnSkipToNextMain);
@@ -380,7 +382,6 @@ extends JPanel {
         this.pnlShortCuts.add(this.txtHoldPriority);
         this.pnlShortCuts.add(this.btnSwitchHands);
         this.pnlShortCuts.add(this.btnConcede);
-        this.pnlShortCuts.add(this.btnExitMatch);
         this.pnlShortCuts.add(this.btnStopWatching);
         this.pickNumber = new PickNumberDialog();
         MageFrame.getDesktop().add((Component)this.pickNumber, this.pickNumber.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);

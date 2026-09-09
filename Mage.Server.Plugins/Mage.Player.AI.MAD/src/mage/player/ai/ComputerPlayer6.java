@@ -598,7 +598,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
                     // skip priority for opponents before stack resolve
                     UUID nextPlayerId = sim.getPlayerList().get();
                     do {
-                        sim.getPlayer(nextPlayerId).pass(game);
+                        // Advance only the copied simulation; touching the real game here can desync the match.\r\n                        sim.getPlayer(nextPlayerId).pass(sim);
                         nextPlayerId = sim.getPlayerList().getNext();
                     } while (!Objects.equals(nextPlayerId, this.getId()));
                 }

@@ -231,6 +231,7 @@ extends JPanel {
     private KeyboundButton btnSkipToYourTurn;
     private KeyboundButton btnSkipToEndStepBeforeYourTurn;
     private JButton btnConcede;
+    private JButton btnExitMatch;
     private JButton btnSwitchHands;
     private JButton btnNextPlay;
     private JButton btnPlay;
@@ -377,6 +378,7 @@ extends JPanel {
         this.pnlShortCuts.add(this.txtHoldPriority);
         this.pnlShortCuts.add(this.btnSwitchHands);
         this.pnlShortCuts.add(this.btnConcede);
+        this.pnlShortCuts.add(this.btnExitMatch);
         this.pnlShortCuts.add(this.btnStopWatching);
         this.pickNumber = new PickNumberDialog();
         MageFrame.getDesktop().add((Component)this.pickNumber, this.pickNumber.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
@@ -661,6 +663,7 @@ extends JPanel {
         this.setSkipButtonSize(this.btnSkipToNextMain, guiScale, strictSize);
         this.setSkipButtonSize(this.btnSkipStack, guiScale, strictSize);
         this.setSkipButtonSize(this.btnConcede, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnExitMatch, guiScale, strictSize);
         this.setSkipButtonSize(this.btnToggleMacro, guiScale, strictSize);
         this.setSkipButtonSize(this.btnSwitchHands, guiScale, strictSize);
         this.setSkipButtonSize(this.btnStopWatching, guiScale, strictSize);
@@ -886,6 +889,7 @@ extends JPanel {
         this.pickMultiNumber.init(gameId, this.bigCard);
         this.abilityPicker.init(gameId, this.bigCard);
         this.btnConcede.setVisible(true);
+        this.btnExitMatch.setVisible(true);
         this.btnStopWatching.setVisible(false);
         this.btnSwitchHands.setVisible(false);
         this.btnCancelSkip.setVisible(true);
@@ -922,6 +926,7 @@ extends JPanel {
         this.feedbackPanel.init(gameId, this.bigCard);
         this.feedbackPanel.clear();
         this.btnConcede.setVisible(false);
+        this.btnExitMatch.setVisible(false);
         this.btnStopWatching.setVisible(true);
         this.btnSwitchHands.setVisible(false);
         this.chosenHandKey = "";
@@ -953,6 +958,7 @@ extends JPanel {
         this.feedbackPanel.init(gameId, this.bigCard);
         this.feedbackPanel.clear();
         this.btnConcede.setVisible(false);
+        this.btnExitMatch.setVisible(false);
         this.btnSkipToNextTurn.setVisible(false);
         this.btnSwitchHands.setVisible(false);
         this.btnStopWatching.setVisible(false);
@@ -2618,6 +2624,7 @@ extends JPanel {
         this.btnSkipToYourTurn = new KeyboundButton("controlYourTurn", displayButtonText);
         this.btnSkipToEndStepBeforeYourTurn = new KeyboundButton("controlPriorEnd", displayButtonText);
         this.btnConcede = new JButton();
+        this.btnExitMatch = new JButton("SALIR");
         this.btnSwitchHands = new JButton();
         this.btnStopWatching = new JButton();
         this.bigCard = new BigCard();
@@ -2844,6 +2851,9 @@ extends JPanel {
         this.btnConcede.setToolTipText("CONCEDE current game");
         this.btnConcede.setFocusable(false);
         this.btnConcede.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnConcedeActionPerformed(null)));
+        this.btnExitMatch.setToolTipText("Salir y cerrar el match actual");
+        this.btnExitMatch.setFocusable(false);
+        this.btnExitMatch.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnExitMatchActionPerformed(null)));
         this.updateSkipButtons();
         KeyStroke ks2 = PreferencesDialog.getCachedKeystroke("controlConfirm");
         this.getInputMap(c).put(ks2, "F2_PRESS");
@@ -3113,6 +3123,14 @@ extends JPanel {
         UserRequestMessage message = new UserRequestMessage("Confirm concede", "Are you sure you want to concede?");
         message.setButton1("No", null);
         message.setButton2("Yes", PlayerAction.CLIENT_CONCEDE_GAME);
+        message.setGameId(this.gameId);
+        MageFrame.getInstance().showUserRequestDialog(message);
+    }
+
+    private void btnExitMatchActionPerformed(ActionEvent evt) {
+        UserRequestMessage message = new UserRequestMessage("Salir de la partida", "¿Cerrar la partida y abandonar el match completo?");
+        message.setButton1("No", null);
+        message.setButton2("Sí, salir", PlayerAction.CLIENT_CONCEDE_MATCH);
         message.setGameId(this.gameId);
         MageFrame.getInstance().showUserRequestDialog(message);
     }

@@ -1163,8 +1163,8 @@ implements MageClient {
         this.btnExitMatchToolbar.setOpaque(true);
         this.btnExitMatchToolbar.setFont(this.btnExitMatchToolbar.getFont().deriveFont(Font.BOLD));
         this.btnExitMatchToolbar.setMargin(new java.awt.Insets(2, 10, 2, 10));
-        this.btnExitMatchToolbar.setPreferredSize(new Dimension(78, 26));
-        this.btnExitMatchToolbar.setMinimumSize(new Dimension(78, 26));
+        this.btnExitMatchToolbar.setPreferredSize(new Dimension(150, 26));
+        this.btnExitMatchToolbar.setMinimumSize(new Dimension(150, 26));
         this.btnExitMatchToolbar.addActionListener(event -> this.btnExitMatchToolbarActionPerformed());
         this.mageToolbar.add(new JToolBar.Separator());
         this.mageToolbar.add(this.btnExitMatchToolbar);
@@ -1789,6 +1789,10 @@ implements MageClient {
             component.setMinimumSize(d);
             component.setMaximumSize(d);
         }
+        Dimension toolbarExitSize = new Dimension(150, newHeight);
+        this.btnExitMatchToolbar.setPreferredSize(toolbarExitSize);
+        this.btnExitMatchToolbar.setMinimumSize(toolbarExitSize);
+        this.btnExitMatchToolbar.setMaximumSize(toolbarExitSize);
         this.connectDialog.changeGUISize();
         this.errorDialog.changeGUISize();
         this.menuDownloadSymbols.setFont(font);

@@ -274,6 +274,7 @@ extends JPanel {
     private Point floatingStackResizeOrigin;
     private Dimension floatingStackResizeStartSize;
     private boolean floatingStackHadObjects = false;
+    private String floatingStackLastOrderLabel = "";
     private boolean floatingStackRestoringBounds = false;
     private static final String XCP_STACK_PREF_NODE = "xcpFloatingStackV5";
     private static final String XCP_STACK_X = "x";
@@ -1597,6 +1598,7 @@ extends JPanel {
         this.floatingStackResizeOrigin = null;
         this.floatingStackResizeStartSize = null;
         this.floatingStackHadObjects = false;
+        this.floatingStackLastOrderLabel = "";
     }
 
     private String getFloatingStackTypeLabel(CardView card) {
@@ -1656,11 +1658,15 @@ extends JPanel {
                 this.floatingStackTypeLabel.setVisible(!type.isEmpty());
             }
             if (this.floatingStackOrderLabel != null) {
-                this.floatingStackOrderLabel.setText(this.getFloatingStackOrderLabel(topStackObject));
+                String orderLabel = this.getFloatingStackOrderLabel(topStackObject);
+                if (!orderLabel.equals(this.floatingStackLastOrderLabel)) {
+                    this.floatingStackOrderLabel.setText(orderLabel);
+                    this.floatingStackHeader.revalidate();
+                    this.floatingStackHeader.repaint();
+                    this.floatingStackLastOrderLabel = orderLabel;
+                    logger.debug((Object)("Floating stack guide: text=" + orderLabel + " visible=" + hasObjects));
+                }
                 this.floatingStackOrderLabel.setVisible(hasObjects);
-                this.floatingStackHeader.revalidate();
-                this.floatingStackHeader.repaint();
-                logger.debug((Object)("Floating stack guide: text=" + this.floatingStackOrderLabel.getText() + " visible=" + this.floatingStackOrderLabel.isVisible()));
             }
             if (hasObjects && !this.floatingStackHadObjects) {
                 this.floatingStackFrame.setVisible(true);

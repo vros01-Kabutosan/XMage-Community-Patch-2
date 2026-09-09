@@ -511,9 +511,12 @@ implements MageClient {
             LOGGER.fatal((Object)"Can't find card tooltip plugin");
             return;
         }
-        cardInfoPane.setLocation(40, 40);
+        cardInfoPane.setLocation(16, 16);
         UI.addComponent(MageComponents.CARD_INFO_PANE, cardInfoPane);
         MageRoundPane popupContainer = new MageRoundPane();
+        popupContainer.setXOffset(12);
+        popupContainer.setYOffset(12);
+        popupContainer.setBackgroundColor(new Color(30, 36, 46, 245));
         popupContainer.setLayout(null);
         popupContainer.add(cardInfoPane);
         popupContainer.setVisible(false);

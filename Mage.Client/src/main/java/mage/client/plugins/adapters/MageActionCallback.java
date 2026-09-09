@@ -19,8 +19,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import javax.swing.BorderFactory;
@@ -72,6 +74,8 @@ implements ActionCallback {
     public static final int GO_DOWN_ON_DRAG_Y_OFFSET = 0;
     public static final int GO_UP_ON_DRAG_Y_OFFSET = 0;
     private Popup tooltipPopup;
+    private volatile Future<?> tooltipTask;
+    private final AtomicLong tooltipRequestId = new AtomicLong();
     private BigCard bigCard;
     private CardView tooltipCard;
     private TransferData popupData;
@@ -126,6 +130,11 @@ implements ActionCallback {
     }
 
     private void startCardHintPopup(TransferData data, Component parentComponent, Point parentPoint) {
+        final long requestId = this.tooltipRequestId.incrementAndGet();
+        Future<?> previousTask = this.tooltipTask;
+        if (previousTask != null) {
+            previousTask.cancel(true);
+        }
         MageCard cardPanel = data.getComponent().getTopPanelRef();
         this.tooltipDelay = data.getTooltipDelay() > 0 ? data.getTooltipDelay() : PreferencesDialog.getCachedValue("showTooltipsDelay", 300);
         if (this.tooltipDelay == 0) {
@@ -145,18 +154,18 @@ implements ActionCallback {
             this.tooltipPopup = factory.getPopup((Component)cardPanel, (Component)data.getPopupText(), newLocationX, newLocationY);
             this.tooltipPopup.show();
         } else {
-            this.showCardHintPopup(data, parentComponent, parentPoint);
+            this.showCardHintPopup(data, parentComponent, parentPoint, requestId);
         }
     }
 
-    private void showCardHintPopup(final TransferData data, final Component parentComponent, final Point parentPoint) {
+    private void showCardHintPopup(final TransferData data, final Component parentComponent, final Point parentPoint, final long requestId) {
         final MageCard cardPanel = data.getComponent().getTopPanelRef();
-        MageUI.threadPoolPopups.submit(new Runnable(){
+        MageActionCallback.this.tooltipTask = MageUI.threadPoolPopups.submit(new Runnable(){
 
             @Override
             public void run() {
                 ThreadUtils.sleep(MageActionCallback.this.tooltipDelay);
-                if (MageActionCallback.this.tooltipCard == null || !MageActionCallback.this.tooltipCard.equals(data.getCard()) || SessionHandler.getSession() == null || !MageActionCallback.this.popupTextWindowOpen || MageActionCallback.this.enlargedWindowState != EnlargedWindowState.CLOSED) {
+                if (requestId != MageActionCallback.this.tooltipRequestId.get() || MageActionCallback.this.tooltipCard == null || !MageActionCallback.this.tooltipCard.equals(data.getCard()) || SessionHandler.getSession() == null || !MageActionCallback.this.popupTextWindowOpen || MageActionCallback.this.enlargedWindowState != EnlargedWindowState.CLOSED) {
                     return;
                 }
                 try {
@@ -166,7 +175,6 @@ implements ActionCallback {
                     this.showPopup(popupContainer, popupInfo);
                 }
                 catch (InterruptedException e) {
-                    logger.error((Object)"Can't show card tooltip", (Throwable)e);
                     Thread.currentThread().interrupt();
                 }
             }
@@ -437,6 +445,12 @@ implements ActionCallback {
     }
 
     public void hideTooltipPopup() {
+        this.tooltipRequestId.incrementAndGet();
+        Future<?> pendingTooltip = this.tooltipTask;
+        if (pendingTooltip != null) {
+            pendingTooltip.cancel(true);
+            this.tooltipTask = null;
+        }
         this.tooltipCard = null;
         if (this.tooltipPopup != null) {
             this.tooltipPopup.hide();

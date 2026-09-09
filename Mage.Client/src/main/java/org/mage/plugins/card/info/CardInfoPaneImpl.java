@@ -3,10 +3,15 @@
  */
 package org.mage.plugins.card.info;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
+import javax.swing.BorderFactory;
 import javax.swing.JEditorPane;
 import javax.swing.SwingUtilities;
 import mage.client.util.GUISizeHelper;
@@ -22,15 +27,45 @@ implements CardInfoPane {
     public static final int TOOLTIP_HEIGHT_MIN = 118;
     public static final int TOOLTIP_HEIGHT_MAX = 480;
     public static final int TOOLTIP_BORDER_WIDTH = 28;
+    private static final int CARD_CORNER_RADIUS = 12;
+    private static final int CARD_HORIZONTAL_PADDING = 14;
+    private static final int CARD_VERTICAL_PADDING = 10;
+    private static final Color CARD_BACKGROUND = new Color(248, 250, 252);
+    private static final Color CARD_BORDER = new Color(205, 212, 221);
     private int type;
     private int addWidth;
     private int addHeight;
     private boolean setSize = false;
+    private CardView pendingCard;
+    private Component pendingContainer;
+    private boolean cardRenderQueued;
 
     public CardInfoPaneImpl() {
         UI.setHTMLEditorKit(this);
         this.setEditable(false);
+        this.setOpaque(false);
+        this.setBackground(CARD_BACKGROUND);
+        this.setBorder(BorderFactory.createEmptyBorder(CARD_VERTICAL_PADDING, CARD_HORIZONTAL_PADDING, CARD_VERTICAL_PADDING, CARD_HORIZONTAL_PADDING));
         this.setGUISize();
+    }
+
+    @Override
+    protected void paintComponent(Graphics graphics) {
+        Graphics2D g = (Graphics2D) graphics.create();
+        try {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int width = getWidth() - 1;
+            int height = getHeight() - 1;
+            if (width > 0 && height > 0) {
+                g.setColor(getBackground());
+                g.fillRoundRect(0, 0, width, height, CARD_CORNER_RADIUS, CARD_CORNER_RADIUS);
+                g.setColor(CARD_BORDER);
+                g.drawRoundRect(0, 0, width, height, CARD_CORNER_RADIUS, CARD_CORNER_RADIUS);
+            }
+        } finally {
+            g.dispose();
+        }
+        super.paintComponent(graphics);
     }
 
     public void changeGUISize() {
@@ -46,18 +81,36 @@ implements CardInfoPane {
     }
 
     public void setCard(CardView card, Component container) {
-        try {
-            SwingUtilities.invokeLater(() -> {
-                GuiDisplayUtil.TextLines textLines = GuiDisplayUtil.getTextLinesfromCardView(card);
-                StringBuilder buffer = GuiDisplayUtil.getRulesFromCardView(card, textLines);
-                this.setText(buffer.toString());
-                this.setCaretPosition(0);
-                this.resizeTooltipIfNeeded(container, textLines.getBasicTextLength(), textLines.getLines().size());
-            });
+        if (card == null) {
+            return;
         }
-        catch (Exception e) {
-            e.printStackTrace();
+        synchronized (this) {
+            this.pendingCard = card;
+            this.pendingContainer = container;
+            if (this.cardRenderQueued) {
+                return;
+            }
+            this.cardRenderQueued = true;
         }
+        SwingUtilities.invokeLater(() -> {
+            CardView cardToRender;
+            Component containerToResize;
+            synchronized (this) {
+                cardToRender = this.pendingCard;
+                containerToResize = this.pendingContainer;
+                this.pendingCard = null;
+                this.pendingContainer = null;
+                this.cardRenderQueued = false;
+            }
+            if (cardToRender == null) {
+                return;
+            }
+            GuiDisplayUtil.TextLines textLines = GuiDisplayUtil.getTextLinesfromCardView(cardToRender);
+            StringBuilder buffer = GuiDisplayUtil.getRulesFromCardView(cardToRender, textLines);
+            this.setText(buffer.toString());
+            this.setCaretPosition(0);
+            this.resizeTooltipIfNeeded(containerToResize, textLines.getBasicTextLength(), textLines.getLines().size());
+        });
     }
 
     private void resizeTooltipIfNeeded(Component container, int ruleLength, int rules) {
@@ -90,19 +143,20 @@ implements CardInfoPane {
             minHeight = 178;
         }
         int contentHeight = Math.max(minHeight, naturalHeight + 18);
-        int maxContentHeight = Math.max(260, Math.min(480, screen.height - 175 - 28));
+        int maxContentHeight = Math.max(260, Math.min(480, screen.height - 175 - 32));
         contentHeight = Math.max(minHeight, Math.min(contentHeight, maxContentHeight));
         this.setPreferredSize(new Dimension(contentWidth, contentHeight));
         this.setMinimumSize(new Dimension(contentWidth, Math.min(contentHeight, minHeight)));
         this.setSize(contentWidth, contentHeight);
-        int outerWidth = contentWidth + 28;
-        int outerHeight = contentHeight + 28;
+        // Keep the outer frame symmetrical with the 16px content inset.
+        int outerWidth = contentWidth + 32;
+        int outerHeight = contentHeight + 32;
         container.setPreferredSize(new Dimension(outerWidth, outerHeight));
         container.setSize(outerWidth, outerHeight);
         GuiDisplayUtil.keepComponentInsideScreen(container.getX(), container.getY(), container);
         Container parent = container.getParent();
         if (parent != null && parent.getWidth() > 0 && parent.getHeight() > 0) {
-            int margin = 14;
+            int margin = 16;
             int x = container.getX();
             int y = container.getY();
             int safeRight = parent.getWidth() - margin;

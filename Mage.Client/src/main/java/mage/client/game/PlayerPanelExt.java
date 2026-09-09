@@ -252,12 +252,12 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         if (this.matchScoreLabel == null) {
             return;
         }
-        // Keep the chip immediately after the command-zone counter. Reserve the
-        // right-most part only when the test-mode control is visible.
+        // Keep a compact chip immediately after the command-zone counter. Reserve the
+        // right-most slot only when the test-mode control is visible.
         boolean testControlsVisible = SessionHandler.isTestMode() && this.isMe;
-        int scoreX = testControlsVisible ? 67 : 46;
-        int scoreWidth = testControlsVisible ? 30 : 51;
-        this.matchScoreLabel.setBounds(sizeMod(scoreX), 0, sizeMod(scoreWidth), sizeMod(21));
+        int scoreX = testControlsVisible ? 67 : 47;
+
+        this.matchScoreLabel.setBounds(sizeMod(scoreX), 0, sizeMod(30), sizeMod(21));
         if (!this.isMe || game == null || game.getPlayers().size() != 2) {
             this.matchScoreLabel.setVisible(false);
             return;
@@ -749,12 +749,12 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         matchScoreLabel.setHorizontalAlignment(SwingConstants.CENTER);
         matchScoreLabel.setFont(this.getFont().deriveFont(Font.BOLD, sizeMod(11f)));
         matchScoreLabel.setForeground(Color.WHITE);
-        matchScoreLabel.setBackground(new Color(24, 27, 34, 220));
+        matchScoreLabel.setBackground(new Color(28, 32, 40, 245));
         matchScoreLabel.setOpaque(true);
         matchScoreLabel.setBorder(BorderFactory.createLineBorder(new Color(150, 160, 175)));
         matchScoreLabel.setToolTipText("Marcador del match");
         matchScoreLabel.setVisible(false);
-        matchScoreLabel.setBounds(sizeMod(46), 0, sizeMod(51), sizeMod(21));
+        matchScoreLabel.setBounds(sizeMod(47), 0, sizeMod(30), sizeMod(21));
         zonesPanel.add(matchScoreLabel);
 
         // hints

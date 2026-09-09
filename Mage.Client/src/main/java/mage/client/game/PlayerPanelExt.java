@@ -252,6 +252,12 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         if (this.matchScoreLabel == null) {
             return;
         }
+        // Keep the chip immediately after the command-zone counter. Reserve the
+        // right-most part only when the test-mode control is visible.
+        boolean testControlsVisible = SessionHandler.isTestMode() && this.isMe;
+        int scoreX = testControlsVisible ? 67 : 46;
+        int scoreWidth = testControlsVisible ? 30 : 51;
+        this.matchScoreLabel.setBounds(sizeMod(scoreX), 0, sizeMod(scoreWidth), sizeMod(21));
         if (!this.isMe || game == null || game.getPlayers().size() != 2) {
             this.matchScoreLabel.setVisible(false);
             return;
@@ -264,8 +270,19 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             this.matchScoreLabel.setVisible(false);
             return;
         }
-        String score = currentPlayer.getWins() + "-" + opponent.getWins();
+        int myWins = currentPlayer.getWins();
+        int opponentWins = opponent.getWins();
+        String score = myWins + "-" + opponentWins;
+        Color scoreColor = myWins > opponentWins
+                ? new Color(90, 210, 125)
+                : myWins < opponentWins
+                ? new Color(235, 105, 105)
+                : new Color(240, 205, 75);
         this.matchScoreLabel.setText(score);
+        this.matchScoreLabel.setForeground(scoreColor);
+        this.matchScoreLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(scoreColor.getRed(), scoreColor.getGreen(), scoreColor.getBlue(), 190)),
+                BorderFactory.createEmptyBorder(0, sizeMod(2), 0, sizeMod(2))));
         this.matchScoreLabel.setToolTipText("Marcador del match: " + score);
         this.matchScoreLabel.setVisible(true);
     }
@@ -737,7 +754,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         matchScoreLabel.setBorder(BorderFactory.createLineBorder(new Color(150, 160, 175)));
         matchScoreLabel.setToolTipText("Marcador del match");
         matchScoreLabel.setVisible(false);
-        matchScoreLabel.setBounds(sizeMod(48), 0, sizeMod(49), sizeMod(21));
+        matchScoreLabel.setBounds(sizeMod(46), 0, sizeMod(51), sizeMod(21));
         zonesPanel.add(matchScoreLabel);
 
         // hints

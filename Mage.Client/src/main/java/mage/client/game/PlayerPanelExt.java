@@ -737,7 +737,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         matchScoreLabel.setBorder(BorderFactory.createLineBorder(new Color(150, 160, 175)));
         matchScoreLabel.setToolTipText("Marcador del match");
         matchScoreLabel.setVisible(false);
-        matchScoreLabel.setBounds(sizeMod(70), 0, sizeMod(27), sizeMod(21));
+        matchScoreLabel.setBounds(sizeMod(67), 0, sizeMod(30), sizeMod(21));
         zonesPanel.add(matchScoreLabel);
 
         // hints

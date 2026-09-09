@@ -33,6 +33,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
     private static final Logger logger = Logger.getLogger(SimulatedPlayer2.class);
 
     private static final boolean AI_SIMULATE_ALL_BAD_AND_GOOD_TARGETS = false; // TODO: enable and do performance test (it's increase calculations by x2, but is it useful?)
+    // This bounds only the AI's internal combat search. Real combat rules and
+    // declarations remain unchanged.
+    private static final int MAX_COMBAT_SIMULATIONS = 4096;
 
     // warning, simulated player do not restore own data by game rollback
     private final boolean isSimulatedPlayer;
@@ -77,6 +80,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         allActions = new ConcurrentLinkedQueue<>();
         Game sim = game.createSimulationForAI();
         simulateOptions(sim);
+        if (Thread.currentThread().isInterrupted()) {
+            return Collections.singletonList(new PassAbility());
+        }
 
         // possible actions
         List<Ability> list = new ArrayList<>(allActions);
@@ -115,6 +121,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
                 continue;
             }
             List<Ability> options = game.getPlayer(playerId).getPlayableOptions(ability, game);
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             options = optimizeOptions(game, options, ability);
             if (options.isEmpty()) {
                 allActions.add(ability);
@@ -253,21 +262,21 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         //useful only for two player games - will only attack first opponent
         UUID defenderId = game.getOpponents(playerId, true).iterator().next();
         List<Permanent> attackersList = super.getAvailableAttackers(defenderId, game);
-        //use binary digits to calculate powerset of attackers
-        int powerElements = (int) Math.pow(2, attackersList.size());
-        StringBuilder binary = new StringBuilder();
-        for (int i = powerElements - 1; i >= 0; i--) {
+        // Use bit masks for the powerset. For large boards the full powerset
+        // is not tractable, so search a deterministic bounded prefix and keep
+        // the no-attack line as well. This does not restrict real combat.
+        int attackerCount = attackersList.size();
+        long totalCombinations = attackerCount < Long.SIZE ? 1L << attackerCount : Long.MAX_VALUE;
+        long combinationsToEvaluate = Math.min(totalCombinations, MAX_COMBAT_SIMULATIONS);
+        long firstMask = totalCombinations == Long.MAX_VALUE ? Long.MAX_VALUE : totalCombinations - 1;
+        for (long offset = 0; offset < combinationsToEvaluate; offset++) {
             if (Thread.currentThread().isInterrupted()) {
                 break;
             }
             Game sim = game.createSimulationForAI();
-            binary.setLength(0);
-            binary.append(Integer.toBinaryString(i));
-            while (binary.length() < attackersList.size()) {
-                binary.insert(0, '0');
-            }
-            for (int j = 0; j < attackersList.size(); j++) {
-                if (binary.charAt(j) == '1') {
+            long mask = firstMask - offset;
+            for (int j = 0; j < attackerCount; j++) {
+                if ((mask & (1L << j)) != 0) {
                     setStoredBookmark(sim.bookmarkState()); // makes it possible to UNDO a declared attacker with costs from e.g. Propaganda
                     if (!sim.getCombat().declareAttacker(attackersList.get(j).getId(), defenderId, playerId, sim)) {
                         sim.undo(playerId);
@@ -275,10 +284,16 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
                 }
             }
             if (engagements.put(sim.getCombat().getValue().hashCode(), sim.getCombat()) != null) {
-                logger.debug("simulating -- found redundant attack combination");
-            } else {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("simulating -- found redundant attack combination");
+                }
+            } else if (logger.isDebugEnabled()) {
                 logger.debug("simulating -- attack:" + sim.getCombat().getGroups().size());
             }
+        }
+        if (combinationsToEvaluate < totalCombinations && !Thread.currentThread().isInterrupted()) {
+            Game noAttackSim = game.createSimulationForAI();
+            engagements.put(noAttackSim.getCombat().getValue().hashCode(), noAttackSim.getCombat());
         }
         List list = new ArrayList<>(engagements.values());
         Collections.sort(list, new Comparator<Combat>() {
@@ -312,13 +327,18 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         if (Thread.currentThread().isInterrupted()) {
             return;
         }
+        if (engagements.size() >= MAX_COMBAT_SIMULATIONS) {
+            return;
+        }
         if (blockers.isEmpty()) {
             return;
         }
         int numGroups = game.getCombat().getGroups().size();
         //try to block each attacker with each potential blocker
         Permanent blocker = blockers.get(0);
-        logger.debug("simulating -- block:" + blocker);
+        if (logger.isDebugEnabled()) {
+            logger.debug("simulating -- block:" + blocker);
+        }
         List<Permanent> remaining = remove(blockers, blocker);
         for (int i = 0; i < numGroups; i++) {
             if (Thread.currentThread().isInterrupted()) {
@@ -328,7 +348,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
                 Game sim = game.createSimulationForAI();
                 sim.getCombat().getGroups().get(i).addBlocker(blocker.getId(), playerId, sim);
                 if (engagements.put(sim.getCombat().getValue().hashCode(), sim.getCombat()) != null) {
-                    logger.debug("simulating -- found redundant block combination");
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("simulating -- found redundant block combination");
+                    }
                 }
                 addBlocker(sim, remaining, engagements);  // and recurse minus the used blocker
             }

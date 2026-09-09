@@ -338,10 +338,13 @@ public class ComputerPlayer6 extends ComputerPlayer {
                 test = root;
                 root = root.children.get(0);
             }
-            logger.trace("Sim getNextAction -- game value:" + game.getState().getValue(true) + " test value:" + test.getGameStateValue());
+            String gameStateValue = game.getState().getValue(true);
+            if (logger.isTraceEnabled()) {
+                logger.trace("Sim getNextAction -- game value:" + gameStateValue + " test value:" + test.getGameStateValue());
+            }
             if (root.playerId.equals(playerId)
                     && root.abilities != null
-                    && game.getState().getValue(true).equals(test.getGameStateValue())) {
+                    && gameStateValue.equals(test.getGameStateValue())) {
                 logger.info("simulating -- continuing previous actions chain");
                 actions = new LinkedList<>(root.abilities);
                 combat = root.combat;
@@ -349,7 +352,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
             } else {
                 if (root.abilities == null || root.abilities.isEmpty()) {
                     logger.info("simulating -- need re-calculation (no more actions)");
-                } else if (!game.getState().getValue(true).equals(test.getGameStateValue())) {
+                } else if (!gameStateValue.equals(test.getGameStateValue())) {
                     logger.info("simulating -- need re-calculation (game state changed between actions)");
                 } else if (!root.playerId.equals(playerId)) {
                     // TODO: need research, why need playerId and why it taken from stack objects as controller
@@ -364,7 +367,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
     }
 
     protected int minimaxAB(SimulationNode2 node, int depth, int alpha, int beta) {
-        logger.trace("Sim minimaxAB [" + depth + "] -- a: " + alpha + " b: " + beta + " <" + (node != null ? node.getScore() : "null") + '>');
+        if (logger.isTraceEnabled()) {
+            logger.trace("Sim minimaxAB [" + depth + "] -- a: " + alpha + " b: " + beta + " <" + (node != null ? node.getScore() : "null") + '>');
+        }
         UUID currentPlayerId = node.getGame().getPlayerList().get();
         SimulationNode2 bestChild = null;
         for (SimulationNode2 child : node.getChildren()) {
@@ -456,7 +461,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
                         SimulationNode2 newNode = new SimulationNode2(node, sim, depth, stackObject.getControllerId());
                         node.children.add(newNode);
                         newNode.getTargets().add(targetId);
-                        logger.trace("Sim search -- node#: " + SimulationNode2.getCount() + " for player: " + sim.getPlayer(stackObject.getControllerId()).getName());
+                        if (logger.isTraceEnabled()) {
+                            logger.trace("Sim search -- node#: " + SimulationNode2.getCount() + " for player: " + sim.getPlayer(stackObject.getControllerId()).getName());
+                        }
                     }
                     return;
                 }
@@ -561,8 +568,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
             logger.debug("AI game sim interrupted by timeout");
             return GameStateEvaluator2.evaluate(playerId, game).getTotalScore();
         }
-        node.setGameValue(game.getState().getValue(true).hashCode());
-        node.setGameStateValue(game.getState().getValue(true));
+        String gameStateValue = game.getState().getValue(true);
+        node.setGameValue(gameStateValue.hashCode());
+        node.setGameStateValue(gameStateValue);
         SimulatedPlayer2 currentPlayer = (SimulatedPlayer2) game.getPlayer(game.getPlayerList().get());
         SimulationNode2 bestNode = null;
         List<Ability> allActions = currentPlayer.simulatePriority(game);
@@ -571,7 +579,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
         }
         optimize(game, allActions);
         int startedScore = GameStateEvaluator2.evaluate(this.getId(), node.getGame()).getTotalScore();
-        if (logger.isInfoEnabled()
+        if (logger.isDebugEnabled()
                 && !allActions.isEmpty()
                 && depth == maxDepth) {
             logger.debug(String.format("POSSIBLE ACTION CHAINS for %s (%d, started score: %d)%s",
@@ -630,7 +638,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
                 // * newNode - resolved game with resolved command (resolve stack)
                 // * node.children - rewrites to store only best tree (e.g. contains only final data)
                 // * node.score - rewrites to store max score (e.g. contains only final data)
-                if (logger.isInfoEnabled()
+                if (logger.isDebugEnabled()
                         && depth >= maxDepth) {
                     // show final calculated score and best actions chain from it
                     List<SimulationNode2> fullChain = new ArrayList<>();

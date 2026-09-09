@@ -99,7 +99,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
         }
         // Keep decisions responsive even at the highest skill level. A long
         // search blocks the game thread and makes a complete match impractical.
-        maxThinkTimeSecs = Math.min(6, Math.max(1, skill * 2));
+        maxThinkTimeSecs = Math.min(4, Math.max(1, skill * 2));
         maxNodes = calculateMaxNodes(skill);
         this.actionCache = new HashSet<>();
         this.transpositionTable = new HashMap<>();

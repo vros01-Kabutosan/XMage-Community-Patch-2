@@ -1158,18 +1158,21 @@ implements MageClient {
         this.btnExitMatchToolbar = new JButton("SALIR");
         this.btnExitMatchToolbar.setToolTipText("Salir y cerrar la partida activa");
         this.btnExitMatchToolbar.setFocusable(false);
-        this.btnExitMatchToolbar.setContentAreaFilled(false);
-        this.btnExitMatchToolbar.setBorderPainted(false);
-        this.btnExitMatchToolbar.setOpaque(false);
+        this.btnExitMatchToolbar.setContentAreaFilled(true);
+        this.btnExitMatchToolbar.setBorderPainted(true);
+        this.btnExitMatchToolbar.setOpaque(true);
         this.btnExitMatchToolbar.setFont(this.btnExitMatchToolbar.getFont().deriveFont(Font.BOLD));
         this.btnExitMatchToolbar.setMargin(new java.awt.Insets(2, 10, 2, 10));
+        this.btnExitMatchToolbar.setPreferredSize(new Dimension(78, 26));
+        this.btnExitMatchToolbar.setMinimumSize(new Dimension(78, 26));
         this.btnExitMatchToolbar.addActionListener(event -> this.btnExitMatchToolbarActionPerformed());
         JPanel exitMatchToolbarPanel = new JPanel(new java.awt.BorderLayout());
-        exitMatchToolbarPanel.setOpaque(true);
-        exitMatchToolbarPanel.setBackground(new Color(45, 45, 45));
+        exitMatchToolbarPanel.setOpaque(false);
         exitMatchToolbarPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(115, 115, 115)),
-                BorderFactory.createEmptyBorder(0, 4, 0, 4)));
+                BorderFactory.createLineBorder(new Color(125, 125, 125), 1, true),
+                BorderFactory.createEmptyBorder(1, 5, 1, 5)));
+        exitMatchToolbarPanel.setPreferredSize(new Dimension(90, 30));
+        exitMatchToolbarPanel.setMinimumSize(new Dimension(90, 30));
         exitMatchToolbarPanel.add(this.btnExitMatchToolbar, java.awt.BorderLayout.CENTER);
         this.mageToolbar.add(exitMatchToolbarPanel);
         this.mageToolbar.add(this.jMemUsageLabel);

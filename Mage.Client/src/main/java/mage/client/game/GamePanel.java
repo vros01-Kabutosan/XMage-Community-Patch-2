@@ -1660,7 +1660,7 @@ extends JPanel {
                 this.floatingStackOrderLabel.setVisible(hasObjects);
                 this.floatingStackHeader.revalidate();
                 this.floatingStackHeader.repaint();
-                logger.info((Object)("Floating stack guide: text=" + this.floatingStackOrderLabel.getText() + " visible=" + this.floatingStackOrderLabel.isVisible()));
+                logger.debug((Object)("Floating stack guide: text=" + this.floatingStackOrderLabel.getText() + " visible=" + this.floatingStackOrderLabel.isVisible()));
             }
             if (hasObjects && !this.floatingStackHadObjects) {
                 this.floatingStackFrame.setVisible(true);
@@ -1676,7 +1676,7 @@ extends JPanel {
     private void displayStack(GameView game, BigCard bigCard, FeedbackPanel feedbackPanel, UUID gameId) {
         this.stackObjects.loadCards(game.getStack(), bigCard, gameId, false);
         String stackAudit = game.getStack().values().stream().map(card -> card.getName() + "[" + card.getId() + "]").collect(Collectors.joining(" -> "));
-        logger.info((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
+        logger.debug((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
         this.updateFloatingStackVisibility(game);
     }
 

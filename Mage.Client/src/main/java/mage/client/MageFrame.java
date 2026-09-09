@@ -203,6 +203,7 @@ implements MageClient {
     private JButton btnSendFeedback;
     private static JDesktopPane desktopPane;
     private JLabel jMemUsageLabel;
+    private JButton btnExitMatchToolbar;
     private JToolBar.Separator jSeparator1;
     private JToolBar.Separator jSeparator2;
     private JToolBar.Separator jSeparator4;
@@ -454,6 +455,30 @@ implements MageClient {
 
     private void setWindowTitle() {
         this.setTitle("XMage  Client: " + (VERSION == null ? "<not available>" : VERSION.toString()) + "  Server: " + (SessionHandler.getSession() != null && SessionHandler.isConnected() ? SessionHandler.getVersionInfo() : NOT_CONNECTED_TEXT));
+    }
+
+    private void updateMatchExitToolbarButton() {
+        if (this.btnExitMatchToolbar == null) {
+            return;
+        }
+        this.btnExitMatchToolbar.setEnabled(activeFrame instanceof GamePane
+                && ((GamePane) activeFrame).getGameId() != null
+                && SessionHandler.isConnected());
+    }
+
+    private void btnExitMatchToolbarActionPerformed() {
+        if (!(activeFrame instanceof GamePane)) {
+            return;
+        }
+        UUID gameId = ((GamePane) activeFrame).getGameId();
+        if (gameId == null) {
+            return;
+        }
+        UserRequestMessage message = new UserRequestMessage("Salir de la partida", "¿Cerrar la partida y abandonar el match completo?");
+        message.setButton1("No", null);
+        message.setButton2("Sí, salir", PlayerAction.CLIENT_CONCEDE_MATCH);
+        message.setGameId(gameId);
+        this.showUserRequestDialog(message);
     }
 
     private void updateTooltipContainerSizes() {
@@ -730,6 +755,7 @@ implements MageClient {
             activeFrame.deactivated();
         }
         activeFrame = null;
+        getInstance().updateMatchExitToolbarButton();
         ArrowBuilder.getBuilder().hideAllPanels();
         MusicPlayer.stopBGM();
         if (frame == null) {
@@ -741,6 +767,7 @@ implements MageClient {
         activeFrame.revalidate();
         activeFrame.activated();
         activeFrame.setVisible(true);
+        getInstance().updateMatchExitToolbarButton();
         if (activeFrame instanceof GamePane) {
             ArrowBuilder.getBuilder().showPanel(((GamePane)activeFrame).getGameId());
             MusicPlayer.playBGM();
@@ -1128,6 +1155,16 @@ implements MageClient {
         this.jMemUsageLabel.setText("100% Free mem");
         this.jMemUsageLabel.setFocusable(false);
         this.jMemUsageLabel.setHorizontalTextPosition(4);
+        this.btnExitMatchToolbar = new JButton("SALIR");
+        this.btnExitMatchToolbar.setToolTipText("Salir y cerrar la partida activa");
+        this.btnExitMatchToolbar.setFocusable(false);
+        this.btnExitMatchToolbar.setContentAreaFilled(false);
+        this.btnExitMatchToolbar.setBorderPainted(false);
+        this.btnExitMatchToolbar.setOpaque(false);
+        this.btnExitMatchToolbar.setFont(this.btnExitMatchToolbar.getFont().deriveFont(Font.BOLD));
+        this.btnExitMatchToolbar.setMargin(new java.awt.Insets(2, 10, 2, 10));
+        this.btnExitMatchToolbar.addActionListener(event -> this.btnExitMatchToolbarActionPerformed());
+        this.mageToolbar.add(this.btnExitMatchToolbar);
         this.mageToolbar.add(this.jMemUsageLabel);
         GroupLayout layout = new GroupLayout(this.getContentPane());
         this.getContentPane().setLayout(layout);

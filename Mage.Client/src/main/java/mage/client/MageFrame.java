@@ -204,7 +204,6 @@ implements MageClient {
     private static JDesktopPane desktopPane;
     private JLabel jMemUsageLabel;
     private JButton btnExitMatchToolbar;
-    private JPanel exitMatchToolbarPanel;
     private JToolBar.Separator jSeparator1;
     private JToolBar.Separator jSeparator2;
     private JToolBar.Separator jSeparator4;
@@ -1167,15 +1166,9 @@ implements MageClient {
         this.btnExitMatchToolbar.setPreferredSize(new Dimension(78, 26));
         this.btnExitMatchToolbar.setMinimumSize(new Dimension(78, 26));
         this.btnExitMatchToolbar.addActionListener(event -> this.btnExitMatchToolbarActionPerformed());
-        this.exitMatchToolbarPanel = new JPanel(new java.awt.BorderLayout());
-        this.exitMatchToolbarPanel.setOpaque(false);
-        this.exitMatchToolbarPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(125, 125, 125), 1, true),
-                BorderFactory.createEmptyBorder(1, 5, 1, 5)));
-        this.exitMatchToolbarPanel.setPreferredSize(new Dimension(90, 30));
-        this.exitMatchToolbarPanel.setMinimumSize(new Dimension(90, 30));
-        this.exitMatchToolbarPanel.add(this.btnExitMatchToolbar, java.awt.BorderLayout.CENTER);
-        this.mageToolbar.add(this.exitMatchToolbarPanel);
+        this.mageToolbar.add(new JToolBar.Separator());
+        this.mageToolbar.add(this.btnExitMatchToolbar);
+        this.mageToolbar.add(new JToolBar.Separator());
         this.mageToolbar.add(this.jMemUsageLabel);
         GroupLayout layout = new GroupLayout(this.getContentPane());
         this.getContentPane().setLayout(layout);
@@ -1795,16 +1788,6 @@ implements MageClient {
             d.height = newHeight;
             component.setMinimumSize(d);
             component.setMaximumSize(d);
-        }
-        if (this.exitMatchToolbarPanel != null) {
-            Dimension exitPanelSize = new Dimension(90, newHeight);
-            this.exitMatchToolbarPanel.setPreferredSize(exitPanelSize);
-            this.exitMatchToolbarPanel.setMinimumSize(exitPanelSize);
-            this.exitMatchToolbarPanel.setMaximumSize(exitPanelSize);
-            Dimension exitButtonSize = new Dimension(78, Math.max(18, newHeight - 2));
-            this.btnExitMatchToolbar.setPreferredSize(exitButtonSize);
-            this.btnExitMatchToolbar.setMinimumSize(exitButtonSize);
-            this.btnExitMatchToolbar.setMaximumSize(exitButtonSize);
         }
         this.connectDialog.changeGUISize();
         this.errorDialog.changeGUISize();

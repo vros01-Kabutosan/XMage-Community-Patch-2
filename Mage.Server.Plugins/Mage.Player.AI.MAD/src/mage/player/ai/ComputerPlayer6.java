@@ -1152,6 +1152,15 @@ public class ComputerPlayer6 extends ComputerPlayer {
                             safeToAttack = false;
                         }
 
+                        // Trample can survive a blocking creature and still push damage;
+                        // do not reject this profitable attack merely because the blocker
+                        // would otherwise be marked as a lethal blocker.
+                        if (attacker.getAbilities().containsKey(TrampleAbility.getInstance().getId())
+                                && attacker.getPower().getValue() > blocker.getToughness().getValue()
+                                && attacker.getToughness().getValue() > blocker.getPower().getValue()) {
+                            safeToAttack = true;
+                        }
+
                         // attacker and blocker have the same P/T, check their overall value
                         if (attacker.getToughness().getValue() == blocker.getPower().getValue()
                                 && attacker.getPower().getValue() == blocker.getToughness().getValue()) {

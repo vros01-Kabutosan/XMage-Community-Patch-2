@@ -1711,8 +1711,10 @@ extends JPanel {
 
     private void displayStack(GameView game, BigCard bigCard, FeedbackPanel feedbackPanel, UUID gameId) {
         this.stackObjects.loadCards(game.getStack(), bigCard, gameId, false);
-        String stackAudit = game.getStack().values().stream().map(card -> card.getName() + "[" + card.getId() + "]").collect(Collectors.joining(" -> "));
-        logger.debug((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
+        if (logger.isDebugEnabled()) {
+            String stackAudit = game.getStack().values().stream().map(card -> card.getName() + "[" + card.getId() + "]").collect(Collectors.joining(" -> "));
+            logger.debug((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
+        }
         this.updateFloatingStackVisibility(game);
     }
 

@@ -270,7 +270,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
             }
             val = minimaxAB(node, depth - 1, alpha, beta);
         } else {
-            logger.trace("Add Action -- alpha: " + alpha + " beta: " + beta + " depth:" + depth + " step:" + game.getTurnStepType() + " for player:" + game.getPlayer(game.getActivePlayerId()).getName());
+            if (logger.isTraceEnabled()) {
+                logger.trace("Add Action -- alpha: " + alpha + " beta: " + beta + " depth:" + depth + " step:" + game.getTurnStepType() + " for player:" + game.getPlayer(game.getActivePlayerId()).getName());
+            }
             if (allPassed(game)) {
                 if (!game.getStack().isEmpty()) {
                     resolve(node, depth, game);
@@ -313,7 +315,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
             }
         }
         node.setScore(val);
-        logger.trace("returning -- score: " + val + " depth:" + depth + " step:" + game.getTurnStepType() + " for player:" + game.getPlayer(node.getPlayerId()).getName());
+        if (logger.isTraceEnabled()) {
+            logger.trace("returning -- score: " + val + " depth:" + depth + " step:" + game.getTurnStepType() + " for player:" + game.getPlayer(node.getPlayerId()).getName());
+        }
         return val;
 
     }
@@ -608,7 +612,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
                     // resolve current action and calc all next actions to find best score (return max possible score)
                     finalScore = addActions(newNode, depth - 1, alpha, beta);
                 }
-                logger.debug("Sim Prio " + BLANKS.substring(0, 2 + (maxDepth - depth) * 3) + '[' + depth + "]#" + actionNumber + " <" + finalScore + "> - (" + action + ") ");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Sim Prio " + BLANKS.substring(0, 2 + (maxDepth - depth) * 3) + depth + "]#" + actionNumber + " <" + finalScore + "> - (" + action + ") ");
+                }
 
                 // Hints on data:
                 // * node - started game with executed command (pay and put on stack)

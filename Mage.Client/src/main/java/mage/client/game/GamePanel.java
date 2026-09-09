@@ -666,6 +666,10 @@ extends JPanel {
         this.setSkipButtonSize(this.btnSkipStack, guiScale, strictSize);
         this.setSkipButtonSize(this.btnConcede, guiScale, strictSize);
         this.setSkipButtonSize(this.btnExitMatch, guiScale, strictSize);
+        int exitButtonWidth = GUISizeHelper.guiSizeScale(92, guiScale);
+        Dimension exitButtonSize = new Dimension(Math.max(strictSize.width, exitButtonWidth), strictSize.height);
+        this.btnExitMatch.setPreferredSize(exitButtonSize);
+        this.btnExitMatch.setMinimumSize(exitButtonSize);
         this.setSkipButtonSize(this.btnToggleMacro, guiScale, strictSize);
         this.setSkipButtonSize(this.btnSwitchHands, guiScale, strictSize);
         this.setSkipButtonSize(this.btnStopWatching, guiScale, strictSize);
@@ -2884,6 +2888,11 @@ extends JPanel {
         this.btnConcede.setFocusable(false);
         this.btnConcede.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnConcedeActionPerformed(null)));
         this.btnExitMatch.setToolTipText("Salir y cerrar el match actual");
+        this.btnExitMatch.setContentAreaFilled(false);
+        this.btnExitMatch.setBorderPainted(false);
+        this.btnExitMatch.setOpaque(false);
+        this.btnExitMatch.setMargin(new java.awt.Insets(2, 12, 2, 12));
+        this.btnExitMatch.setFont(this.btnExitMatch.getFont().deriveFont(Font.BOLD));
         this.btnExitMatch.setFocusable(false);
         this.btnExitMatch.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnExitMatchActionPerformed(null)));
         this.updateSkipButtons();

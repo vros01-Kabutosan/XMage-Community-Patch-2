@@ -38,6 +38,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
     private final ShowType showType;
     private boolean positioned;
+    private String lastRenderedTitle;
     private final String name;
     private Runnable userCloseListener;
 
@@ -46,6 +47,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
         this.title = name;
         this.showType = showType;
         this.positioned = false;
+        this.lastRenderedTitle = null;
         this.userCloseListener = () -> {
         };
         initComponents();
@@ -159,8 +161,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     public void loadCardsAndShow(ExileView exile, BigCard bigCard, UUID gameId) {
         boolean changed = cards.loadCards(exile, bigCard, gameId, true);
         String titel = name + " (" + exile.size() + ')';
-        setTitle(titel);
-        this.setTitelBarToolTip(titel);
+        setRenderedTitle(titel);
         if (!exile.isEmpty()) {
             show();
             if (changed) {
@@ -181,26 +182,31 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
         if (showType == ShowType.REVEAL || showType == ShowType.LOOKED_AT) {
             String newTitle = name + " (" + showCards.size() + ")";
-            setTitle(newTitle);
-            this.setTitelBarToolTip(newTitle);
+            setRenderedTitle(newTitle);
         }
         // additional info for grave windows
         if (showType == ShowType.GRAVEYARD) {
             int qty = qtyCardTypes(showCards);
             String newTitle = name + "'s graveyard (" + showCards.size() + ")  -  " + qty + ((qty == 1) ? " card type" : " card types");
-            setTitle(newTitle);
-            this.setTitelBarToolTip(newTitle);
+            setRenderedTitle(newTitle);
         }
 
         // additional info for sideboard window
         if (showType == ShowType.SIDEBOARD) {
             String newTitle = name + "'s sideboard";
-            setTitle(newTitle);
-            this.setTitelBarToolTip(newTitle);
+            setRenderedTitle(newTitle);
         }
 
         if (changed || !positioned) {
             showAndPositionWindow();
+        }
+    }
+
+    private void setRenderedTitle(String newTitle) {
+        if (!Objects.equals(newTitle, lastRenderedTitle)) {
+            setTitle(newTitle);
+            this.setTitelBarToolTip(newTitle);
+            lastRenderedTitle = newTitle;
         }
     }
 

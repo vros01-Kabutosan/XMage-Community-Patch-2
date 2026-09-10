@@ -1,6 +1,8 @@
 package mage.client.game;
 
+import mage.abilities.icon.CardIcon;
 import mage.abilities.icon.CardIconRenderSettings;
+import mage.view.CardView;
 import mage.cards.MageCard;
 import mage.cards.MagePermanent;
 import mage.client.MageFrame;
@@ -230,7 +232,10 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
                         }
                     }
                 }
-                oldMagePermanent.update(permanent);
+                if (!this.permanentViewEquals(oldMagePermanent, permanent)) {
+                    oldMagePermanent.update(permanent);
+                    changed = true;
+                }
             }
         }
 
@@ -268,6 +273,38 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
             this.battlefield = battlefield;
             sortLayout();
         }
+    }
+
+    private boolean permanentViewEquals(MagePermanent oldPermanent, PermanentView newPermanent) {
+        PermanentView oldView = oldPermanent.getOriginalPermanent();
+        if (!CardView.cardViewEquals(oldView, newPermanent)) {
+            return false;
+        }
+        if (oldPermanent.isTapped() != newPermanent.isTapped()
+                || oldPermanent.isFlipped() != newPermanent.isFlipped()
+                || oldView.isCopy() != newPermanent.isCopy()
+                || oldView.isMutated() != newPermanent.isMutated()
+                || oldView.isCanAttack() != newPermanent.isCanAttack()
+                || oldView.isCanBlock() != newPermanent.isCanBlock()
+                || !Objects.equals(oldView.getAttachedTo(), newPermanent.getAttachedTo())
+                || !Objects.equals(oldView.getAttachments(), newPermanent.getAttachments())) {
+            return false;
+        }
+        List<CardIcon> oldIcons = oldView.getCardIcons();
+        List<CardIcon> newIcons = newPermanent.getCardIcons();
+        if (oldIcons.size() != newIcons.size()) {
+            return false;
+        }
+        for (int i = 0; i < oldIcons.size(); i++) {
+            CardIcon oldIcon = oldIcons.get(i);
+            CardIcon newIcon = newIcons.get(i);
+            if (oldIcon.getIconType() != newIcon.getIconType()
+                    || !Objects.equals(oldIcon.getText(), newIcon.getText())
+                    || !Objects.equals(oldIcon.getHint(), newIcon.getHint())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public void sortLayout() {

@@ -278,6 +278,7 @@ extends JPanel {
     private String floatingStackLastOrderLabel = "";
     private int floatingStackLastObjectCount = -1;
     private String floatingStackLastTypeLabel = "";
+    private String floatingStackLastAudit;
     private boolean floatingStackRestoringBounds = false;
     private static final String XCP_STACK_PREF_NODE = "xcpFloatingStackV5";
     private static final String XCP_STACK_X = "x";
@@ -1616,6 +1617,7 @@ extends JPanel {
         this.floatingStackLastOrderLabel = "";
         this.floatingStackLastObjectCount = -1;
         this.floatingStackLastTypeLabel = "";
+        this.floatingStackLastAudit = null;
     }
 
     private String getFloatingStackTypeLabel(CardView card) {
@@ -1732,7 +1734,10 @@ extends JPanel {
         this.stackObjects.loadCards(game.getStack(), bigCard, gameId, false);
         if (logger.isDebugEnabled()) {
             String stackAudit = game.getStack().values().stream().map(card -> card.getName() + "[" + card.getId() + "]").collect(Collectors.joining(" -> "));
-            logger.debug((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
+            if (!stackAudit.equals(this.floatingStackLastAudit)) {
+                logger.debug((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
+                this.floatingStackLastAudit = stackAudit;
+            }
         }
         this.updateFloatingStackVisibility(game);
     }

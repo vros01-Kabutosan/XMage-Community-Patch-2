@@ -78,6 +78,11 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     private int avatarId = -1;
     private String flagName;
     private String basicTooltipText;
+    private String avatarTopRightSignature;
+    private String lastAvatarTooltipText;
+    private String lastPlayerButtonTooltipText;
+    private String lastMatchScore;
+    private Color lastMatchScoreColor;
     private static final Map<UUID, Integer> playerLives = new HashMap<>();
 
     private final Font defaultFont;
@@ -116,6 +121,11 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         this.EMPTY_BORDER = BorderFactory.createEmptyBorder(0, 0, 0, 0);
 
         setPreferredSize(new Dimension(sizeMod(PANEL_WIDTH), sizeMod(PANEL_HEIGHT)));
+        avatarTopRightSignature = null;
+        lastAvatarTooltipText = null;
+        lastPlayerButtonTooltipText = null;
+        lastMatchScore = null;
+        lastMatchScoreColor = null;
         initComponents();
         setGUISize();
     }
@@ -139,6 +149,11 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         toolHintsHelper.setVisible(this.isMe);
         toolHintsHelper.setFocusable(false);
         flagName = null;
+        avatarTopRightSignature = null;
+        lastAvatarTooltipText = null;
+        lastPlayerButtonTooltipText = null;
+        lastMatchScore = null;
+        lastMatchScoreColor = null;
         avatarId = -1;
         if (priorityTime > 0 && priorityTime != Integer.MAX_VALUE) {
             long delay = 1000L;
@@ -195,18 +210,27 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     }
 
     private void setTextForLabel(String category, JLabel label, JComponent relatedComponent, int amount, boolean alwaysBlack, Color fontColor) {
-        label.setText(Integer.toString(amount));
-        label.setToolTipText(category + ": " + amount);
-        if (relatedComponent != null) {
-            relatedComponent.setToolTipText(category + ": " + amount);
-        }
+        String value = Integer.toString(amount);
+        String tooltip = category + ": " + amount;
+        Color desiredColor = amount != 0 || alwaysBlack ? fontColor : new Color(100, 100, 100);
+        Font desiredFont = amount != 0 || alwaysBlack ? fontValuesNonZero : fontValuesZero;
 
-        if (amount != 0 || alwaysBlack) {
-            label.setForeground(fontColor);
-            label.setFont(fontValuesNonZero);
-        } else {
-            label.setForeground(new Color(100, 100, 100));
-            label.setFont(fontValuesZero);
+        // Player panels receive frequent game updates. Avoid firing Swing property
+        // changes when the displayed value and its presentation are unchanged.
+        if (!value.equals(label.getText())) {
+            label.setText(value);
+        }
+        if (!tooltip.equals(label.getToolTipText())) {
+            label.setToolTipText(tooltip);
+        }
+        if (relatedComponent != null && !tooltip.equals(relatedComponent.getToolTipText())) {
+            relatedComponent.setToolTipText(tooltip);
+        }
+        if (!desiredColor.equals(label.getForeground())) {
+            label.setForeground(desiredColor);
+        }
+        if (!desiredFont.equals(label.getFont())) {
+            label.setFont(desiredFont);
         }
     }
 
@@ -257,9 +281,19 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         boolean testControlsVisible = SessionHandler.isTestMode() && this.isMe;
         int scoreX = testControlsVisible ? 67 : 47;
 
-        this.matchScoreLabel.setBounds(sizeMod(scoreX), 0, sizeMod(30), sizeMod(21));
+        int scoreLabelX = sizeMod(scoreX);
+        int scoreLabelWidth = sizeMod(30);
+        int scoreLabelHeight = sizeMod(21);
+        if (this.matchScoreLabel.getX() != scoreLabelX
+                || this.matchScoreLabel.getY() != 0
+                || this.matchScoreLabel.getWidth() != scoreLabelWidth
+                || this.matchScoreLabel.getHeight() != scoreLabelHeight) {
+            this.matchScoreLabel.setBounds(scoreLabelX, 0, scoreLabelWidth, scoreLabelHeight);
+        }
         if (!this.isMe || game == null || game.getPlayers().size() != 2) {
-            this.matchScoreLabel.setVisible(false);
+            if (this.matchScoreLabel.isVisible()) {
+                this.matchScoreLabel.setVisible(false);
+            }
             return;
         }
         PlayerView opponent = game.getPlayers().stream()
@@ -278,13 +312,21 @@ public class PlayerPanelExt extends javax.swing.JPanel {
                 : myWins < opponentWins
                 ? new Color(235, 105, 105)
                 : new Color(240, 205, 75);
-        this.matchScoreLabel.setText(score);
-        this.matchScoreLabel.setForeground(scoreColor);
-        this.matchScoreLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(scoreColor.getRed(), scoreColor.getGreen(), scoreColor.getBlue(), 190)),
-                BorderFactory.createEmptyBorder(0, sizeMod(2), 0, sizeMod(2))));
-        this.matchScoreLabel.setToolTipText("Marcador del match: " + score);
-        this.matchScoreLabel.setVisible(true);
+        if (!score.equals(lastMatchScore)) {
+            this.matchScoreLabel.setText(score);
+            this.matchScoreLabel.setToolTipText("Marcador del match: " + score);
+            lastMatchScore = score;
+        }
+        if (!scoreColor.equals(lastMatchScoreColor)) {
+            this.matchScoreLabel.setForeground(scoreColor);
+            this.matchScoreLabel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(scoreColor.getRed(), scoreColor.getGreen(), scoreColor.getBlue(), 190)),
+                    BorderFactory.createEmptyBorder(0, sizeMod(2), 0, sizeMod(2))));
+            lastMatchScoreColor = scoreColor;
+        }
+        if (!this.matchScoreLabel.isVisible()) {
+            this.matchScoreLabel.setVisible(true);
+        }
     }
     public void update(GameView game, PlayerView player, Set<UUID> possibleTargets, Set<UUID> chosenTargets) {
         this.player = player;
@@ -508,21 +550,40 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         StringBuilder tooltipText = new StringBuilder(basicTooltipText);
         tooltipText.append("<br/>Match time remaining: ").append(getPriorityTimeLeftString(player));
 
-        // designations
-        this.avatar.clearTopTextImagesRight();
+        // designations and avatar icons. Rebuild the right-side icons only when
+        // their actual state changes; game updates can arrive much more often.
+        boolean cityBlessing = false;
+        StringBuilder topRightSignature = new StringBuilder();
         for (String name : player.getDesignationNames()) {
             tooltipText.append("<br/>").append(name);
+            topRightSignature.append(name).append('|');
             if (DesignationType.CITYS_BLESSING.toString().equals(name)) {
-                this.avatar.addTopTextImageRight(ImageHelper.getImageFromResourcesScaledToHeight("/info/city_blessing.png", sizeMod(11)));
+                cityBlessing = true;
             }
         }
-        if (player.isMonarch()) {
-            tooltipText.append("<br/>").append("The Monarch");
-            this.avatar.addTopTextImageRight(ImageHelper.getImageFromResourcesScaledToHeight("/info/crown.png", sizeMod(11)));
+        boolean monarch = player.isMonarch();
+        boolean initiative = player.isInitiative();
+        topRightSignature.append(monarch).append('|').append(initiative);
+        String newTopRightSignature = topRightSignature.toString();
+        boolean avatarVisualChanged = !newTopRightSignature.equals(avatarTopRightSignature);
+        if (avatarVisualChanged) {
+            this.avatar.clearTopTextImagesRight();
+            if (cityBlessing) {
+                this.avatar.addTopTextImageRight(ImageHelper.getImageFromResourcesScaledToHeight("/info/city_blessing.png", sizeMod(11)));
+            }
+            if (monarch) {
+                this.avatar.addTopTextImageRight(ImageHelper.getImageFromResourcesScaledToHeight("/info/crown.png", sizeMod(11)));
+            }
+            if (initiative) {
+                this.avatar.addTopTextImageRight(ImageHelper.getImageFromResourcesScaledToHeight("/info/initiative.png", sizeMod(11)));
+            }
+            avatarTopRightSignature = newTopRightSignature;
         }
-        if (player.isInitiative()) {
+        if (monarch) {
+            tooltipText.append("<br/>").append("The Monarch");
+        }
+        if (initiative) {
             tooltipText.append("<br/>").append("Have the Initiative");
-            this.avatar.addTopTextImageRight(ImageHelper.getImageFromResourcesScaledToHeight("/info/initiative.png", sizeMod(11)));
         }
 
         // counters
@@ -530,12 +591,24 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             tooltipText.append("<br/>").append(counter.getName()).append(" counters: ").append(counter.getCount());
         }
 
-        avatar.setToolTipText(tooltipText.toString());
-        avatar.repaint();
+        String tooltip = tooltipText.toString();
+        if (!tooltip.equals(lastAvatarTooltipText)) {
+            avatar.setToolTipText(tooltip);
+            lastAvatarTooltipText = tooltip;
+            avatarVisualChanged = true;
+        }
+        if (avatarVisualChanged) {
+            avatar.repaint();
+        }
 
         // used if avatar image can't be used
-        this.btnPlayer.setText(player.getName());
-        this.btnPlayer.setToolTipText(tooltipText.toString());
+        if (!player.getName().equals(this.btnPlayer.getText())) {
+            this.btnPlayer.setText(player.getName());
+        }
+        if (!tooltip.equals(lastPlayerButtonTooltipText)) {
+            this.btnPlayer.setToolTipText(tooltip);
+            lastPlayerButtonTooltipText = tooltip;
+        }
     }
 
     private String getPriorityTimeLeftString(PlayerView player) {

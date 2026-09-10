@@ -185,7 +185,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
             setRenderedTitle(newTitle);
         }
         // additional info for grave windows
-        if (showType == ShowType.GRAVEYARD) {
+        if (showType == ShowType.GRAVEYARD && (changed || lastRenderedTitle == null)) {
             int qty = qtyCardTypes(showCards);
             String newTitle = name + "'s graveyard (" + showCards.size() + ")  -  " + qty + ((qty == 1) ? " card type" : " card types");
             setRenderedTitle(newTitle);

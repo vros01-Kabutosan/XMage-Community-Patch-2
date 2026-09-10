@@ -28,6 +28,7 @@ public class DeckGeneratorPool {
     public static final int DEFAULT_LAND_PERCENTAGE = 41;
 
     private final List<ColoredManaSymbol> allowedColors;
+    private final Set<String> allowedColorNames;
     private final boolean colorlessAllowed;
     private final List<DeckGeneratorCMC.CMC> poolCMCs;
     private final int creatureCount;
@@ -66,6 +67,9 @@ public class DeckGeneratorPool {
                              boolean isAdvanced, DeckGeneratorCMC deckGeneratorCMC) {
         this.deckSize = deckSize;
         this.allowedColors = allowedColors;
+        this.allowedColorNames = allowedColors.stream()
+                .map(ColoredManaSymbol::toString)
+                .collect(Collectors.toSet());
         this.colorlessAllowed = colorlessAllowed;
         this.commandersCount = isCommander ? 1 : 0;
         this.isSingleton = isSingleton || isCommander; // commander must use singleton mode only
@@ -205,10 +209,9 @@ public class DeckGeneratorPool {
     }
 
     private boolean cardFitsChosenColors(Card card) {
-        Set<String> needColors = allowedColors.stream().map(ColoredManaSymbol::toString).collect(Collectors.toSet());
         List<ObjectColor> cardColors = card.getColorIdentity().getColors();
         for (ObjectColor cardColor : cardColors) {
-            if (!needColors.contains(cardColor.toString())) {
+            if (!allowedColorNames.contains(cardColor.toString())) {
                 return false;
             }
         }

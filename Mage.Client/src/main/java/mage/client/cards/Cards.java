@@ -179,16 +179,19 @@ implements CardEventProducer {
                 this.cardArea.remove(comp);
             }
         }
-        ArrayList<CardView> orderedList = new ArrayList<CardView>();
-        ArrayList<UUID> arrayList = verticalStackOrder = this.verticalStackLayout ? new ArrayList<UUID>() : null;
+        verticalStackOrder = this.verticalStackLayout ? new ArrayList<UUID>() : null;
+        ArrayList<CardView> orderedList = null;
+        Iterable<CardView> orderedCards;
         if (revertOrder && !this.verticalStackLayout) {
+            orderedList = new ArrayList<CardView>();
             for (CardView card : cardsView.values()) {
                 orderedList.add(0, card);
             }
+            orderedCards = orderedList;
         } else {
-            orderedList.addAll(cardsView.values());
+            orderedCards = cardsView.values();
         }
-        for (CardView card : orderedList) {
+        for (CardView card : orderedCards) {
             if (this.verticalStackLayout && card.getCardIcons() != null) {
                 card.getCardIcons().removeIf(icon -> icon.getIconType() == CardIconType.OTHER_HAS_TARGETS);
             }

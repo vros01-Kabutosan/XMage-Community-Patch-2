@@ -184,7 +184,8 @@ extends JPanel {
     private final Set<String> manuallyClosedCardInfoWindows = new HashSet<String>();
     private static final int CARD_INFO_WINDOW_CLOSE_DELAY_MS = 250;
     private final Map<String, CardsView> graveyards = new HashMap<String, CardsView>();
-    private final Map<String, CardInfoWindowDialog> graveyardWindows = new HashMap<String, CardInfoWindowDialog>();
+    private final Map<String, ShowCardsDialog> graveyardWindows = new HashMap<String, ShowCardsDialog>();
+    private final Map<String, String> graveyardWindowFingerprints = new HashMap<String, String>();
     private final Map<String, CardInfoWindowDialog> companion = new HashMap<String, CardInfoWindowDialog>();
     private final Map<String, CardsView> sideboards = new HashMap<String, CardsView>();
     private final Map<String, CardInfoWindowDialog> sideboardWindows = new HashMap<String, CardInfoWindowDialog>();
@@ -516,6 +517,7 @@ extends JPanel {
         this.pendingCardInfoWindowClosures.values().forEach(Timer::stop);
         this.pendingCardInfoWindowClosures.clear();
         this.retainedReveals.clear();
+        this.graveyardWindowFingerprints.clear();
         this.activeSpellRevealName = null;
         this.handContainer.cleanUp();
         this.disposeFloatingStackWindow();
@@ -537,7 +539,7 @@ extends JPanel {
             cardInfoWindowDialog.cleanUp();
             cardInfoWindowDialog.removeDialog();
         }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+        for (ShowCardsDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
             cardInfoWindowDialog.cleanUp();
             cardInfoWindowDialog.removeDialog();
         }
@@ -623,7 +625,7 @@ extends JPanel {
         for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
             cardInfoWindowDialog.changeGUISize();
         }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+        for (ShowCardsDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
             cardInfoWindowDialog.changeGUISize();
         }
         for (CardInfoWindowDialog cardInfoWindowDialog : this.sideboardWindows.values()) {
@@ -1199,11 +1201,16 @@ extends JPanel {
                 }
                 this.graveyards.put(player.getName(), player.getGraveyard());
                 if (this.graveyardWindows.containsKey(player.getName())) {
-                    windowDialog2 = this.graveyardWindows.get(player.getName());
-                    if (windowDialog2.isClosed()) {
+                    ShowCardsDialog graveyardWindow = this.graveyardWindows.get(player.getName());
+                    if (graveyardWindow.isClosed()) {
                         this.graveyardWindows.remove(player.getName());
+                        this.graveyardWindowFingerprints.remove(player.getName());
                     } else {
-                        windowDialog2.loadCardsAndShow(player.getGraveyard(), this.bigCard, this.gameId, false);
+                        String fingerprint = getCardsFingerprint(player.getGraveyard());
+                        if (!fingerprint.equals(this.graveyardWindowFingerprints.get(player.getName()))) {
+                            graveyardWindow.loadCards(player.getName() + "'s graveyard (" + player.getGraveyard().size() + ")", player.getGraveyard(), this.bigCard, this.gameId, false, null, null, null);
+                            this.graveyardWindowFingerprints.put(player.getName(), fingerprint);
+                        }
                     }
                 }
                 this.sideboards.put(player.getName(), player.getSideboard());
@@ -1878,7 +1885,7 @@ extends JPanel {
         for (CardInfoWindowDialog cardInfoWindowDialog : this.exiles.values()) {
             cardInfoWindowDialog.hideDialog();
         }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+        for (ShowCardsDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
             cardInfoWindowDialog.hideDialog();
         }
         for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
@@ -1909,7 +1916,7 @@ extends JPanel {
         for (CardInfoWindowDialog cardInfoWindowDialog : this.lookedAt.values()) {
             cardInfoWindowDialog.show();
         }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+        for (ShowCardsDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
             cardInfoWindowDialog.show();
         }
         for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
@@ -1925,7 +1932,7 @@ extends JPanel {
 
     public void openGraveyardWindow(String playerName) {
         if (this.graveyardWindows.containsKey(playerName)) {
-            CardInfoWindowDialog cardInfoWindowDialog = this.graveyardWindows.get(playerName);
+            ShowCardsDialog cardInfoWindowDialog = this.graveyardWindows.get(playerName);
             if (cardInfoWindowDialog.isVisible()) {
                 cardInfoWindowDialog.hideDialog();
             } else {
@@ -1933,10 +1940,20 @@ extends JPanel {
             }
             return;
         }
-        CardInfoWindowDialog newGraveyard = new CardInfoWindowDialog(CardInfoWindowDialog.ShowType.GRAVEYARD, playerName);
+        ShowCardsDialog newGraveyard = new ShowCardsDialog();
         this.graveyardWindows.put(playerName, newGraveyard);
         MageFrame.getDesktop().add((Component)newGraveyard, newGraveyard.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
-        newGraveyard.loadCardsAndShow(this.graveyards.get(playerName), this.bigCard, this.gameId, false);
+        newGraveyard.loadCards(playerName + "'s graveyard (" + this.graveyards.get(playerName).size() + ")", this.graveyards.get(playerName), this.bigCard, this.gameId, false, null, null, null);
+        this.graveyardWindowFingerprints.put(playerName, getCardsFingerprint(this.graveyards.get(playerName)));
+        newGraveyard.show();
+    }
+
+    private String getCardsFingerprint(CardsView cards) {
+        StringBuilder fingerprint = new StringBuilder(cards.size() * 37);
+        for (UUID cardId : cards.keySet()) {
+            fingerprint.append(cardId).append(';');
+        }
+        return fingerprint.toString();
     }
 
     private void clearClosedCardHintsWindows() {

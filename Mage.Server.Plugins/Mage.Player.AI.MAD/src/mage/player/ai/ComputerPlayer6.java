@@ -546,8 +546,28 @@ public class ComputerPlayer6 extends ComputerPlayer {
             task.cancel(true);
         }
         // Keep the baseline evaluation when search is interrupted or fails.
+        installFastFallbackAction();
         logSlowDecision(decisionStartedNanos, true);
         return currentScore;
+    }
+
+    private void installFastFallbackAction() {
+        if (root == null || root.game == null || !root.children.isEmpty()
+                || root.game.checkIfGameIsOver()
+                || !Objects.equals(root.game.getPlayerList().get(), playerId)) {
+            return;
+        }
+        Player simulatedPlayer = root.game.getPlayer(playerId);
+        if (!(simulatedPlayer instanceof SimulatedPlayer2)) {
+            return;
+        }
+        Ability fallback = ((SimulatedPlayer2) simulatedPlayer).getFastFallbackAction(root.game);
+        if (fallback != null) {
+            SimulationNode2 fallbackNode = new SimulationNode2(root, root.game, fallback, maxDepth, playerId);
+            fallbackNode.setScore(currentScore);
+            root.children.add(fallbackNode);
+            root.setScore(currentScore);
+        }
     }
 
     private void logSlowDecision(long startedNanos, boolean fallback) {
@@ -1232,12 +1252,12 @@ public class ComputerPlayer6 extends ComputerPlayer {
                                 || attacker.getAbilities().containsKey(IndestructibleAbility.getInstance().getId())) {
                             safeToAttack = true;
                         }
-
-                        // attacker has flying and blocker has neither flying nor reach
+                        // A ground-only blocker cannot block a flying attacker.
+                        // Continue so later checks cannot accidentally undo this rule.
                         if (attacker.getAbilities().containsKey(FlyingAbility.getInstance().getId())
                                 && !blocker.getAbilities().containsKey(FlyingAbility.getInstance().getId())
                                 && !blocker.getAbilities().containsKey(ReachAbility.getInstance().getId())) {
-                            safeToAttack = true;
+                            continue;
                         }
 
                         // if any check fails, move on to the next possible attacker
@@ -1254,6 +1274,27 @@ public class ComputerPlayer6 extends ComputerPlayer {
                     // add attacker to the next list of all attackers that can safely attack
                     if (safeToAttack) {
                         attackersToCheck.add(attacker);
+                    }
+                }
+
+                // If every potential attacker was filtered because of a blocker, still attack
+                // with creatures that have no legal blocker. This keeps the bot from
+                // passing in an obviously free-damage position after a conservative check.
+                if (attackersToCheck.isEmpty()) {
+                    for (Permanent attacker : attackersList) {
+                        if (attacker.getPower().getValue() <= 0) {
+                            continue;
+                        }
+                        boolean canBeBlocked = false;
+                        for (Permanent blocker : possibleBlockers) {
+                            if (blocker.canBlock(attacker.getId(), game)) {
+                                canBeBlocked = true;
+                                break;
+                            }
+                        }
+                        if (!canBeBlocked) {
+                            attackersToCheck.add(attacker);
+                        }
                     }
                 }
 

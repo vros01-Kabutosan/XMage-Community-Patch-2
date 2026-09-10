@@ -111,6 +111,29 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         return list;
     }
 
+
+    /**
+     * Return one already-targeted legal action without constructing the full
+     * priority list. Used only when bounded search is interrupted.
+     */
+    public Ability getFastFallbackAction(Game game) {
+        Game sim = game.createSimulationForAI();
+        List<ActivatedAbility> playables = sim.getPlayer(playerId).getPlayable(sim, isSimulatedPlayer);
+        for (ActivatedAbility ability : playables) {
+            if (Thread.currentThread().isInterrupted() || ability.isManaAbility()) {
+                continue;
+            }
+            List<Ability> options = sim.getPlayer(playerId).getPlayableOptions(ability, sim);
+            options = optimizeOptions(sim, options, ability);
+            if (!options.isEmpty()) {
+                return options.get(0);
+            }
+            if (ability.getTargets().isEmpty()) {
+                return ability;
+            }
+        }
+        return new PassAbility();
+    }
     private void simulateOptions(Game game) {
         List<ActivatedAbility> playables = game.getPlayer(playerId).getPlayable(game, isSimulatedPlayer);
         for (ActivatedAbility ability : playables) {

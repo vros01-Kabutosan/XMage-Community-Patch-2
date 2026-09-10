@@ -1239,20 +1239,11 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     }
 
     private int qtyCardTypes(mage.view.CardsView cardsView) {
-        Set<String> cardTypesPresent = new LinkedHashSet<String>() {
-        };
+        Set<CardType> cardTypesPresent = EnumSet.noneOf(CardType.class);
         for (CardView card : cardsView.values()) {
-            Set<CardType> cardTypes = EnumSet.noneOf(CardType.class);
-            cardTypes.addAll(card.getCardTypes());
-            for (CardType cardType : cardTypes) {
-                cardTypesPresent.add(cardType.toString());
-            }
+            cardTypesPresent.addAll(card.getCardTypes());
         }
-        if (cardTypesPresent.isEmpty()) {
-            return 0;
-        } else {
-            return cardTypesPresent.size();
-        }
+        return cardTypesPresent.size();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

@@ -1981,11 +1981,15 @@ extends JPanel {
 
     private void showRevealed(GameView game) {
         Set<String> activeWindows = new HashSet<>();
-        Set<UUID> publicCardIds = collectPublicCardIds(game);
+        Set<UUID> publicCardIds = null;
         for (RevealedView revealView : game.getRevealed()) {
             String name = revealView.getName();
             this.cancelPendingCardInfoWindowClosure(this.revealed, name);
-            if (isSpellReveal(game, revealView)) {
+            boolean spellReveal = isSpellReveal(game, revealView);
+            if (spellReveal) {
+                if (publicCardIds == null) {
+                    publicCardIds = collectPublicCardIds(game);
+                }
                 if (!name.equals(this.activeSpellRevealName)) {
                     for (String previousName : new ArrayList<String>(this.retainedReveals.keySet())) {
                         if (!previousName.equals(name)) {
@@ -2018,6 +2022,9 @@ extends JPanel {
                 activeWindows.add(name);
                 this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, name, (LinkedHashMap) revealView.getCards());
             }
+        }
+        if (publicCardIds == null && !this.retainedReveals.isEmpty()) {
+            publicCardIds = collectPublicCardIds(game);
         }
         // The server may omit the reveal entry after the discard resolves.
         // Keep only the still-private cards alive until each one becomes public.

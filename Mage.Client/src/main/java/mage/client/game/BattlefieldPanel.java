@@ -318,11 +318,19 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
                 if (mageCard.getMainPanel() instanceof MagePermanent) {
                     MagePermanent magePermanent = (MagePermanent) mageCard.getMainPanel();
                     if (magePermanent.getOriginal().getId().equals(permanentId)) {
+                        MageCard cardToRemove = mageCard;
                         Thread t = new Thread(() -> {
-                            Plugins.instance.onRemoveCard(mageCard, count);
-                            mageCard.setVisible(false);
-                            this.jPanel.remove(mageCard);
-                        });
+                            Plugins.instance.onRemoveCard(cardToRemove, count);
+                            SwingUtilities.invokeLater(() -> {
+                                if (cardToRemove.getParent() == this.jPanel) {
+                                    cardToRemove.setVisible(false);
+                                    this.jPanel.remove(cardToRemove);
+                                    this.jPanel.revalidate();
+                                    this.jPanel.repaint();
+                                }
+                            });
+                        }, "BattlefieldCardRemoval");
+                        t.setDaemon(true);
                         t.start();
                     }
                     if (magePermanent.getOriginal().isCreature()) {

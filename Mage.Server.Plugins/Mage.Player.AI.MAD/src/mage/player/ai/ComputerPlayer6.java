@@ -1243,9 +1243,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
                 }
 
                 // Prefer high-impact attackers first so planeswalkers and battles are not overkilled.
+                Map<Permanent, Integer> attackerEvalCache = new IdentityHashMap<>();
                 attackersToCheck.sort((left, right) -> {
-                    int rightScore = eval.evaluate(right, game) + right.getPower().getValue() * 2;
-                    int leftScore = eval.evaluate(left, game) + left.getPower().getValue() * 2;
+                    int rightScore = attackerEvalCache.computeIfAbsent(right, p -> eval.evaluate(p, game)) + right.getPower().getValue() * 2;
+                    int leftScore = attackerEvalCache.computeIfAbsent(left, p -> eval.evaluate(p, game)) + left.getPower().getValue() * 2;
                     return Integer.compare(rightScore, leftScore);
                 });
 
@@ -1298,7 +1299,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
                         if (powerOrder != 0) {
                             return powerOrder;
                         }
-                        return Integer.compare(eval.evaluate(right, game), eval.evaluate(left, game));
+                        return Integer.compare(
+                                attackerEvalCache.computeIfAbsent(right, p -> eval.evaluate(p, game)),
+                                attackerEvalCache.computeIfAbsent(left, p -> eval.evaluate(p, game)));
                     });
                     for (Permanent attackingPermanent : attackersForPermanentDefender) {
                         if (attackingPermanent.isAttacking()) {

@@ -48,6 +48,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -279,6 +280,7 @@ extends JPanel {
     private int floatingStackLastObjectCount = -1;
     private String floatingStackLastTypeLabel = "";
     private String floatingStackLastAudit;
+    private PhaseStep lastRenderedStep;
     private boolean floatingStackRestoringBounds = false;
     private static final String XCP_STACK_PREF_NODE = "xcpFloatingStackV5";
     private static final String XCP_STACK_X = "x";
@@ -521,6 +523,7 @@ extends JPanel {
         }
         this.players.clear();
         this.playersWhoLeft.clear();
+        this.lastRenderedStep = null;
         this.uninstallComponents();
         if (this.pickNumber != null) {
             this.pickNumber.removeDialog();
@@ -1006,6 +1009,7 @@ extends JPanel {
         int playerNum;
         this.players.clear();
         this.playersWhoLeft.clear();
+        this.lastRenderedStep = null;
         this.pnlBattlefield.removeAll();
         int numSeats = game.getPlayers().size();
         int numColumns = (numSeats + 1) / 2;
@@ -1105,9 +1109,9 @@ extends JPanel {
 
     public synchronized void updateGame() {
         if (this.playerId == null && this.lastGameData.game.getWatchedHands().isEmpty()) {
-            this.handContainer.setVisible(false);
+            setVisibleIfChanged(this.handContainer, false);
         } else {
-            this.handContainer.setVisible(true);
+            setVisibleIfChanged(this.handContainer, true);
             this.handCards.clear();
             if (!this.lastGameData.game.getWatchedHands().isEmpty()) {
                 for (Map.Entry hand : this.lastGameData.game.getWatchedHands().entrySet()) {
@@ -1133,7 +1137,7 @@ extends JPanel {
             this.hideAll();
             if (this.playerId != null) {
                 boolean change;
-                this.btnSwitchHands.setVisible(this.handCards.size() > 1);
+                setVisibleIfChanged(this.btnSwitchHands, this.handCards.size() > 1);
                 boolean bl = change = this.handCardsOfOpponentAvailable == this.lastGameData.game.getOpponentHands().isEmpty();
                 if (change) {
                     boolean bl2 = this.handCardsOfOpponentAvailable = !this.handCardsOfOpponentAvailable;
@@ -1144,24 +1148,26 @@ extends JPanel {
                     }
                 }
             } else {
-                this.btnSwitchHands.setVisible(!this.handCards.isEmpty());
+                setVisibleIfChanged(this.btnSwitchHands, !this.handCards.isEmpty());
             }
         }
-        if (this.lastGameData.game.getPhase() != null) {
-            this.txtPhase.setText(this.lastGameData.game.getPhase().toString());
-        } else {
-            this.txtPhase.setText("");
-        }
-        if (this.lastGameData.game.getStep() != null) {
-            this.updateActivePhase(this.lastGameData.game.getStep());
-            this.txtStep.setText(this.lastGameData.game.getStep().toString());
+        String phaseText = this.lastGameData.game.getPhase() == null ? "" : this.lastGameData.game.getPhase().toString();
+        setLabelTextIfChanged(this.txtPhase, phaseText);
+        PhaseStep currentStep = this.lastGameData.game.getStep();
+        if (currentStep != null) {
+            if (currentStep != this.lastRenderedStep) {
+                this.updateActivePhase(currentStep);
+                this.lastRenderedStep = currentStep;
+            }
+            setLabelTextIfChanged(this.txtStep, currentStep.toString());
         } else {
             logger.debug((Object)"Step is empty");
-            this.txtStep.setText("");
+            setLabelTextIfChanged(this.txtStep, "");
+            this.lastRenderedStep = null;
         }
-        this.txtActivePlayer.setText(this.lastGameData.game.getActivePlayerName());
-        this.txtPriority.setText(this.lastGameData.game.getPriorityPlayerName());
-        this.txtTurn.setText(Integer.toString(this.lastGameData.game.getTurn()));
+        setLabelTextIfChanged(this.txtActivePlayer, this.lastGameData.game.getActivePlayerName());
+        setLabelTextIfChanged(this.txtPriority, this.lastGameData.game.getPriorityPlayerName());
+        setLabelTextIfChanged(this.txtTurn, Integer.toString(this.lastGameData.game.getTurn()));
         List<UUID> possibleAttackers = new ArrayList<>();
         if (this.lastGameData.options != null && this.lastGameData.options.containsKey("possibleAttackers") && this.lastGameData.options.get("possibleAttackers") instanceof List) {
             possibleAttackers.addAll((List<UUID>) this.lastGameData.options.get("possibleAttackers"));
@@ -1299,18 +1305,36 @@ extends JPanel {
     }
 
     private void updateSkipButtons() {
-        this.btnSkipToNextTurn.setToolTipText(this.skipButtons.turn.getTooltip());
-        this.btnSkipToEndTurn.setToolTipText(this.skipButtons.untilEndOfTurn.getTooltip());
-        this.btnSkipToNextMain.setToolTipText(this.skipButtons.untilNextMain.getTooltip());
-        this.btnSkipStack.setToolTipText(this.skipButtons.untilStackResolved.getTooltip());
-        this.btnSkipToYourTurn.setToolTipText(this.skipButtons.allTurns.getTooltip());
-        this.btnSkipToEndStepBeforeYourTurn.setToolTipText(this.skipButtons.untilUntilEndStepBeforeMyTurn.getTooltip());
+        setToolTipIfChanged(this.btnSkipToNextTurn, this.skipButtons.turn.getTooltip());
+        setToolTipIfChanged(this.btnSkipToEndTurn, this.skipButtons.untilEndOfTurn.getTooltip());
+        setToolTipIfChanged(this.btnSkipToNextMain, this.skipButtons.untilNextMain.getTooltip());
+        setToolTipIfChanged(this.btnSkipStack, this.skipButtons.untilStackResolved.getTooltip());
+        setToolTipIfChanged(this.btnSkipToYourTurn, this.skipButtons.allTurns.getTooltip());
+        setToolTipIfChanged(this.btnSkipToEndStepBeforeYourTurn, this.skipButtons.untilUntilEndStepBeforeMyTurn.getTooltip());
         this.btnSkipToNextTurn.setBorder(this.skipButtons.turn.getBorder());
         this.btnSkipToEndTurn.setBorder(this.skipButtons.untilEndOfTurn.getBorder());
         this.btnSkipToNextMain.setBorder(this.skipButtons.untilNextMain.getBorder());
         this.btnSkipStack.setBorder(this.skipButtons.untilStackResolved.getBorder());
         this.btnSkipToYourTurn.setBorder(this.skipButtons.allTurns.getBorder());
         this.btnSkipToEndStepBeforeYourTurn.setBorder(this.skipButtons.untilUntilEndStepBeforeMyTurn.getBorder());
+    }
+
+    private static void setLabelTextIfChanged(JLabel label, String text) {
+        if (!Objects.equals(label.getText(), text)) {
+            label.setText(text);
+        }
+    }
+
+    private static void setVisibleIfChanged(Component component, boolean visible) {
+        if (component.isVisible() != visible) {
+            component.setVisible(visible);
+        }
+    }
+
+    private static void setToolTipIfChanged(JComponent component, String tooltip) {
+        if (!Objects.equals(component.getToolTipText(), tooltip)) {
+            component.setToolTipText(tooltip);
+        }
     }
 
     public void setMenuStates(boolean manaPoolAutomatic, boolean manaPoolAutomaticRestricted, boolean useFirstManaAbility, boolean holdPriority) {

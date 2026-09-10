@@ -311,12 +311,13 @@ extends JPanel {
         for (PlayAreaPanel playArea : this.players.values()) {
             BattlefieldPanel battlefield = playArea.getBattlefieldPanel();
             battlefield.updateSize();
-            this.xcpNormalizeBattlefieldViewport(battlefield);
-            battlefield.revalidate();
+            if (this.xcpNormalizeBattlefieldViewport(battlefield)) {
+                battlefield.revalidate();
+            }
         }
     }
 
-    private void xcpNormalizeBattlefieldViewport(BattlefieldPanel battlefield) {
+    private boolean xcpNormalizeBattlefieldViewport(BattlefieldPanel battlefield) {
         JLayeredPane mainPanel = battlefield.getMainPanel();
         Dimension preferred = mainPanel.getPreferredSize();
         int maxBottom = 0;
@@ -328,7 +329,9 @@ extends JPanel {
         int normalizedHeight = Math.max(1, maxBottom);
         if (preferred.height > normalizedHeight) {
             mainPanel.setPreferredSize(new Dimension(preferred.width, normalizedHeight));
+            return true;
         }
+        return false;
     }
 
     public LastGameData getLastGameData() {

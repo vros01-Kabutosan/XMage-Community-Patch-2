@@ -385,11 +385,26 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             changedFontLife = false;
         }
         setTextForLabel("life", lifeLabel, life, playerLife, false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("poison", poisonLabel, poison, counterOfName(player, "poison"), false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("energy", energyLabel, energy, counterOfName(player, "energy"), false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("experience", experienceLabel, experience, counterOfName(player, "experience"), false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("rad", radLabel, rad, counterOfName(player, "rad"), false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("ticket", ticketLabel, ticket, counterOfName(player, "ticket"), false, PreferencesDialog.getCurrentTheme().getTextColor());
+        int poisonCounters = 0;
+        int energyCounters = 0;
+        int experienceCounters = 0;
+        int radCounters = 0;
+        int ticketCounters = 0;
+        for (CounterView counter : player.getCounters()) {
+            switch (counter.getName()) {
+                case "poison": poisonCounters = counter.getCount(); break;
+                case "energy": energyCounters = counter.getCount(); break;
+                case "experience": experienceCounters = counter.getCount(); break;
+                case "rad": radCounters = counter.getCount(); break;
+                case "ticket": ticketCounters = counter.getCount(); break;
+                default: break;
+            }
+        }
+        setTextForLabel("poison", poisonLabel, poison, poisonCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
+        setTextForLabel("energy", energyLabel, energy, energyCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
+        setTextForLabel("experience", experienceLabel, experience, experienceCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
+        setTextForLabel("rad", radLabel, rad, radCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
+        setTextForLabel("ticket", ticketLabel, ticket, ticketCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
         setTextForLabel("hand zone", handLabel, hand, player.getHandCount(), false, PreferencesDialog.getCurrentTheme().getTextColor());
         int libraryCards = player.getLibraryCount();
         if (libraryCards > 99) {

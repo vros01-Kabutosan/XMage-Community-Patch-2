@@ -52,6 +52,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
     // TODO: increase maxNodes due AI skill level like max depth?
     private static final int MAX_SIMULATED_NODES_PER_CALC = 5000;
     private static final int MAX_SIMULATED_NODES_PER_ERROR = 8100; // safety ceiling for the highest skill budget
+    private static final int DEEP_STACK_RESPONSE_THRESHOLD = 8;
+    private static final int DEEP_STACK_MAX_THINK_SECONDS = 1;
 
     // same params as Executors.newFixedThreadPool
     // no needs errors check in afterExecute here cause that pool used for FutureTask with result check already
@@ -499,6 +501,12 @@ public class ComputerPlayer6 extends ComputerPlayer {
             int maxSeconds = maxThinkTimeSecs;
             if (COMPUTER_DISABLE_TIMEOUT_IN_GAME_SIMULATIONS) {
                 maxSeconds = 3600;
+            } else if (root != null
+                    && root.getGame() != null
+                    && root.getGame().getStack().size() >= DEEP_STACK_RESPONSE_THRESHOLD) {
+                // A very deep stack can otherwise make every pass spend the full
+                // think budget repeatedly. Keep the legal fallback responsive.
+                maxSeconds = Math.min(maxSeconds, DEEP_STACK_MAX_THINK_SECONDS);
             }
             logger.debug("maxThink: " + maxSeconds + " seconds ");
             Integer res = task.get(maxSeconds, TimeUnit.SECONDS);

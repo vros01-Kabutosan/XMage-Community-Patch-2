@@ -83,6 +83,13 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     private String lastPlayerButtonTooltipText;
     private String lastMatchScore;
     private Color lastMatchScoreColor;
+    private int lastTimerPriorityTime = Integer.MIN_VALUE;
+    private int lastTimerBufferTime = Integer.MIN_VALUE;
+    private String lastTimerText;
+    private Color lastTimerAvatarTextColor;
+    private Color lastTimerLabelForegroundColor;
+    private boolean timerStateKnown;
+    private boolean lastTimerActive;
     private static final Map<UUID, Integer> playerLives = new HashMap<>();
 
     private final Font defaultFont;
@@ -154,6 +161,13 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         lastPlayerButtonTooltipText = null;
         lastMatchScore = null;
         lastMatchScoreColor = null;
+        lastTimerPriorityTime = Integer.MIN_VALUE;
+        lastTimerBufferTime = Integer.MIN_VALUE;
+        lastTimerText = null;
+        lastTimerAvatarTextColor = null;
+        lastTimerLabelForegroundColor = null;
+        timerStateKnown = false;
+        lastTimerActive = false;
         avatarId = -1;
         if (priorityTime > 0 && priorityTime != Integer.MAX_VALUE) {
             long delay = 1000L;
@@ -459,32 +473,54 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             }
         }
         if (this.timer != null) {
-            if (player.getPriorityTimeLeftSecs() != Integer.MAX_VALUE) {
+            int priorityTimeLeft = player.getPriorityTimeLeftSecs();
+            int bufferTimeLeft = player.getBufferTimeLeft();
+            if (priorityTimeLeft != Integer.MAX_VALUE) {
+                if (priorityTimeLeft != lastTimerPriorityTime) {
+                    this.timer.setCount(priorityTimeLeft);
+                    lastTimerPriorityTime = priorityTimeLeft;
+                }
+                if (bufferTimeLeft != lastTimerBufferTime) {
+                    this.timer.setBufferCount(bufferTimeLeft);
+                    lastTimerBufferTime = bufferTimeLeft;
+                }
                 String priorityTimeValue = getPriorityTimeLeftString(player);
-                this.timer.setCount(player.getPriorityTimeLeftSecs());
-                this.timer.setBufferCount(player.getBufferTimeLeft());
-                this.avatar.setTopText(priorityTimeValue);
-                this.timerLabel.setText(priorityTimeValue);
+                if (!priorityTimeValue.equals(lastTimerText)) {
+                    this.avatar.setTopText(priorityTimeValue);
+                    this.timerLabel.setText(priorityTimeValue);
+                    lastTimerText = priorityTimeValue;
+                }
                 // Set timer text colors (note, if you change it here, change it in init()::timer.setTaskOnTick() as well)
                 final Color textColor; // use default in HoverButton
                 final Color foregroundColor;
-                if (player.getBufferTimeLeft() > 0) {
+                if (bufferTimeLeft > 0) {
                     textColor = Color.GREEN;
                     foregroundColor = Color.GREEN.darker().darker();
-                } else if (player.getPriorityTimeLeftSecs() < 300) { // visual indication for under 5 minutes
+                } else if (priorityTimeLeft < 300) { // visual indication for under 5 minutes
                     textColor = Color.RED;
                     foregroundColor = Color.RED.darker().darker();
                 } else {
                     textColor = null;
                     foregroundColor = Color.BLACK;
                 }
-                this.avatar.setTopTextColor(textColor);
-                this.timerLabel.setForeground(foregroundColor);
+                if (!Objects.equals(textColor, lastTimerAvatarTextColor)) {
+                    this.avatar.setTopTextColor(textColor);
+                    lastTimerAvatarTextColor = textColor;
+                }
+                if (!foregroundColor.equals(lastTimerLabelForegroundColor)) {
+                    this.timerLabel.setForeground(foregroundColor);
+                    lastTimerLabelForegroundColor = foregroundColor;
+                }
             }
-            if (player.isTimerActive()) {
-                this.timer.resume();
-            } else {
-                this.timer.pause();
+            boolean timerActive = player.isTimerActive();
+            if (!timerStateKnown || timerActive != lastTimerActive) {
+                if (timerActive) {
+                    this.timer.resume();
+                } else {
+                    this.timer.pause();
+                }
+                lastTimerActive = timerActive;
+                timerStateKnown = true;
             }
         }
 

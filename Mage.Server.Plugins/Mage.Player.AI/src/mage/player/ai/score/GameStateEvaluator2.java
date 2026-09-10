@@ -160,10 +160,13 @@ public final class GameStateEvaluator2 {
                 + (playerHandScore - opponentHandScore)
                 + (playerGraveyardScore - opponentGraveyardScore)
                 + (playerRevealedScore - opponentRevealedScore);
-        logger.debug(score
-                + " total Score (life:" + (playerLifeScore - opponentLifeScore)
-                + " permanents:" + (playerPermanentsScore - opponentPermanentsScore)
-                + " hand:" + (playerHandScore - opponentHandScore) + ')');
+        if (logger.isDebugEnabled()) {
+            logger.debug(score
+                    + " total Score (life:" + (playerLifeScore - opponentLifeScore)
+                    + " permanents:" + (playerPermanentsScore - opponentPermanentsScore)
+                    + " hand:" + (playerHandScore - opponentHandScore) + ')');
+        }
+
         return new PlayerEvaluateScore(
                 playerId,
                 playerLifeScore, playerHandScore, playerPermanentsScore,

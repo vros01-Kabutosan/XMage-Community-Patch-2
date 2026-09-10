@@ -151,7 +151,7 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
         gameUpdateTimer.stop();
         boolean changed = false;
 
-        List<PermanentView> permanentsToAdd = new ArrayList<>();
+        List<PermanentView> permanentsToAdd = null;
         for (PermanentView permanent : battlefield.values()) {
             if (!permanent.isPhasedIn()) {
                 continue;
@@ -185,6 +185,9 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
             }
 
             if (oldMagePermanent == null) {
+                if (permanentsToAdd == null) {
+                    permanentsToAdd = new ArrayList<>();
+                }
                 permanentsToAdd.add(permanent);
                 changed = true;
             } else {
@@ -241,9 +244,11 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
 
         addedArtifact = addedCreature = addedPermanent = false;
 
-        int count = permanentsToAdd.size();
-        for (PermanentView permanent : permanentsToAdd) {
-            addPermanent(permanent, count);
+        int count = permanentsToAdd == null ? 0 : permanentsToAdd.size();
+        if (permanentsToAdd != null) {
+            for (PermanentView permanent : permanentsToAdd) {
+                addPermanent(permanent, count);
+            }
         }
 
         if (addedArtifact) {
@@ -258,7 +263,8 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
 
         for (Iterator<Entry<UUID, MageCard>> iterator = permanents.entrySet().iterator(); iterator.hasNext();) {
             Entry<UUID, MageCard> entry = iterator.next();
-            if (!battlefield.containsKey(entry.getKey()) || !battlefield.get(entry.getKey()).isPhasedIn()) {
+            PermanentView currentPermanent = battlefield.get(entry.getKey());
+            if (currentPermanent == null || !currentPermanent.isPhasedIn()) {
                 removePermanent(entry.getKey(), 1);
                 iterator.remove();
                 changed = true;

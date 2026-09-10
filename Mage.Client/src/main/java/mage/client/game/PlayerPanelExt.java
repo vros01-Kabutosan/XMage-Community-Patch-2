@@ -90,6 +90,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     private Color lastTimerLabelForegroundColor;
     private boolean timerStateKnown;
     private boolean lastTimerActive;
+    private Color lastPanelBackgroundColor;
     private static final Map<UUID, Integer> playerLives = new HashMap<>();
 
     private final Font defaultFont;
@@ -168,6 +169,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         lastTimerLabelForegroundColor = null;
         timerStateKnown = false;
         lastTimerActive = false;
+        lastPanelBackgroundColor = null;
         avatarId = -1;
         if (priorityTime > 0 && priorityTime != Integer.MAX_VALUE) {
             long delay = 1000L;
@@ -524,47 +526,56 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             }
         }
 
+        Border desiredPlayerBorder;
         if (player.isActive()) {
-            this.avatar.setBorder(GREEN_BORDER);
-            this.btnPlayer.setBorder(GREEN_BORDER);
+            desiredPlayerBorder = GREEN_BORDER;
             setGreenBackgroundColor();
         } else {
             resetBackgroundColor();
             if (player.hasLeft()) {
-                this.avatar.setBorder(RED_BORDER);
-                this.btnPlayer.setBorder(RED_BORDER);
+                desiredPlayerBorder = RED_BORDER;
                 setDeadBackgroundColor();
             } else {
-                this.avatar.setBorder(EMPTY_BORDER);
-                this.btnPlayer.setBorder(EMPTY_BORDER);
+                desiredPlayerBorder = EMPTY_BORDER;
             }
         }
 
         // possible targeting
         if (possibleTargets != null && possibleTargets.contains(this.playerId)) {
-            this.avatar.setBorder(YELLOW_BORDER);
-            this.btnPlayer.setBorder(YELLOW_BORDER);
+            desiredPlayerBorder = YELLOW_BORDER;
         }
 
         // selected targeting (draw as priority)
         if (chosenTargets != null && chosenTargets.contains(this.playerId)) {
-            this.avatar.setBorder(GREEN_BORDER); // TODO: use diff green color for chosen targeting and current priority?
-            this.btnPlayer.setBorder(GREEN_BORDER);
+            desiredPlayerBorder = GREEN_BORDER; // TODO: use diff green color for chosen targeting and current priority?
+        }
+        if (this.avatar.getBorder() != desiredPlayerBorder) {
+            this.avatar.setBorder(desiredPlayerBorder);
+        }
+        if (this.btnPlayer.getBorder() != desiredPlayerBorder) {
+            this.btnPlayer.setBorder(desiredPlayerBorder);
         }
 
         update(player.getManaPool());
     }
 
+    private void setPanelBackgroundColor(Color color) {
+        if (!Objects.equals(color, lastPanelBackgroundColor)) {
+            panelBackground.setBackgroundColor(color);
+            lastPanelBackgroundColor = color;
+        }
+    }
+
     private void resetBackgroundColor() {
-        panelBackground.setBackgroundColor(PreferencesDialog.getCurrentTheme().getPlayerPanel_inactiveBackgroundColor());
+        setPanelBackgroundColor(PreferencesDialog.getCurrentTheme().getPlayerPanel_inactiveBackgroundColor());
     }
 
     private void setGreenBackgroundColor() {
-        panelBackground.setBackgroundColor(PreferencesDialog.getCurrentTheme().getPlayerPanel_activeBackgroundColor());
+        setPanelBackgroundColor(PreferencesDialog.getCurrentTheme().getPlayerPanel_activeBackgroundColor());
     }
 
     private void setDeadBackgroundColor() {
-        panelBackground.setBackgroundColor(PreferencesDialog.getCurrentTheme().getPlayerPanel_deadBackgroundColor());
+        setPanelBackgroundColor(PreferencesDialog.getCurrentTheme().getPlayerPanel_deadBackgroundColor());
     }
 
     /**

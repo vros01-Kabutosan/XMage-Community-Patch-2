@@ -292,10 +292,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
                         //logger.debug("Add Action -- abandoning check, no immediate benefit");
                         val = testScore;
                     } else {
-                        val = GameStateEvaluator2.evaluate(playerId, game).getTotalScore();
+                        val = testScore;
                     }
                 } else {
-                    val = GameStateEvaluator2.evaluate(playerId, game).getTotalScore();
+                    val = testScore;
                 }
             } else if (!node.getChildren().isEmpty()) {
                 if (logger.isDebugEnabled()) {

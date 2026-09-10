@@ -58,6 +58,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     private BigCard bigCard;
 
     private static final String DEFAULT_AVATAR_PATH = "/avatars/" + DEFAULT_AVATAR_ID + ".jpg";
+    private static final Color ZERO_VALUE_COLOR = new Color(100, 100, 100);
 
     private static final int PANEL_WIDTH = 94;
     private static final int PANEL_HEIGHT = 270; // full mode (with avatar image)
@@ -228,7 +229,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     private void setTextForLabel(String category, JLabel label, JComponent relatedComponent, int amount, boolean alwaysBlack, Color fontColor) {
         String value = Integer.toString(amount);
         String tooltip = category + ": " + amount;
-        Color desiredColor = amount != 0 || alwaysBlack ? fontColor : new Color(100, 100, 100);
+        Color desiredColor = amount != 0 || alwaysBlack ? fontColor : ZERO_VALUE_COLOR;
         Font desiredFont = amount != 0 || alwaysBlack ? fontValuesNonZero : fontValuesZero;
 
         // Player panels receive frequent game updates. Avoid firing Swing property
@@ -355,6 +356,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             playerLives.put(player.getPlayerId(), player.getLife());
         }
         int playerLife = player.getLife();
+        Color defaultTextColor = PreferencesDialog.getCurrentTheme().getTextColor();
 
         boolean displayLife = "true".equals(MageFrame.getPreferences().get(PreferencesDialog.KEY_DISPLAY_LIVE_ON_AVATAR, "true"));
         avatar.setCenterText(displayLife ? String.valueOf(playerLife) : null);
@@ -384,7 +386,7 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             lifeLabel.setFont(font);
             changedFontLife = false;
         }
-        setTextForLabel("life", lifeLabel, life, playerLife, false, PreferencesDialog.getCurrentTheme().getTextColor());
+        setTextForLabel("life", lifeLabel, life, playerLife, false, defaultTextColor);
         int poisonCounters = 0;
         int energyCounters = 0;
         int experienceCounters = 0;
@@ -400,12 +402,12 @@ public class PlayerPanelExt extends javax.swing.JPanel {
                 default: break;
             }
         }
-        setTextForLabel("poison", poisonLabel, poison, poisonCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("energy", energyLabel, energy, energyCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("experience", experienceLabel, experience, experienceCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("rad", radLabel, rad, radCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("ticket", ticketLabel, ticket, ticketCounters, false, PreferencesDialog.getCurrentTheme().getTextColor());
-        setTextForLabel("hand zone", handLabel, hand, player.getHandCount(), false, PreferencesDialog.getCurrentTheme().getTextColor());
+        setTextForLabel("poison", poisonLabel, poison, poisonCounters, false, defaultTextColor);
+        setTextForLabel("energy", energyLabel, energy, energyCounters, false, defaultTextColor);
+        setTextForLabel("experience", experienceLabel, experience, experienceCounters, false, defaultTextColor);
+        setTextForLabel("rad", radLabel, rad, radCounters, false, defaultTextColor);
+        setTextForLabel("ticket", ticketLabel, ticket, ticketCounters, false, defaultTextColor);
+        setTextForLabel("hand zone", handLabel, hand, player.getHandCount(), false, defaultTextColor);
         int libraryCards = player.getLibraryCount();
         if (libraryCards > 99) {
             Font font = libraryLabel.getFont();
@@ -418,9 +420,10 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             libraryLabel.setFont(font);
             changedFontLibrary = false;
         }
-        setTextForLabel("library zone", libraryLabel, library, libraryCards, false, PreferencesDialog.getCurrentTheme().getTextColor());
+        setTextForLabel("library zone", libraryLabel, library, libraryCards, false, defaultTextColor);
 
-        int graveCards = player.getGraveyard().size();
+        CardsView graveyard = player.getGraveyard();
+        int graveCards = graveyard.size();
         if (graveCards > 99) {
             if (!changedFontGrave) {
                 Font font = graveLabel.getFont();
@@ -435,11 +438,11 @@ public class PlayerPanelExt extends javax.swing.JPanel {
             changedFontGrave = false;
         }
 
-        Color graveColor = isCardsPlayable(player.getGraveyard().values(), game, possibleTargets) ? activeValueColor : PreferencesDialog.getCurrentTheme().getTextColor();
+        Color graveColor = isCardsPlayable(graveyard.values(), game, possibleTargets) ? activeValueColor : defaultTextColor;
         setTextForLabel("graveyard zone", graveLabel, grave, graveCards, false, graveColor);
-        graveLabel.setToolTipText("Card Types: " + qtyCardTypes(player.getGraveyard()));
+        graveLabel.setToolTipText("Card Types: " + qtyCardTypes(graveyard));
 
-        Color commandColor = PreferencesDialog.getCurrentTheme().getTextColor();
+        Color commandColor = defaultTextColor;
         for (CommandObjectView com : player.getCommandObjectList()) {
             if (game != null && game.getCanPlayObjects() != null && game.getCanPlayObjects().containsObject(com.getId())) {
                 commandColor = activeValueColor;
@@ -452,8 +455,9 @@ public class PlayerPanelExt extends javax.swing.JPanel {
         }
         setTextForLabel("command zone", commandLabel, commandZone, player.getCommandObjectList().size(), false, commandColor);
 
-        int exileCards = player.getExile().size();
-        Color exileColor = isCardsPlayable(player.getExile().values(), game, possibleTargets) ? activeValueColor : PreferencesDialog.getCurrentTheme().getTextColor();
+        CardsView exile = player.getExile();
+        int exileCards = exile.size();
+        Color exileColor = isCardsPlayable(exile.values(), game, possibleTargets) ? activeValueColor : defaultTextColor;
         if (exileCards > 99) {
             if (!changedFontExile) {
                 Font font = exileLabel.getFont();

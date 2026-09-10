@@ -64,12 +64,6 @@ implements CardEventProducer {
         for (MageCard mageCard : this.cards.values()) {
             mageCard.setCardContainerRef((Container)(enabled ? this : this.cardArea));
         }
-        for (MageCard mageCard : this.cards.values()) {
-            mageCard.setCardContainerRef((Container)(enabled ? this : this.cardArea));
-        }
-        for (MageCard mageCard : this.cards.values()) {
-            mageCard.setCardContainerRef((Container)(enabled ? this : this.cardArea));
-        }
         if (enabled) {
             this.cardArea.setLayout(null);
         }
@@ -238,14 +232,16 @@ implements CardEventProducer {
             this.cards.putAll(reorderedCards);
         }
         if (changed) {
-            this.layoutCards();
+            if (!this.verticalStackLayout) {
+                this.layoutCards();
+            }
+            this.sizeCards(this.getCardDimension());
+            this.revalidate();
+            this.repaint();
         }
-        if (!this.isVisibleIfEmpty) {
+        if (!this.isVisibleIfEmpty && this.cardArea.isVisible() != !this.cards.isEmpty()) {
             this.cardArea.setVisible(!this.cards.isEmpty());
         }
-        this.sizeCards(this.getCardDimension());
-        this.revalidate();
-        this.repaint();
         if (changed && moveScrollbar) {
             SwingUtilities.invokeLater(() -> {
                 if (this.jScrollPane1 != null) {

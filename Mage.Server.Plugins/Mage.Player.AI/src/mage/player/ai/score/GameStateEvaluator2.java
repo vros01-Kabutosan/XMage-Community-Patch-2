@@ -90,6 +90,7 @@ public final class GameStateEvaluator2 {
 
         int playerPermanentsScore = 0;
         int opponentPermanentsScore = 0;
+        Set<UUID> activeOpponents = game.getOpponents(playerId, true);
         try {
             StringBuilder sbPlayer = new StringBuilder();
             StringBuilder sbOpponent = new StringBuilder();
@@ -110,7 +111,7 @@ public final class GameStateEvaluator2 {
 
             // add values of opponent
             // Add battlefield pressure from every active opponent in multiplayer games.
-            for (UUID opponentId : game.getOpponents(playerId, true)) {
+            for (UUID opponentId : activeOpponents) {
                 for (Permanent permanent : game.getBattlefield().getAllActivePermanents(opponentId)) {
                 int onePermScore = evaluatePermanentSafely(permanent, game, useCombatPermanentScore);
                 opponentPermanentsScore += onePermScore;
@@ -151,7 +152,7 @@ public final class GameStateEvaluator2 {
         int playerRevealedScore = evaluateRevealedCards(playerId, game);
         int opponentRevealedScore = 0;
         // Public zones from every active opponent matter in multiplayer games.
-        for (UUID opponentId : game.getOpponents(playerId, true)) {
+        for (UUID opponentId : activeOpponents) {
             Player publicOpponent = game.getPlayer(opponentId);
             if (publicOpponent != null) {
                 opponentGraveyardScore += evaluateGraveyard(publicOpponent, game);

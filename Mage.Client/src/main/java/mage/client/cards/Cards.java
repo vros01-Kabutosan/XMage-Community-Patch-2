@@ -12,6 +12,7 @@ import java.awt.FlowLayout;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.swing.BorderFactory;
@@ -20,6 +21,7 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
+import mage.abilities.icon.CardIcon;
 import mage.abilities.icon.CardIconRenderSettings;
 import mage.abilities.icon.CardIconType;
 import mage.cards.MageCard;
@@ -215,8 +217,12 @@ implements CardEventProducer {
             if (!this.cards.containsKey(card.getId())) {
                 this.addCard(card, bigCard, gameId);
                 changed = true;
+            } else {
+                MageCard mageCard = this.cards.get(card.getId());
+                if (!this.cardViewEquals(mageCard.getOriginal(), card)) {
+                    mageCard.update(card);
+                }
             }
-            this.cards.get(card.getId()).update(card);
         }
         if (verticalStackOrder != null) {
             LinkedHashMap<UUID, MageCard> reorderedCards = new LinkedHashMap<UUID, MageCard>();
@@ -320,6 +326,40 @@ implements CardEventProducer {
             dx = Math.max(dx, currentCard.getCardLocation().getCardX());
         }
         newCard.setCardLocation(dx += newCard.getCardLocation().getCardWidth() + MageActionCallback.getHandOrStackBetweenGapX(newCard.getZone()), MageActionCallback.getHandOrStackMargins(newCard.getZone()).getTop());
+    }
+
+    private boolean cardViewEquals(CardView oldCard, CardView newCard) {
+        if (!CardView.cardViewEquals(oldCard, newCard)) {
+            return false;
+        }
+        if (oldCard.isChoosable() != newCard.isChoosable()
+                || oldCard.isSelected() != newCard.isSelected()
+                || oldCard.isPlayable() != newCard.isPlayable()
+                || oldCard.isTransformed() != newCard.isTransformed()
+                || oldCard.isAbility() != newCard.isAbility()
+                || oldCard.getAbilityType() != newCard.getAbilityType()
+                || oldCard.isCanAttack() != newCard.isCanAttack()
+                || oldCard.isCanBlock() != newCard.isCanBlock()
+                || !java.util.Objects.equals(oldCard.getTargets(), newCard.getTargets())
+                || !java.util.Objects.equals(oldCard.getPlayableStats().getPlayableAbilityIds(), newCard.getPlayableStats().getPlayableAbilityIds())
+                || !java.util.Objects.equals(oldCard.getPlayableStats().getPlayableAbilityNames(), newCard.getPlayableStats().getPlayableAbilityNames())) {
+            return false;
+        }
+        List<CardIcon> oldIcons = oldCard.getCardIcons();
+        List<CardIcon> newIcons = newCard.getCardIcons();
+        if (oldIcons.size() != newIcons.size()) {
+            return false;
+        }
+        for (int i = 0; i < oldIcons.size(); i++) {
+            CardIcon oldIcon = oldIcons.get(i);
+            CardIcon newIcon = newIcons.get(i);
+            if (oldIcon.getIconType() != newIcon.getIconType()
+                    || !java.util.Objects.equals(oldIcon.getText(), newIcon.getText())
+                    || !java.util.Objects.equals(oldIcon.getHint(), newIcon.getHint())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean removeOutdatedCards(CardsView cardsView) {

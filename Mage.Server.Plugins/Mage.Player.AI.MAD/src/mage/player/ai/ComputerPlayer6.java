@@ -491,6 +491,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
         // run new game simulation in parallel thread
         // Never reuse scores between turns: hidden information, triggers and mana change.
         transpositionTable = new HashMap<>();
+        long decisionStartedNanos = System.nanoTime();
         FutureTask<Integer> task = new FutureTask<>(() -> {
             // Node counters are thread-local; reset them in the simulation worker.
             SimulationNode2.resetCount();
@@ -511,6 +512,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
             logger.debug("maxThink: " + maxSeconds + " seconds ");
             Integer res = task.get(maxSeconds, TimeUnit.SECONDS);
             if (res != null) {
+                logSlowDecision(decisionStartedNanos, false);
                 return res;
             }
         } catch (TimeoutException e) {
@@ -544,7 +546,20 @@ public class ComputerPlayer6 extends ComputerPlayer {
             task.cancel(true);
         }
         // Keep the baseline evaluation when search is interrupted or fails.
+        logSlowDecision(decisionStartedNanos, true);
         return currentScore;
+    }
+
+    private void logSlowDecision(long startedNanos, boolean fallback) {
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedNanos);
+        if (elapsedMillis < 500 || !logger.isInfoEnabled()) {
+            return;
+        }
+        int stackSize = root != null && root.game != null ? root.game.getStack().size() : -1;
+        logger.info("[AI-TIMING] player=" + getName()
+                + " elapsedMs=" + elapsedMillis
+                + " stack=" + stackSize
+                + " fallback=" + fallback);
     }
 
     private void printFreezeNode(SimulationNode2 root) {

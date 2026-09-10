@@ -174,9 +174,7 @@ public class DeckGeneratorPool {
         cardCounts.put(card.getName(), count + 1);
         deckCards.add(card);
 
-        if (deckCards.stream().distinct().collect(Collectors.toList()).size() != deckCards.size()) {
-            System.out.println("wtf " + card.getName());
-        }
+        // Card multiplicity is tracked by cardCounts; avoid rescanning the whole deck here.
     }
 
     public void clearCards(boolean isClearReserve) {

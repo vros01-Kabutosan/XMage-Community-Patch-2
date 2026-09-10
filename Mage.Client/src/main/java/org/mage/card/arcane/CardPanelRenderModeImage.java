@@ -677,7 +677,7 @@ extends CardPanel {
     }
 
     private void setTitle(CardView card) {
-        this.titleText.setText(!this.displayTitleAnyway && this.hasImage ? "" : card.getDisplayName());
+        setLabelTextIfChanged(this.titleText, !this.displayTitleAnyway && this.hasImage ? "" : card.getDisplayName());
     }
 
 
@@ -749,10 +749,10 @@ extends CardPanel {
                 this.otherCounter = 0;
                 this.loyaltyCounter = 0;
             }
-            this.plusCounterLabel.setVisible(false);
-            this.minusCounterLabel.setVisible(false);
-            this.loyaltyCounterLabel.setVisible(false);
-            this.otherCounterLabel.setVisible(false);
+            setVisibleIfChanged(this.plusCounterLabel, false);
+            setVisibleIfChanged(this.minusCounterLabel, false);
+            setVisibleIfChanged(this.loyaltyCounterLabel, false);
+            setVisibleIfChanged(this.otherCounterLabel, false);
             block10: for (CounterView counterView : card.getCounters()) {
                 if (counterView.getCount() == 0) continue;
                 switch (counterView.getName()) {
@@ -761,7 +761,7 @@ extends CardPanel {
                             this.plusCounter = counterView.getCount();
                             this.plusCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.plusCounter, ImageManagerImpl.instance.getCounterImageGreen(), this.getCardWidth()));
                         }
-                        this.plusCounterLabel.setVisible(true);
+                        setVisibleIfChanged(this.plusCounterLabel, true);
                         continue block10;
                     }
                     case "-1/-1": {
@@ -769,7 +769,7 @@ extends CardPanel {
                             this.minusCounter = counterView.getCount();
                             this.minusCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.minusCounter, ImageManagerImpl.instance.getCounterImageRed(), this.getCardWidth()));
                         }
-                        this.minusCounterLabel.setVisible(true);
+                        setVisibleIfChanged(this.minusCounterLabel, true);
                         continue block10;
                     }
                     case "loyalty": {
@@ -777,7 +777,7 @@ extends CardPanel {
                             this.loyaltyCounter = counterView.getCount();
                             this.loyaltyCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.loyaltyCounter, ImageManagerImpl.instance.getCounterImageViolet(), this.getCardWidth()));
                         }
-                        this.loyaltyCounterLabel.setVisible(true);
+                        setVisibleIfChanged(this.loyaltyCounterLabel, true);
                         continue block10;
                     }
                 }
@@ -786,35 +786,47 @@ extends CardPanel {
                 this.otherCounter = counterView.getCount();
                 this.otherCounterLabel.setToolTipText(name);
                 this.otherCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.otherCounter, ImageManagerImpl.instance.getCounterImageGrey(), this.getCardWidth()));
-                this.otherCounterLabel.setVisible(true);
+                setVisibleIfChanged(this.otherCounterLabel, true);
             }
             this.counterPanel.setVisible(true);
         } else {
-            this.plusCounterLabel.setVisible(false);
-            this.minusCounterLabel.setVisible(false);
-            this.loyaltyCounterLabel.setVisible(false);
-            this.otherCounterLabel.setVisible(false);
+            setVisibleIfChanged(this.plusCounterLabel, false);
+            setVisibleIfChanged(this.minusCounterLabel, false);
+            setVisibleIfChanged(this.loyaltyCounterLabel, false);
+            setVisibleIfChanged(this.otherCounterLabel, false);
             this.counterPanel.setVisible(false);
+        }
+    }
+
+    private static void setLabelTextIfChanged(JLabel label, String text) {
+        if (!Objects.equals(label.getText(), text)) {
+            label.setText(text);
+        }
+    }
+
+    private static void setVisibleIfChanged(Component component, boolean visible) {
+        if (component.isVisible() != visible) {
+            component.setVisible(visible);
         }
     }
 
     private void updatePTTexts(CardView card) {
         if (card.isCreature() || card.getSubTypes().contains((Object)SubType.VEHICLE)) {
-            this.ptText1.setText(this.getGameCard().getPower());
-            this.ptText2.setText("/");
-            this.ptText3.setText(CardRendererUtils.getCardLifeWithDamage(this.getGameCard()));
+            setLabelTextIfChanged(this.ptText1, this.getGameCard().getPower());
+            setLabelTextIfChanged(this.ptText2, "/");
+            setLabelTextIfChanged(this.ptText3, CardRendererUtils.getCardLifeWithDamage(this.getGameCard()));
         } else if (card.isPlaneswalker()) {
-            this.ptText1.setText("");
-            this.ptText2.setText("");
-            this.ptText3.setText(this.getGameCard().getLoyalty());
+            setLabelTextIfChanged(this.ptText1, "");
+            setLabelTextIfChanged(this.ptText2, "");
+            setLabelTextIfChanged(this.ptText3, this.getGameCard().getLoyalty());
         } else if (card.isBattle()) {
-            this.ptText1.setText("");
-            this.ptText2.setText("");
-            this.ptText3.setText(this.getGameCard().getDefense());
+            setLabelTextIfChanged(this.ptText1, "");
+            setLabelTextIfChanged(this.ptText2, "");
+            setLabelTextIfChanged(this.ptText3, this.getGameCard().getDefense());
         } else {
-            this.ptText1.setText("");
-            this.ptText2.setText("");
-            this.ptText3.setText("");
+            setLabelTextIfChanged(this.ptText1, "");
+            setLabelTextIfChanged(this.ptText2, "");
+            setLabelTextIfChanged(this.ptText3, "");
         }
         this.ptText1.setForeground(Color.white);
         this.ptText1.setGlow(Color.black, 6, 3.0f);

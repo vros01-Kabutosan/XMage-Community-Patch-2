@@ -2,6 +2,7 @@ package mage.player.ai;
 
 import mage.MageObject;
 import mage.abilities.Ability;
+import mage.abilities.Mode;
 import mage.abilities.ActivatedAbility;
 import mage.abilities.TriggeredAbility;
 import mage.abilities.common.PassAbility;
@@ -9,6 +10,7 @@ import mage.abilities.costs.mana.ManaCost;
 import mage.abilities.costs.mana.ManaCostsImpl;
 import mage.abilities.costs.mana.VariableManaCost;
 import mage.abilities.effects.Effect;
+import mage.abilities.effects.common.SacrificeAllEffect;
 import mage.game.Game;
 import mage.game.combat.Combat;
 import mage.game.events.GameEvent;
@@ -125,6 +127,7 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
             }
             List<Ability> options = sim.getPlayer(playerId).getPlayableOptions(ability, sim);
             options = optimizeOptions(sim, options, ability);
+            options.removeIf(option -> hasDeadModalMode(option, sim));
             if (!options.isEmpty()) {
                 return options.get(0);
             }
@@ -134,6 +137,32 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         }
         return new PassAbility();
     }
+
+    /**
+     * Modal effects such as Sheoldred's Edict may be legally cast with a mode
+     * that has no affected permanent. That is correct rules behavior, but it
+     * is a poor emergency AI action. Remove only those no-op mode choices from
+     * the timeout fallback; normal player choices and full search are untouched.
+     */
+    private boolean hasDeadModalMode(Ability ability, Game game) {
+        if (!ability.isModal() || ability.getModes().getSelectedModes().isEmpty()) {
+            return false;
+        }
+        for (UUID modeId : ability.getModes().getSelectedModes()) {
+            Mode mode = ability.getModes().get(modeId);
+            if (mode == null) {
+                continue;
+            }
+            for (Effect effect : mode.getEffects()) {
+                if (effect instanceof SacrificeAllEffect
+                        && !((SacrificeAllEffect) effect).hasEligiblePermanent(game, ability)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private void simulateOptions(Game game) {
         List<ActivatedAbility> playables = game.getPlayer(playerId).getPlayable(game, isSimulatedPlayer);
         for (ActivatedAbility ability : playables) {

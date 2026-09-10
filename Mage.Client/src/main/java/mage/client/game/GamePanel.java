@@ -280,6 +280,8 @@ extends JPanel {
     private int floatingStackLastObjectCount = -1;
     private String floatingStackLastTypeLabel = "";
     private String floatingStackLastAudit;
+    private int floatingStackLastAuditSignature;
+    private boolean floatingStackAuditSignatureKnown;
     private PhaseStep lastRenderedStep;
     private boolean floatingStackRestoringBounds = false;
     private static final String XCP_STACK_PREF_NODE = "xcpFloatingStackV5";
@@ -1642,6 +1644,8 @@ extends JPanel {
         this.floatingStackLastObjectCount = -1;
         this.floatingStackLastTypeLabel = "";
         this.floatingStackLastAudit = null;
+        this.floatingStackLastAuditSignature = 0;
+        this.floatingStackAuditSignatureKnown = false;
     }
 
     private String getFloatingStackTypeLabel(CardView card) {
@@ -1757,10 +1761,19 @@ extends JPanel {
     private void displayStack(GameView game, BigCard bigCard, FeedbackPanel feedbackPanel, UUID gameId) {
         this.stackObjects.loadCards(game.getStack(), bigCard, gameId, false);
         if (logger.isDebugEnabled()) {
-            String stackAudit = game.getStack().values().stream().map(card -> card.getName() + "[" + card.getId() + "]").collect(Collectors.joining(" -> "));
-            if (!stackAudit.equals(this.floatingStackLastAudit)) {
-                logger.debug((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
-                this.floatingStackLastAudit = stackAudit;
+            int stackAuditSignature = 1;
+            for (CardView card : game.getStack().values()) {
+                stackAuditSignature = 31 * stackAuditSignature + Objects.hashCode(card.getId());
+                stackAuditSignature = 31 * stackAuditSignature + Objects.hashCode(card.getName());
+            }
+            if (!this.floatingStackAuditSignatureKnown || stackAuditSignature != this.floatingStackLastAuditSignature) {
+                String stackAudit = game.getStack().values().stream().map(card -> card.getName() + "[" + card.getId() + "]").collect(Collectors.joining(" -> "));
+                if (!stackAudit.equals(this.floatingStackLastAudit)) {
+                    logger.debug((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
+                    this.floatingStackLastAudit = stackAudit;
+                }
+                this.floatingStackLastAuditSignature = stackAuditSignature;
+                this.floatingStackAuditSignatureKnown = true;
             }
         }
         this.updateFloatingStackVisibility(game);

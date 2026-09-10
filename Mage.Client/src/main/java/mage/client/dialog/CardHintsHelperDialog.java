@@ -216,9 +216,10 @@ public class CardHintsHelperDialog extends MageDialog implements MageDesktopIcon
         if (newGameView == null) {
             return;
         }
-        if (this.lastGameView != newGameView) {
-            this.lastGameView = newGameView;
+        if (this.lastGameView == newGameView) {
+            return;
         }
+        this.lastGameView = newGameView;
 
         // collect full hints data
         this.lastHints.clear();

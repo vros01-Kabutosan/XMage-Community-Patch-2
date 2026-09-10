@@ -177,7 +177,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
     // TODO: remove oudated code with revertOrder (wait new release and delete if no bug reports for diff windows with cards, 2023-12-14)
     public void loadCardsAndShow(CardsView showCards, BigCard bigCard, UUID gameId, boolean revertOrder) {
-        cards.loadCards(showCards, bigCard, gameId, revertOrder);
+        boolean changed = cards.loadCards(showCards, bigCard, gameId, revertOrder);
 
         if (showType == ShowType.REVEAL || showType == ShowType.LOOKED_AT) {
             String newTitle = name + " (" + showCards.size() + ")";
@@ -199,7 +199,9 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
             this.setTitelBarToolTip(newTitle);
         }
 
-        showAndPositionWindow();
+        if (changed || !positioned) {
+            showAndPositionWindow();
+        }
     }
 
     /**

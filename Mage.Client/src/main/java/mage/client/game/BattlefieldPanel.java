@@ -97,7 +97,12 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
     }
 
     public void updateSize() {
-        this.jScrollPane.setSize(this.getWidth(), this.getHeight());
+        int width = this.getWidth();
+        int height = this.getHeight();
+        if (this.jScrollPane.getWidth() == width && this.jScrollPane.getHeight() == height) {
+            return;
+        }
+        this.jScrollPane.setSize(width, height);
         sortLayout();
     }
 

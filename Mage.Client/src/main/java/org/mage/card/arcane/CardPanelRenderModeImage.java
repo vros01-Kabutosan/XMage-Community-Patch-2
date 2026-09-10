@@ -17,6 +17,7 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.util.List;
 import java.util.Objects;
 import java.util.StringTokenizer;
 import java.util.UUID;
@@ -83,6 +84,7 @@ extends CardPanel {
     private int loyaltyCounter;
     private int plusCounter;
     private int otherCounter;
+    private String otherCounterName;
     private int minusCounter;
     private int lastCardWidth;
     private final GlowText titleText;
@@ -740,7 +742,8 @@ extends CardPanel {
     }
 
     private void updateCounters(CardView card) {
-        if (card.getCounters() != null && !card.getCounters().isEmpty()) {
+        List<CounterView> counters = card.getCounters();
+        if (counters != null && !counters.isEmpty()) {
             String name = "";
             if (this.lastCardWidth != this.getCardWidth()) {
                 this.lastCardWidth = this.getCardWidth();
@@ -748,33 +751,36 @@ extends CardPanel {
                 this.minusCounter = 0;
                 this.otherCounter = 0;
                 this.loyaltyCounter = 0;
+                this.otherCounterName = null;
             }
             setVisibleIfChanged(this.plusCounterLabel, false);
             setVisibleIfChanged(this.minusCounterLabel, false);
             setVisibleIfChanged(this.loyaltyCounterLabel, false);
             setVisibleIfChanged(this.otherCounterLabel, false);
-            block10: for (CounterView counterView : card.getCounters()) {
-                if (counterView.getCount() == 0) continue;
-                switch (counterView.getName()) {
+            block10: for (CounterView counterView : counters) {
+                int count = counterView.getCount();
+                if (count == 0) continue;
+                String counterName = counterView.getName();
+                switch (counterName) {
                     case "+1/+1": {
-                        if (counterView.getCount() != this.plusCounter) {
-                            this.plusCounter = counterView.getCount();
+                        if (count != this.plusCounter) {
+                            this.plusCounter = count;
                             this.plusCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.plusCounter, ImageManagerImpl.instance.getCounterImageGreen(), this.getCardWidth()));
                         }
                         setVisibleIfChanged(this.plusCounterLabel, true);
                         continue block10;
                     }
                     case "-1/-1": {
-                        if (counterView.getCount() != this.minusCounter) {
-                            this.minusCounter = counterView.getCount();
+                        if (count != this.minusCounter) {
+                            this.minusCounter = count;
                             this.minusCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.minusCounter, ImageManagerImpl.instance.getCounterImageRed(), this.getCardWidth()));
                         }
                         setVisibleIfChanged(this.minusCounterLabel, true);
                         continue block10;
                     }
                     case "loyalty": {
-                        if (counterView.getCount() != this.loyaltyCounter) {
-                            this.loyaltyCounter = counterView.getCount();
+                        if (count != this.loyaltyCounter) {
+                            this.loyaltyCounter = count;
                             this.loyaltyCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.loyaltyCounter, ImageManagerImpl.instance.getCounterImageViolet(), this.getCardWidth()));
                         }
                         setVisibleIfChanged(this.loyaltyCounterLabel, true);
@@ -782,22 +788,24 @@ extends CardPanel {
                     }
                 }
                 if (!name.isEmpty()) continue;
-                name = counterView.getName();
-                this.otherCounter = counterView.getCount();
-                this.otherCounterLabel.setToolTipText(name);
-                this.otherCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.otherCounter, ImageManagerImpl.instance.getCounterImageGrey(), this.getCardWidth()));
+                name = counterName;
+                if (count != this.otherCounter || !Objects.equals(counterName, this.otherCounterName)) {
+                    this.otherCounter = count;
+                    this.otherCounterName = counterName;
+                    this.otherCounterLabel.setToolTipText(name);
+                    this.otherCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.otherCounter, ImageManagerImpl.instance.getCounterImageGrey(), this.getCardWidth()));
+                }
                 setVisibleIfChanged(this.otherCounterLabel, true);
             }
-            this.counterPanel.setVisible(true);
+            setVisibleIfChanged(this.counterPanel, true);
         } else {
             setVisibleIfChanged(this.plusCounterLabel, false);
             setVisibleIfChanged(this.minusCounterLabel, false);
             setVisibleIfChanged(this.loyaltyCounterLabel, false);
             setVisibleIfChanged(this.otherCounterLabel, false);
-            this.counterPanel.setVisible(false);
+            setVisibleIfChanged(this.counterPanel, false);
         }
     }
-
     private static void setLabelTextIfChanged(JLabel label, String text) {
         if (!Objects.equals(label.getText(), text)) {
             label.setText(text);

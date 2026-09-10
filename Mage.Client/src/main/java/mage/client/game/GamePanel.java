@@ -276,6 +276,8 @@ extends JPanel {
     private boolean floatingStackHadObjects = false;
     private Timer floatingStackHideTimer;
     private String floatingStackLastOrderLabel = "";
+    private int floatingStackLastObjectCount = -1;
+    private String floatingStackLastTypeLabel = "";
     private boolean floatingStackRestoringBounds = false;
     private static final String XCP_STACK_PREF_NODE = "xcpFloatingStackV5";
     private static final String XCP_STACK_X = "x";
@@ -1612,6 +1614,8 @@ extends JPanel {
             this.floatingStackHideTimer = null;
         }
         this.floatingStackLastOrderLabel = "";
+        this.floatingStackLastObjectCount = -1;
+        this.floatingStackLastTypeLabel = "";
     }
 
     private String getFloatingStackTypeLabel(CardView card) {
@@ -1662,13 +1666,22 @@ extends JPanel {
         }
         boolean bl = hasObjects = objectCount > 0;
         if (this.floatingStackFrame != null) {
-            if (this.floatingStackTitleLabel != null) {
-                this.floatingStackTitleLabel.setText("The Stack (" + objectCount + ")");
-                this.floatingStackTitleLabel.setToolTipText("The object marked 1st resolves first (" + objectCount + " object" + (objectCount == 1 ? "" : "s") + ")");
+            if (this.floatingStackTitleLabel != null && objectCount != this.floatingStackLastObjectCount) {
+                String title = "The Stack (" + objectCount + ")";
+                String titleTooltip = "The object marked 1st resolves first (" + objectCount + " object" + (objectCount == 1 ? "" : "s") + ")";
+                this.floatingStackTitleLabel.setText(title);
+                this.floatingStackTitleLabel.setToolTipText(titleTooltip);
+                this.floatingStackLastObjectCount = objectCount;
             }
             if (this.floatingStackTypeLabel != null) {
-                this.floatingStackTypeLabel.setText(type);
-                this.floatingStackTypeLabel.setVisible(!type.isEmpty());
+                if (!type.equals(this.floatingStackLastTypeLabel)) {
+                    this.floatingStackTypeLabel.setText(type);
+                    this.floatingStackLastTypeLabel = type;
+                }
+                boolean typeVisible = !type.isEmpty();
+                if (this.floatingStackTypeLabel.isVisible() != typeVisible) {
+                    this.floatingStackTypeLabel.setVisible(typeVisible);
+                }
             }
             if (this.floatingStackOrderLabel != null) {
                 String orderLabel = this.getFloatingStackOrderLabel(topStackObject);
@@ -1679,7 +1692,9 @@ extends JPanel {
                     this.floatingStackLastOrderLabel = orderLabel;
                     logger.debug((Object)("Floating stack guide: text=" + orderLabel + " visible=" + hasObjects));
                 }
-                this.floatingStackOrderLabel.setVisible(hasObjects);
+                if (this.floatingStackOrderLabel.isVisible() != hasObjects) {
+                    this.floatingStackOrderLabel.setVisible(hasObjects);
+                }
             }
             if (hasObjects) {
                 if (this.floatingStackHideTimer != null) {

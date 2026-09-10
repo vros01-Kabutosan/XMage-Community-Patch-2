@@ -927,11 +927,23 @@ public class ComputerPlayer6 extends ComputerPlayer {
         for (TreeOptimizer optimizer : optimizers) {
             optimizer.optimize(game, allActions);
         }
+        // Sorting is on the hot path of every simulated priority decision.
+        // Cache derived values once per ability for this sort only.
+        Map<Ability, String> ruleCache = new IdentityHashMap<>();
+        Map<Ability, Integer> scoreCache = new IdentityHashMap<>();
         Collections.sort(allActions, new Comparator<Ability>() {
             @Override
             public int compare(Ability ability1, Ability ability2) {
-                String rule1 = ability1.toString();
-                String rule2 = ability2.toString();
+                String rule1 = ruleCache.get(ability1);
+                if (rule1 == null) {
+                    rule1 = ability1.toString();
+                    ruleCache.put(ability1, rule1);
+                }
+                String rule2 = ruleCache.get(ability2);
+                if (rule2 == null) {
+                    rule2 = ability2.toString();
+                    ruleCache.put(ability2, rule2);
+                }
 
                 // pass
                 boolean pass1 = rule1.startsWith("Pass");
@@ -969,8 +981,18 @@ public class ComputerPlayer6 extends ComputerPlayer {
                 // Explore higher-impact abilities first to improve alpha-beta pruning.
                 int cost1 = ability1.getManaCosts() == null ? 0 : ability1.getManaCosts().manaValue();
                 int cost2 = ability2.getManaCosts() == null ? 0 : ability2.getManaCosts().manaValue();
-                int priority1 = mage.player.ai.score.MagicAbility.getAbilityScore(ability1) * 10 - cost1;
-                int priority2 = mage.player.ai.score.MagicAbility.getAbilityScore(ability2) * 10 - cost2;
+                Integer score1 = scoreCache.get(ability1);
+                if (score1 == null) {
+                    score1 = mage.player.ai.score.MagicAbility.getAbilityScore(ability1);
+                    scoreCache.put(ability1, score1);
+                }
+                Integer score2 = scoreCache.get(ability2);
+                if (score2 == null) {
+                    score2 = mage.player.ai.score.MagicAbility.getAbilityScore(ability2);
+                    scoreCache.put(ability2, score2);
+                }
+                int priority1 = score1 * 10 - cost1;
+                int priority2 = score2 * 10 - cost2;
                 if (priority1 != priority2) {
                     return Integer.compare(priority2, priority1);
                 }

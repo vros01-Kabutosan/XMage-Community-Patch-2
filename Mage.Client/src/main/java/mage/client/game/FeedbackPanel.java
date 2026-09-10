@@ -48,6 +48,7 @@ public class FeedbackPanel extends javax.swing.JPanel {
     private MageDialog connectedDialog;
     private ChatPanelBasic connectedChatPanel;
     private Map<String, Serializable> lastOptions = new HashMap<>();
+    private int lastRefreshedLayoutHeight = -1;
 
     private static final boolean AUTO_CLOSE_END_DIALOG = false;
     private static final int AUTO_CLOSE_END_DIALOG_TIMEOUT_SECS = 8;
@@ -80,9 +81,17 @@ public class FeedbackPanel extends javax.swing.JPanel {
             return;
         }
         int height = helper.getRequiredHeight();
+        Dimension currentPreferredSize = getPreferredSize();
+        if (currentPreferredSize != null
+                && currentPreferredSize.width == Short.MAX_VALUE
+                && currentPreferredSize.height == height
+                && lastRefreshedLayoutHeight == height) {
+            return;
+        }
         setPreferredSize(new Dimension(Short.MAX_VALUE, height));
         setMinimumSize(new Dimension(0, height));
         setMaximumSize(new Dimension(Short.MAX_VALUE, height));
+        lastRefreshedLayoutHeight = height;
         revalidate();
         repaint();
     }

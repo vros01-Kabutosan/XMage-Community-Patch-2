@@ -10,6 +10,7 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -184,10 +185,8 @@ implements CardEventProducer {
         ArrayList<CardView> orderedList = null;
         Iterable<CardView> orderedCards;
         if (revertOrder && !this.verticalStackLayout) {
-            orderedList = new ArrayList<CardView>();
-            for (CardView card : cardsView.values()) {
-                orderedList.add(0, card);
-            }
+            orderedList = new ArrayList<CardView>(cardsView.values());
+            Collections.reverse(orderedList);
             orderedCards = orderedList;
         } else {
             orderedCards = cardsView.values();

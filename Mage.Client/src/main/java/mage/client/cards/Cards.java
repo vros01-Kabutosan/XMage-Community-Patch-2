@@ -11,6 +11,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -368,9 +369,10 @@ implements CardEventProducer {
     private boolean removeOutdatedCards(CardsView cardsView) {
         boolean changed = false;
         this.cards.keySet().removeIf(id -> !cardsView.containsKey(id));
+        HashSet<MageCard> cardsToKeep = new HashSet<MageCard>(this.cards.values());
         for (Component comp : this.cardArea.getComponents()) {
             if (comp instanceof MageCard) {
-                if (this.cards.containsValue(comp)) continue;
+                if (cardsToKeep.contains((MageCard) comp)) continue;
                 this.cardArea.remove(comp);
                 changed = true;
                 continue;

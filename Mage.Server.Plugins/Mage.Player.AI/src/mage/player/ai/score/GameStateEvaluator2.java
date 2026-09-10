@@ -7,6 +7,7 @@ import mage.players.Player;
 import org.apache.log4j.Logger;
 
 import java.util.UUID;
+import java.util.Set;
 import mage.abilities.Ability;
 import mage.abilities.effects.Effect;
 import mage.constants.Outcome;
@@ -26,9 +27,13 @@ public final class GameStateEvaluator2 {
     public static final int HAND_CARD_SCORE = 5;
 
     private static UUID findMostThreateningOpponent(UUID playerId, Game game) {
+        Set<UUID> opponents = game.getOpponents(playerId, false);
+        if (opponents.size() == 1) {
+            return opponents.iterator().next();
+        }
         UUID selectedOpponent = null;
         int highestThreat = Integer.MIN_VALUE;
-        for (UUID opponentId : game.getOpponents(playerId, false)) {
+        for (UUID opponentId : opponents) {
             Player opponent = game.getPlayer(opponentId);
             if (opponent == null) {
                 continue;

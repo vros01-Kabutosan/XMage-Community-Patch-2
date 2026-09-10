@@ -1253,9 +1253,16 @@ public class ComputerPlayer6 extends ComputerPlayer {
                 // Keep a compact combat trace so real games explain conservative passes
                 // and future tuning can be based on observed decisions.
                 if (logger.isInfoEnabled()) {
-                    logger.info(String.format("[AI-COMBAT] turn=%d target=%s available=%d safe=%d blockers=%d power=%d",
-                            game.getTurnNum(), defender.getName(), attackersList.size(), attackersToCheck.size(),
-                            possibleBlockers.size(), attackersToCheck.stream().mapToInt(p -> p.getPower().getValue()).sum()));
+                    int availablePower = 0;
+                    for (Permanent attacker : attackersToCheck) {
+                        availablePower += attacker.getPower().getValue();
+                    }
+                    logger.info("[AI-COMBAT] turn=" + game.getTurnNum()
+                            + " target=" + defender.getName()
+                            + " available=" + attackersList.size()
+                            + " safe=" + attackersToCheck.size()
+                            + " blockers=" + possibleBlockers.size()
+                            + " power=" + availablePower);
                 }
 
                 // find possible target for attack (priority: planeswalker -> battle -> player)

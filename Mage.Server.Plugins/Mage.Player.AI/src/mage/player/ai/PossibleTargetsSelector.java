@@ -10,6 +10,7 @@ import mage.players.Player;
 import mage.target.Target;
 import mage.target.common.TargetCardInGraveyardBattlefieldOrStack;
 import mage.target.common.TargetDiscard;
+import mage.target.common.TargetSacrifice;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -74,6 +75,10 @@ public class PossibleTargetsSelector {
         if (target instanceof TargetDiscard) {
             // sort due unplayable
             sortByUnplayableAndUseless();
+        } else if (outcome == Outcome.Sacrifice && target instanceof TargetSacrifice) {
+            // SacrificeTarget already restricts this list to legal permanents.
+            // Only improve the preference among those legal choices.
+            sortBySacrificeValue();
         } else {
             // sort due good/bad outcome
             sortByMostValuableTargets();
@@ -95,6 +100,15 @@ public class PossibleTargetsSelector {
             this.opponents.sort(comparators.ANY_MOST_VALUABLE_FIRST);
             this.any.sort(comparators.ANY_MOST_VALUABLE_LAST);
         }
+    }
+
+    /**
+     * Sorting for sacrifice costs. Prefer expendable legal permanents.
+     */
+    private void sortBySacrificeValue() {
+        this.me.sort(comparators.SACRIFICE_LEAST_VALUABLE);
+        this.opponents.sort(comparators.SACRIFICE_LEAST_VALUABLE);
+        this.any.sort(comparators.SACRIFICE_LEAST_VALUABLE);
     }
 
     /**

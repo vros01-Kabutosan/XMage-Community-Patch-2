@@ -154,6 +154,37 @@ public class PossibleTargetsComparator {
     public final Comparator<MageItem> ANY_MOST_VALUABLE_LAST = ANY_MOST_VALUABLE_FIRST.reversed();
 
     /**
+     * Sacrifice costs should preserve high-value permanents when a disposable
+     * legal option exists. Tokens and already tapped permanents are preferred;
+     * lands and higher battlefield-value permanents are kept for last.
+     */
+    public final Comparator<MageItem> SACRIFICE_LEAST_VALUABLE = (o1, o2) -> {
+        boolean token1 = o1 instanceof Permanent && ((Permanent) o1).isToken();
+        boolean token2 = o2 instanceof Permanent && ((Permanent) o2).isToken();
+        int result = Boolean.compare(token2, token1);
+        if (result != 0) {
+            return result;
+        }
+        boolean land1 = o1 instanceof MageObject && ((MageObject) o1).isLand(game);
+        boolean land2 = o2 instanceof MageObject && ((MageObject) o2).isLand(game);
+        result = Boolean.compare(land1, land2);
+        if (result != 0) {
+            return result;
+        }
+        boolean tapped1 = o1 instanceof Permanent && ((Permanent) o1).isTapped();
+        boolean tapped2 = o2 instanceof Permanent && ((Permanent) o2).isTapped();
+        result = Boolean.compare(tapped2, tapped1);
+        if (result != 0) {
+            return result;
+        }
+        result = Integer.compare(getScoreFromBattlefield(o1), getScoreFromBattlefield(o2));
+        if (result != 0) {
+            return result;
+        }
+        return BY_NAME.thenComparing(BY_ID).compare(o1, o2);
+    };
+
+    /**
      * Sorting for discard effects - put the biggest unplayable at the top, lands at the end anyway
      */
     public final Comparator<MageItem> ANY_UNPLAYABLE_AND_USELESS = BY_LAND.reversed()

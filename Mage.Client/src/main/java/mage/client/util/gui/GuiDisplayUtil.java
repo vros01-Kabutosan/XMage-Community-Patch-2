@@ -4,6 +4,7 @@
 package mage.client.util.gui;
 
 import java.awt.Color;
+import java.net.URL;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -391,7 +392,11 @@ public final class GuiDisplayUtil {
     }
 
     private static String getResourcePath(String image) {
-        return GuiDisplayUtil.class.getClassLoader().getResource(image).toString();
+        if (image == null || image.isEmpty()) {
+            return "";
+        }
+        URL resource = GuiDisplayUtil.class.getClassLoader().getResource(image);
+        return resource == null ? "" : resource.toString();
     }
 
     private static String getTypes(CardView card) {

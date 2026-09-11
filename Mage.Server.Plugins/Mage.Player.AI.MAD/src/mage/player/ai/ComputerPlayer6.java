@@ -547,6 +547,10 @@ public class ComputerPlayer6 extends ComputerPlayer {
             logger.error("AI simulation catch unknown error: " + e, e);
             task.cancel(true);
         }
+        if (threadPoolSimulations instanceof ThreadPoolExecutor) {
+            // Remove cancelled simulations that never reached a worker.
+            ((ThreadPoolExecutor) threadPoolSimulations).purge();
+        }
         // Keep the baseline evaluation when search is interrupted or fails.
         installFastFallbackAction();
         logSlowDecision(decisionStartedNanos, true);

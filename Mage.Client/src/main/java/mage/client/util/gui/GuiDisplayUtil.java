@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -382,7 +383,11 @@ public final class GuiDisplayUtil {
     }
 
     private static String replaceNamesInRule(String rule, String cardName) {
-        return rule.replaceAll("\\{this\\}", cardName.isEmpty() ? "this" : cardName);
+        if (rule == null || rule.isEmpty()) {
+            return rule == null ? "" : rule;
+        }
+        String safeCardName = cardName == null || cardName.isEmpty() ? "this" : cardName;
+        return rule.replaceAll("\\{this\\}", Matcher.quoteReplacement(safeCardName));
     }
 
     private static String getResourcePath(String image) {

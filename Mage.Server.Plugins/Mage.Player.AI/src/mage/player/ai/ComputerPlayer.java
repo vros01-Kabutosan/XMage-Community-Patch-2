@@ -984,14 +984,11 @@ public class ComputerPlayer extends PlayerImpl {
                 .map(m -> m.getId() + " [" + m.getEffects().getText(m) + "]")
                 .collect(Collectors.joining(" | ")));
 
-        List<Mode> availableModes = modes.getAvailableModes(source, game).stream()
+        Mode result = modes.getAvailableModes(source, game).stream()
                 .filter(mode -> modes.isMayChooseSameModeMoreThanOnce() || !modes.getSelectedModes().contains(mode.getId()))
                 .filter(mode -> mode.getTargets().canChoose(source.getControllerId(), source, game))
-                .sorted(Comparator
-                        .comparingInt((Mode mode) -> mode.getEffects().getOutcomeScore(source)).reversed()
-                        .thenComparing(mode -> mode.getId().toString()))
-                .collect(Collectors.toList());
-        Mode result = availableModes.isEmpty() ? null : availableModes.get(0);
+                .findFirst()
+                .orElse(null);
 
         logger.debug("  - fallback picked: " + (result == null ? "null" : result.getId() + " [" + result.getEffects().getText(result) + "]"));
         logger.debug("  - canChoose per mode: " + modes.getAvailableModes(source, game).stream()
@@ -1012,38 +1009,12 @@ public class ComputerPlayer extends PlayerImpl {
         for (int i = 1; i < abilities.size(); i++) {
             TriggeredAbility candidate = abilities.get(i);
             int candidateScore = triggeredAbilityScore(candidate, game);
-            if (candidateScore > bestScore
-                    || (candidateScore == bestScore && triggeredAbilityTieBreak(candidate, best, game) > 0)) {
+            if (candidateScore > bestScore) {
                 best = candidate;
                 bestScore = candidateScore;
             }
         }
         return best;
-    }
-
-    private int triggeredAbilityTieBreak(TriggeredAbility first, TriggeredAbility second, Game game) {
-        int firstValue = triggeredAbilitySourceValue(first, game);
-        int secondValue = triggeredAbilitySourceValue(second, game);
-        if (firstValue != secondValue) {
-            return Integer.compare(firstValue, secondValue);
-        }
-        String firstId = first == null || first.getId() == null ? "" : first.getId().toString();
-        String secondId = second == null || second.getId() == null ? "" : second.getId().toString();
-        return secondId.compareTo(firstId);
-    }
-
-    private int triggeredAbilitySourceValue(TriggeredAbility ability, Game game) {
-        if (ability == null || game == null) {
-            return 0;
-        }
-        MageObject sourceObject = game.getObject(ability.getSourceId());
-        if (sourceObject instanceof Permanent) {
-            return ArtificialScoringSystem.getDynamicPermanentScore(game, (Permanent) sourceObject);
-        }
-        if (sourceObject instanceof Card) {
-            return ArtificialScoringSystem.getCardDefinitionScore(game, (Card) sourceObject);
-        }
-        return 0;
     }
 
     private int triggeredAbilityScore(TriggeredAbility ability, Game game) {

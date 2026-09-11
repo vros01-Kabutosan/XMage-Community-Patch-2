@@ -660,7 +660,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
                     // skip priority for opponents before stack resolve
                     UUID nextPlayerId = sim.getPlayerList().get();
                     do {
-                        // Advance only the copied simulation; touching the real game here can desync the match.\r\n                        sim.getPlayer(nextPlayerId).pass(sim);
+                        // Advance only the copied simulation; touching the real game here can desync the match.
+                        sim.getPlayer(nextPlayerId).pass(sim);
                         nextPlayerId = sim.getPlayerList().getNext();
                     } while (!Objects.equals(nextPlayerId, this.getId()));
                 }
@@ -782,7 +783,8 @@ public class ComputerPlayer6 extends ComputerPlayer {
                             && action instanceof PassAbility) {
                         finalScore = finalScore - PASSIVITY_PENALTY; // passivity penalty
                     }
-                    if (finalScore > alpha) {
+                    if (finalScore > alpha
+                            || (finalScore == alpha && preferDiversifiedTargeting(action, bestNode))) {
                         alpha = finalScore;
                         bestNode = newNode;
                         bestNode.setScore(finalScore);
@@ -855,6 +857,37 @@ public class ComputerPlayer6 extends ComputerPlayer {
         } else {
             return beta;
         }
+    }
+
+    /**
+     * Prefer spreading an equivalent beneficial target-amount effect across more
+     * permanents. This is only a deterministic tie-break in the AI search; it
+     * never changes legality, costs, or the amount assigned by the card.
+     */
+    private boolean preferDiversifiedTargeting(Ability candidate, SimulationNode2 currentBest) {
+        if (candidate == null || currentBest == null || currentBest.getAbilities().isEmpty()) {
+            return false;
+        }
+        Ability best = currentBest.getAbilities().get(0);
+        if (candidate.getEffects().isEmpty()
+                || candidate.getEffects().stream().anyMatch(effect -> effect == null
+                || effect.getOutcome() == null
+                || !effect.getOutcome().isGood())) {
+            return false;
+        }
+        int candidateTargets = countTargetAmountTargets(candidate);
+        int bestTargets = countTargetAmountTargets(best);
+        return candidateTargets > 1 && candidateTargets > bestTargets;
+    }
+
+    private int countTargetAmountTargets(Ability ability) {
+        int count = 0;
+        for (Target target : ability.getTargets()) {
+            if (target instanceof TargetAmount) {
+                count += target.getTargets().size();
+            }
+        }
+        return count;
     }
 
     protected String getAbilityAndSourceInfo(Game game, Ability ability, boolean showTargets) {

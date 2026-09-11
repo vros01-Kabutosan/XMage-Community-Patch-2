@@ -3,6 +3,8 @@ package mage.player.ai.util;
 import mage.abilities.Ability;
 import mage.abilities.common.SimpleStaticAbility;
 import mage.abilities.keyword.DoubleStrikeAbility;
+import mage.abilities.keyword.DeathtouchAbility;
+import mage.abilities.keyword.IndestructibleAbility;
 import mage.abilities.keyword.InfectAbility;
 import mage.counters.CounterType;
 import mage.game.Game;
@@ -288,17 +290,30 @@ public final class CombatUtil {
                 }
             });
 
+            // The lightweight damage path can miss the source ability when a copied
+            // permanent is used. Preserve the rules result for deathtouch: a blocker
+            // that can deal combat damage kills a non-indestructible creature.
+            for (Permanent candidate : new ArrayList<>(survivedBlockers)) {
+                if (hasEffectiveDeathtouch(candidate, attacker, game)) {
+                    survivedBlockers.remove(candidate);
+                    survivedAndKillBlocker.add(candidate);
+                }
+            }
+
             int blockedCount = 0;
 
             // find good blocker
-            Permanent blocker = getWorstCreature(game, survivedAndKillBlocker, survivedBlockers);
+            Permanent blocker = survivedAndKillBlocker.isEmpty()
+                    ? getWorstCreature(game, survivedBlockers)
+                    : getWorstCreature(game, survivedAndKillBlocker);
             if (blocker != null) {
+                boolean blockerKillsAttacker = survivedAndKillBlocker.contains(blocker);
                 combatInfo.addPair(attacker, blocker);
                 removeWorstCreature(blocker, blockers, survivedAndKillBlocker, survivedBlockers);
                 blockedCount++;
 
                 // Add a second survivor when the pair can finish the attacker.
-                if (!survivedAndKillBlocker.contains(blocker)) {
+                if (!blockerKillsAttacker) {
                     final Permanent chosenBlocker = blocker;
                     int combinedPower = chosenBlocker.getPower().getValue();
                     List<Permanent> supportCandidates = survivedBlockers.stream()
@@ -602,6 +617,14 @@ public final class CombatUtil {
             fakeAbility.setControllerId(fromCreature.getControllerId());
             toCreature.damage(fromCreature.getPower().getValue(), fromCreature.getId(), fakeAbility, sim, true, true);
         }
+    }
+
+    private static boolean hasEffectiveDeathtouch(Permanent blocker, Permanent attacker, Game game) {
+        return blocker != null && attacker != null
+                && attacker.isCreature(game)
+                && blocker.getPower() != null && blocker.getPower().getValue() > 0
+                && !attacker.getAbilities(game).containsKey(IndestructibleAbility.getInstance().getId())
+                && blocker.getAbilities(game).containsKey(DeathtouchAbility.getInstance().getId());
     }
 
     private static void simulateStep(Game sim, Step step) {

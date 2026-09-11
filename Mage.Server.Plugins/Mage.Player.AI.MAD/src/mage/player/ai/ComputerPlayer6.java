@@ -141,7 +141,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
     }
 
     protected void printBattlefieldScore(Game game, String info) {
-        if (logger.isInfoEnabled()) {
+        // Full hand/battlefield snapshots are diagnostic only and expensive when a game has many permanents.
+        // Keep them available in debug mode without rebuilding them on every priority decision in normal games.
+        if (logger.isDebugEnabled()) {
             logger.info("");
             logger.info("=================== " + info + ", turn " + game.getTurnNum() + ", " + game.getPlayer(game.getPriorityPlayerId()).getName() + " ===================");
             logger.info("[Stack]: " + game.getStack());

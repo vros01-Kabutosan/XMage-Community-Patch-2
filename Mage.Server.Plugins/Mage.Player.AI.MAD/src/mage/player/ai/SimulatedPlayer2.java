@@ -177,8 +177,12 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
                 return;
             }
             options = optimizeOptions(game, options, ability);
+            // Avoid selecting a modal line with no legal object to affect.
+            options.removeIf(option -> hasDeadModalMode(option, game));
             if (options.isEmpty()) {
-                allActions.add(ability);
+                if (!ability.isModal()) {
+                    allActions.add(ability);
+                }
             } else {
                 for (Ability option : options) {
                     if (Thread.currentThread().isInterrupted()) {

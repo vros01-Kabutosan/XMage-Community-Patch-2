@@ -54,8 +54,14 @@ public class PickChoiceDialog extends MageDialog {
 
         // pick choice shared in multiple dialogs, so modify window size only one time
         this.setSize(GUISizeHelper.dialogGuiScaleSize(this.getSize()));
+        Dimension currentSize = this.getSize();
+        this.setSize(Math.max(760, currentSize.width), Math.max(480, currentSize.height));
+        this.setMinimumSize(new Dimension(640, 360));
 
         this.listChoices.setModel(new DefaultListModel<KeyValueItem>());
+        this.listChoices.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        this.listChoices.setFixedCellHeight(-1);
+        this.listChoices.setCellRenderer(new ChoiceCellRenderer());
         this.setModal(true);
     }
 
@@ -474,6 +480,35 @@ public class PickChoiceDialog extends MageDialog {
         }
     }
 
+    private static final class ChoiceCellRenderer extends JPanel implements ListCellRenderer<KeyValueItem> {
+
+        private final JLabel label = new JLabel();
+
+        ChoiceCellRenderer() {
+            super(new BorderLayout());
+            setOpaque(true);
+            label.setOpaque(false);
+            label.setVerticalAlignment(SwingConstants.CENTER);
+            add(label, BorderLayout.CENTER);
+        }
+
+        @Override
+        public Component getListCellRendererComponent(JList<? extends KeyValueItem> list,
+                                                       KeyValueItem item, int index,
+                                                       boolean selected, boolean focused) {
+            int textWidth = Math.max(420, list.getWidth() - 44);
+            String value = item == null || item.getValue() == null ? "" : item.getValue();
+            String html = ManaSymbols.replaceSymbolsWithHTML(value, ManaSymbols.Type.TABLE);
+            label.setText("<html><div style='width:" + textWidth + "px;'>" + html + "</div></html>");
+            label.setFont(list.getFont());
+            label.setForeground(selected ? new Color(235, 255, 240) : new Color(35, 40, 48));
+            setBackground(selected ? new Color(42, 150, 82) : new Color(244, 246, 249));
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(selected ? new Color(25, 105, 55) : new Color(205, 211, 220), 1, true),
+                    BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+            return this;
+        }
+    }
     static class KeyValueItem {
 
         protected final String key;

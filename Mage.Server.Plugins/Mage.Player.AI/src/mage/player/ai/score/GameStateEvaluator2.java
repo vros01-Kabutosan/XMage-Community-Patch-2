@@ -254,9 +254,13 @@ public final class GameStateEvaluator2 {
         if (!permanent.getAttachments().isEmpty()) {
             for (UUID attachmentId : permanent.getAttachments()) {
                 Permanent attachment = game.getPermanent(attachmentId);
+                if (attachment == null) {
+                    continue;
+                }
                 for (Ability a : attachment.getAbilities(game)) {
                     for (Effect e : a.getEffects()) {
-                        if (e.getOutcome().equals(Outcome.Detriment)
+                        if (e.getOutcome() == Outcome.Detriment
+                                && attachment.getControllerId() != null
                                 && attachment.getControllerId().equals(permanent.getControllerId())) {
                             value -= 1000;  // seems to work well ; -300 is not effective enough
                         }

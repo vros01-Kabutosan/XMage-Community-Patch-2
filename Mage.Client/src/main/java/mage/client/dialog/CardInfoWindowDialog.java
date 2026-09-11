@@ -152,9 +152,16 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
         Color background = new Color(31, 35, 43);
         getContentPane().setBackground(background);
         if (useCardAreaLayout) {
+            // Match ShowCardsDialog: cemetery uses the same CardArea and the
+            // same native panel background instead of the legacy dark frame.
+            Color panelBackground = UIManager.getColor("Panel.background");
+            if (panelBackground == null) {
+                panelBackground = background;
+            }
+            getContentPane().setBackground(panelBackground);
             cardArea.setOpaque(true);
-            cardArea.setBackground(background);
-            cardArea.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
+            cardArea.setBackground(panelBackground);
+            cardArea.setBorder(null);
         } else {
             cards.setBackgroundColor(background);
             cards.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
@@ -339,8 +346,10 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
         setIconifiable(true);
         setResizable(true);
-        setPreferredSize(new Dimension((int) Math.round(GUISizeHelper.otherZonesCardDimension.width * 1.4),
-                (int) Math.round(GUISizeHelper.otherZonesCardDimension.height * 1.4)));
+        if (!useCardAreaLayout) {
+            setPreferredSize(new Dimension((int) Math.round(GUISizeHelper.otherZonesCardDimension.width * 1.4),
+                    (int) Math.round(GUISizeHelper.otherZonesCardDimension.height * 1.4)));
+        }
         getContentPane().setLayout(new java.awt.BorderLayout());
         getContentPane().add(useCardAreaLayout ? cardArea : cards, java.awt.BorderLayout.CENTER);
 

@@ -41,6 +41,7 @@ public class PickChoiceDialog extends MageDialog {
 
     java.util.List<KeyValueItem> allItems = new ArrayList<>();
     KeyValueItem biggestItem = null; // for render optimization
+    private final ChoiceCellRenderer choiceCellRenderer;
     PickChoiceCallback callback = null;
 
     final private static String HTML_HEADERS_TEMPLATE = "<html><div style='text-align: center;'>%s</div></html>";
@@ -62,7 +63,8 @@ public class PickChoiceDialog extends MageDialog {
         this.listChoices.setModel(new DefaultListModel<KeyValueItem>());
         this.listChoices.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         this.listChoices.setFixedCellHeight(-1);
-        this.listChoices.setCellRenderer(new ChoiceCellRenderer());
+        this.choiceCellRenderer = new ChoiceCellRenderer();
+        this.listChoices.setCellRenderer(this.choiceCellRenderer);
         this.scrollList.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         installInteractionListeners();
         this.setModal(true);
@@ -250,18 +252,9 @@ public class PickChoiceDialog extends MageDialog {
         // final load
         loadData();
 
-        // Recompute variable-height rows before the dialog is displayed.
-        this.listChoices.revalidate();
-        this.scrollList.revalidate();
-        this.revalidate();
-        this.pack();
-        Dimension packedSize = this.getSize();
-        int maxWidth = Math.max(760, SettingsManager.instance.getScreenWidth() - 32);
-        int maxHeight = Math.max(480, SettingsManager.instance.getScreenHeight() - 96);
-        this.setSize(
-                Math.min(maxWidth, Math.max(760, packedSize.width)),
-                Math.min(maxHeight, Math.max(480, packedSize.height))
-        );
+        // Compute the renderer width before layout. Swing otherwise measures
+        // HTML while the list is still width zero and keeps clipped rows.
+        autoFitChoiceDialog();
 
         // start selection
         if (startSelectionValue != null) {
@@ -287,8 +280,60 @@ public class PickChoiceDialog extends MageDialog {
         if (choice != null) {
             choice.setSearchText(editSearch.getText());
             loadData();
+            autoFitChoiceDialog();
         }
     }
+
+    private void autoFitChoiceDialog() {
+        if (choice == null) {
+            return;
+        }
+
+        int screenWidth = Math.max(800, SettingsManager.instance.getScreenWidth());
+        int screenHeight = Math.max(600, SettingsManager.instance.getScreenHeight());
+        FontMetrics metrics = listChoices.getFontMetrics(listChoices.getFont());
+        int contentWidth = 520;
+        for (KeyValueItem item : allItems) {
+            String plainText = item.getValue() == null
+                    ? ""
+                    : item.getValue().replaceAll("<[^>]*>", " ");
+            contentWidth = Math.max(contentWidth,
+                    Math.min(1200, metrics.stringWidth(plainText) + 72));
+        }
+
+        int maxWidth = Math.max(760, screenWidth - 32);
+        int dialogWidth = Math.min(maxWidth, Math.max(760, contentWidth));
+        int textWidth = Math.max(420, dialogWidth - 64);
+        choiceCellRenderer.setRenderTextWidth(textWidth);
+
+        int rowsHeight = 0;
+        ListModel<KeyValueItem> model = listChoices.getModel();
+        for (int i = 0; i < model.getSize(); i++) {
+            Component renderer = choiceCellRenderer.getListCellRendererComponent(
+                    listChoices, model.getElementAt(i), i, false, false);
+            renderer.setSize(textWidth + 24, Integer.MAX_VALUE);
+            rowsHeight += renderer.getPreferredSize().height;
+        }
+
+        int maxListHeight = Math.max(220, screenHeight - 300);
+        int listHeight = Math.min(maxListHeight, Math.max(268, rowsHeight + 4));
+        Dimension listSize = new Dimension(Math.max(640, dialogWidth - 32), listHeight);
+        scrollList.setPreferredSize(listSize);
+        listChoices.setPreferredSize(new Dimension(listSize.width, Math.max(1, rowsHeight)));
+
+        this.pack();
+
+        Dimension packedSize = this.getSize();
+        int maxHeight = Math.max(480, screenHeight - 96);
+        this.setSize(
+                Math.min(maxWidth, Math.max(760, Math.max(dialogWidth, packedSize.width))),
+                Math.min(maxHeight, Math.max(480, packedSize.height))
+        );
+        this.listChoices.revalidate();
+        this.scrollList.revalidate();
+        this.revalidate();
+    }
+
     @Override
     public void changeGUISize() {
         super.changeGUISize();
@@ -486,6 +531,7 @@ public class PickChoiceDialog extends MageDialog {
     private static final class ChoiceCellRenderer extends JPanel implements ListCellRenderer<KeyValueItem> {
 
         private final JLabel label = new JLabel();
+        private int renderTextWidth = -1;
 
         ChoiceCellRenderer() {
             super(new BorderLayout());
@@ -499,10 +545,12 @@ public class PickChoiceDialog extends MageDialog {
         public Component getListCellRendererComponent(JList<? extends KeyValueItem> list,
                                                        KeyValueItem item, int index,
                                                        boolean selected, boolean focused) {
-            int textWidth = Math.max(420, list.getWidth() - 44);
+            int textWidth = list.getWidth() > 0
+                    ? Math.max(420, list.getWidth() - 44)
+                    : Math.max(420, renderTextWidth);
             String value = item == null || item.getValue() == null ? "" : item.getValue();
             String html = ManaSymbols.replaceSymbolsWithHTML(value, ManaSymbols.Type.TABLE);
-            label.setText("<html><div style='width:" + textWidth + "px;'>" + html + "</div></html>");
+            label.setText("<html><body style='width:" + textWidth + "px;'>" + html + "</body></html>");
             label.setFont(list.getFont());
             label.setForeground(selected ? new Color(235, 255, 240) : new Color(35, 40, 48));
             setBackground(selected ? new Color(42, 150, 82) : new Color(244, 246, 249));
@@ -516,6 +564,10 @@ public class PickChoiceDialog extends MageDialog {
                     labelSize.height + insets.top + insets.bottom
             ));
             return this;
+        }
+
+        void setRenderTextWidth(int width) {
+            this.renderTextWidth = Math.max(420, width);
         }
     }
     static class KeyValueItem {

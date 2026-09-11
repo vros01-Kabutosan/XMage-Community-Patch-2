@@ -178,7 +178,8 @@ public final class GameStateEvaluator2 {
                 playerLifeScore, playerHandScore, playerPermanentsScore,
                 opponentLifeScore, opponentHandScore, opponentPermanentsScore,
                 playerGraveyardScore, opponentGraveyardScore,
-                playerRevealedScore, opponentRevealedScore);
+                playerRevealedScore, opponentRevealedScore,
+                stackScore);
     }
 
     private static int evaluateOwnHand(Player player, Game game) {
@@ -285,6 +286,7 @@ public final class GameStateEvaluator2 {
         private int opponentPermanentsScore = 0;
         private int opponentGraveyardScore = 0;
         private int opponentRevealedScore = 0;
+        private int stackScore = 0;
 
         private int specialScore = 0; // special score (ignore all others, e.g. for win/lose game states)
 
@@ -314,6 +316,18 @@ public final class GameStateEvaluator2 {
                        int opponentLifeScore, int opponentHandScore, int opponentPermanentsScore,
                        int playerGraveyardScore, int opponentGraveyardScore,
                        int playerRevealedScore, int opponentRevealedScore) {
+            this(playerId, playerLifeScore, playerHandScore, playerPermanentsScore,
+                    opponentLifeScore, opponentHandScore, opponentPermanentsScore,
+                    playerGraveyardScore, opponentGraveyardScore,
+                    playerRevealedScore, opponentRevealedScore, 0);
+        }
+
+        public PlayerEvaluateScore(UUID playerId,
+                       int playerLifeScore, int playerHandScore, int playerPermanentsScore,
+                       int opponentLifeScore, int opponentHandScore, int opponentPermanentsScore,
+                       int playerGraveyardScore, int opponentGraveyardScore,
+                       int playerRevealedScore, int opponentRevealedScore,
+                       int stackScore) {
             this.playerId = playerId;
             this.playerLifeScore = playerLifeScore;
             this.playerHandScore = playerHandScore;
@@ -325,6 +339,7 @@ public final class GameStateEvaluator2 {
             this.opponentGraveyardScore = opponentGraveyardScore;
             this.playerRevealedScore = playerRevealedScore;
             this.opponentRevealedScore = opponentRevealedScore;
+            this.stackScore = stackScore;
         }
 
         public UUID getPlayerId() {
@@ -343,7 +358,7 @@ public final class GameStateEvaluator2 {
             if (specialScore != 0) {
                 return specialScore;
             } else {
-                return getPlayerScore() - getOpponentScore();
+                return getPlayerScore() - getOpponentScore() + stackScore;
             }
         }
 

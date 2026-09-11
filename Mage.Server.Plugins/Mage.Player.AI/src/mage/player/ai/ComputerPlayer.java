@@ -127,6 +127,18 @@ public class ComputerPlayer extends PlayerImpl {
         return makeChoice(outcome, target, source, game, null);
     }
 
+    private boolean isAvoidableSelfDamageTarget(MageItem item, PossibleTargetsSelector selector, Outcome outcome) {
+        if (outcome != Outcome.Damage || !(item instanceof Player) || !item.getId().equals(getId())) {
+            return false;
+        }
+        for (MageItem candidate : selector.getAny()) {
+            if (!candidate.getId().equals(getId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Default choice logic for any choose dialogs due effect's outcome and possible target priority
      */
@@ -168,6 +180,9 @@ public class ComputerPlayer extends PlayerImpl {
 
         // good targets -- choose as much as possible
         for (MageItem item : possibleTargetsSelector.getGoodTargets()) {
+            if (isAvoidableSelfDamageTarget(item, possibleTargetsSelector, outcome)) {
+                continue;
+            }
             targetAdder.accept(item);
             if (target.isChoiceCompleted(abilityControllerId, source, game, fromCards)) {
                 return true;
@@ -175,6 +190,9 @@ public class ComputerPlayer extends PlayerImpl {
         }
         // bad targets -- choose as low as possible
         for (MageItem item : possibleTargetsSelector.getBadTargets()) {
+            if (isAvoidableSelfDamageTarget(item, possibleTargetsSelector, outcome)) {
+                continue;
+            }
             if (target.isChosen(game)) {
                 break;
             }

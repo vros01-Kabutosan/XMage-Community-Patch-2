@@ -13,6 +13,8 @@ import mage.players.PlayableObjectsList;
 import mage.players.Player;
 
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -25,6 +27,8 @@ public class PossibleTargetsComparator {
     UUID abilityControllerId;
     Game game;
     PlayableObjectsList playableItems = new PlayableObjectsList();
+    // One target-selection pass observes one immutable game snapshot.
+    private final Map<UUID, Integer> battlefieldScoreCache = new HashMap<>();
 
     public PossibleTargetsComparator(UUID abilityControllerId, Game game) {
         this.abilityControllerId = abilityControllerId;
@@ -36,22 +40,30 @@ public class PossibleTargetsComparator {
     }
 
     private int getScoreFromBattlefield(MageItem item) {
+        UUID itemId = item.getId();
+        Integer cached = battlefieldScoreCache.get(itemId);
+        if (cached != null) {
+            return cached;
+        }
+        int score;
         if (item instanceof Permanent) {
             // use battlefield score instead simple life
             try {
-                return GameStateEvaluator2.evaluatePermanent((Permanent) item, game, false);
+                score = GameStateEvaluator2.evaluatePermanent((Permanent) item, game, false);
             } catch (Throwable ignored) {
-                return getScoreFromLife(item);
+                score = getScoreFromLife(item);
             }
         } else if (item instanceof Card) {
             try {
-                return ArtificialScoringSystem.getCardDefinitionScore(game, (Card) item);
+                score = ArtificialScoringSystem.getCardDefinitionScore(game, (Card) item);
             } catch (Throwable ignored) {
-                return getScoreFromLife(item);
+                score = getScoreFromLife(item);
             }
         } else {
-            return getScoreFromLife(item);
+            score = getScoreFromLife(item);
         }
+        battlefieldScoreCache.put(itemId, score);
+        return score;
     }
 
     private String getName(MageItem item) {

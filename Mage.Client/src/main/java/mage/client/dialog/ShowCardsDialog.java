@@ -66,7 +66,7 @@
          super.show();
 
          // auto-position on first usage
-         if (positioned) {
+         if (!positioned) {
              showAndPositionWindow();
          }
      }
@@ -83,8 +83,8 @@
                      int xPos = centered.x / 2 + RandomUtil.nextInt(50);
                      int yPos = centered.y / 2 + RandomUtil.nextInt(50);
                      ShowCardsDialog.this.setLocation(xPos, yPos);
-                     show();
                      positioned = true;
+                     show();
                  }
                  GuiDisplayUtil.keepComponentInsideFrame(centered.x, centered.y, ShowCardsDialog.this);
              }

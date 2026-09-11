@@ -185,7 +185,7 @@ public class CardArea extends JPanel implements CardEventProducer {
             cardsAdded++;
         }
         cardArea.setPreferredSize(new Dimension(
-                cardDimension.width * showCards.size() + (cardsAdded * xOffsetBetweenCardsOrColumns),
+                cardDimension.width * showCards.size() + (Math.max(0, cardsAdded - 1) * xOffsetBetweenCardsOrColumns),
                 cardDimension.height + verticalCardOffset
         ));
     }
@@ -230,22 +230,27 @@ public class CardArea extends JPanel implements CardEventProducer {
 
     private void loadCardsMany(CardsView showCards, BigCard bigCard, UUID gameId) {
         int columns = 1;
+        int rows = 0;
         if (showCards != null && !showCards.isEmpty()) {
             Rectangle rectangle = new Rectangle(cardDimension.width, cardDimension.height);
-            int count = 0;
-            for (CardView card : getSortedList(showCards)) {
+            List<CardView> sortedCards = getSortedList(showCards);
+            for (int i = 0; i < sortedCards.size(); i++) {
+                CardView card = sortedCards.get(i);
                 addCard(card, bigCard, gameId, rectangle);
-                if (count >= MAX_CARDS_PER_COLUMN) {
+                int cardsInColumn = (i % MAX_CARDS_PER_COLUMN) + 1;
+                rows = Math.max(rows, cardsInColumn);
+                if (cardsInColumn == MAX_CARDS_PER_COLUMN && i + 1 < sortedCards.size()) {
                     rectangle.translate(cardDimension.width + xOffsetBetweenCardsOrColumns, -(MAX_CARDS_PER_COLUMN * verticalCardOffset));
                     columns++;
-                    count = 0;
-                } else {
+                } else if (i + 1 < sortedCards.size()) {
                     rectangle.translate(0, verticalCardOffset);
-                    count++;
                 }
             }
         }
-        cardArea.setPreferredSize(new Dimension(cardDimension.width * columns + xOffsetBetweenCardsOrColumns * (columns - 1), cardDimension.height + (MAX_CARDS_PER_COLUMN * verticalCardOffset)));
+        cardArea.setPreferredSize(new Dimension(
+                cardDimension.width * columns + xOffsetBetweenCardsOrColumns * (columns - 1),
+                cardDimension.height + (Math.max(1, rows) * verticalCardOffset)
+        ));
     }
 
     public boolean isReloaded() {

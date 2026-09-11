@@ -267,7 +267,7 @@ public class ComputerPlayer extends PlayerImpl {
                 if (target.getAmountRemaining() <= 0) {
                     break;
                 }
-                if (target.contains(item.getId()) || !(item instanceof Player)) {
+                if (target.contains(item.getId()) || !(item instanceof Player) || item.getId().equals(getId())) {
                     continue;
                 }
                 int leftLife = PossibleTargetsComparator.getLifeForDamage(item, game);
@@ -301,7 +301,7 @@ public class ComputerPlayer extends PlayerImpl {
                 if (target.getAmountRemaining() <= 0) {
                     break;
                 }
-                if (target.contains(item.getId())) {
+                if (target.contains(item.getId()) || (item instanceof Player && item.getId().equals(getId()))) {
                     continue;
                 }
                 target.addTarget(item.getId(), target.getAmountRemaining(), source, game);

@@ -106,8 +106,31 @@ public class MageDialog extends javax.swing.JInternalFrame {
         //*/
     }
 
+    /**
+     * Keeps floating dialogs large enough for their current content while
+     * respecting the available desktop area. Content that is larger than the
+     * desktop remains scrollable in its owning component.
+     */
+    protected final void autoFitToPreferredContent() {
+        if (isIcon()) {
+            return;
+        }
+
+        Dimension preferred = getPreferredSize();
+        Dimension current = getSize();
+        int maxWidth = Math.max(320, SettingsManager.instance.getScreenWidth() - 32);
+        int maxHeight = Math.max(240, SettingsManager.instance.getScreenHeight() - 96);
+        int width = Math.min(maxWidth, Math.max(current.width, preferred.width));
+        int height = Math.min(maxHeight, Math.max(current.height, preferred.height));
+
+        if (width != current.width || height != current.height) {
+            setSize(width, height);
+            revalidate();
+        }
+    }
     @Override
     public void show() {
+        autoFitToPreferredContent();
         super.show();
 
         // frames desktop ordering

@@ -52,6 +52,8 @@ public class CardHintsHelperDialog extends MageDialog implements MageDesktopIcon
     private CardHintGroupBy currentGroup = CardHintGroupBy.GROUP_BY_HINTS;
     private String currentSearch = "";
 
+    private boolean updatingFilterControls;
+
     private static class CardHintInfo {
         final PlayerView player;
         final String zone;
@@ -146,10 +148,31 @@ public class CardHintsHelperDialog extends MageDialog implements MageDesktopIcon
             }
         });
 
+        installFilterListeners();
         updateTitle();
         changeGUISize();
     }
 
+    private void installFilterListeners() {
+        this.comboFilterBy.addActionListener(evt -> {
+            if (!updatingFilterControls) {
+                Object selected = this.comboFilterBy.getSelectedItem();
+                if (selected instanceof String) {
+                    this.currentFilter = (String) selected;
+                    updateHints();
+                }
+            }
+        });
+        this.comboGroupBy.addActionListener(evt -> {
+            if (!updatingFilterControls) {
+                Object selected = this.comboGroupBy.getSelectedItem();
+                if (selected instanceof CardHintGroupBy) {
+                    this.currentGroup = (CardHintGroupBy) selected;
+                    updateHints();
+                }
+            }
+        });
+    }
     private void updateTitle() {
         // dynamic title
         List<String> settings = new ArrayList<>();
@@ -198,18 +221,15 @@ public class CardHintsHelperDialog extends MageDialog implements MageDesktopIcon
                 .filter(p -> !p.getControlled())
                 .map(PlayerView::getName)
                 .collect(Collectors.toList()));
-        this.comboFilterBy.setModel(new DefaultComboBoxModel<>(filters.toArray(new String[0])));
-        this.comboFilterBy.addActionListener(evt -> {
-            this.currentFilter = (String) this.comboFilterBy.getSelectedItem();
-            updateHints();
-        });
+        this.updatingFilterControls = true;
+        try {
+            this.comboFilterBy.setModel(new DefaultComboBoxModel<>(filters.toArray(new String[0])));
 
-        // prepare gui group
-        this.comboGroupBy.setModel(new DefaultComboBoxModel(CardHintGroupBy.values()));
-        this.comboGroupBy.addActionListener(evt -> {
-            this.currentGroup = (CardHintGroupBy) this.comboGroupBy.getSelectedItem();
-            updateHints();
-        });
+            // prepare gui group
+            this.comboGroupBy.setModel(new DefaultComboBoxModel(CardHintGroupBy.values()));
+        } finally {
+            this.updatingFilterControls = false;
+        }
     }
 
     public void loadHints(GameView newGameView) {

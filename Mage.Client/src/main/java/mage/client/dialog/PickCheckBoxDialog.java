@@ -36,6 +36,63 @@ public class PickCheckBoxDialog extends MageDialog {
         void onChoiceDone();
     }
 
+    private void installInteractionListeners() {
+        editSearch.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                refreshSearch();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                refreshSearch();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                refreshSearch();
+            }
+        });
+
+        editSearch.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    doPrevSelect();
+                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    doNextSelect();
+                }
+            }
+        });
+
+        listChoices.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 2) {
+                    doChoose();
+                }
+            }
+        });
+
+        String cancelName = "cancel";
+        InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), cancelName);
+        getRootPane().getActionMap().put(cancelName, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (choice != null && !choice.isRequired()) {
+                    doCancel();
+                }
+            }
+        });
+    }
+
+    private void refreshSearch() {
+        if (choice != null) {
+            choice.setSearchText(editSearch.getText());
+            loadData();
+        }
+    }
     public void showDialog(Choice choice, PickCheckBoxCallback callback) {
         showDialog(choice, null, null, null, callback);
     }
@@ -102,75 +159,6 @@ public class PickCheckBoxDialog extends MageDialog {
         } else {
             panelSearch.setVisible(false);
             this.editSearch.setText("");
-        }
-
-        // listeners for inremental filtering        
-        editSearch.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                choice.setSearchText(editSearch.getText());
-                loadData();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                choice.setSearchText(editSearch.getText());
-                loadData();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                choice.setSearchText(editSearch.getText());
-                loadData();
-            }
-        });
-
-        // listeners for select up and down without edit focus lost
-        editSearch.addKeyListener(new KeyListener() {
-            @Override
-            public void keyTyped(KeyEvent e) {
-                //System.out.println("types");                
-            }
-
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_UP) {
-                    doPrevSelect();
-                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-                    doNextSelect();
-                }
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                //System.out.println("released");
-            }
-        });
-
-        // listeners double click choose
-        listChoices.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (!SwingUtilities.isLeftMouseButton(e)) {
-                    return;
-                }
-                if (e.getClickCount() == 2) {
-                    doChoose();
-                }
-            }
-        });
-
-        // listeners for ESC close
-        if (!choice.isRequired()) {
-            String cancelName = "cancel";
-            InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), cancelName);
-            ActionMap actionMap = getRootPane().getActionMap();
-            actionMap.put(cancelName, new AbstractAction() {
-                public void actionPerformed(ActionEvent e) {
-                    doCancel();
-                }
-            });
         }
 
         // window settings
@@ -319,6 +307,7 @@ public class PickCheckBoxDialog extends MageDialog {
                 setFocus(tList);
             }
         }
+        installInteractionListeners();
     }
 
     /**

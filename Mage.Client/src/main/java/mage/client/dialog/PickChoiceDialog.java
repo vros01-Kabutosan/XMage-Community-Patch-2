@@ -63,7 +63,87 @@ public class PickChoiceDialog extends MageDialog {
         this.listChoices.setFixedCellHeight(-1);
         this.listChoices.setCellRenderer(new ChoiceCellRenderer());
         this.scrollList.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        installInteractionListeners();
         this.setModal(true);
+    }
+
+    /**
+     * Install the dialog interaction handlers once. This dialog is reused for
+     * many choices; registering them from showDialog() made every reuse add
+     * another set of listeners and progressively slowed filtering and hover
+     * handling.
+     */
+    private void installInteractionListeners() {
+        editSearch.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                refreshSearch();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                refreshSearch();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                refreshSearch();
+            }
+        });
+
+        editSearch.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    doPrevSelect();
+                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    doNextSelect();
+                }
+            }
+        });
+
+        listChoices.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 2) {
+                    doChoose();
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                choiceHintHide();
+            }
+        });
+
+        listChoices.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                int index = -1;
+                Rectangle visibleCells = listChoices.getCellBounds(0, listChoices.getLastVisibleIndex());
+                if (visibleCells != null && visibleCells.contains(e.getPoint())) {
+                    index = listChoices.locationToIndex(e.getPoint());
+                }
+
+                if (index >= 0) {
+                    choiceHintShow(index);
+                } else {
+                    choiceHintHide();
+                }
+            }
+        });
+
+        String cancelName = "cancel";
+        InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), cancelName);
+        getRootPane().getActionMap().put(cancelName, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (choice != null && !choice.isRequired()) {
+                    doCancel();
+                }
+            }
+        });
     }
 
     public interface PickChoiceCallback {
@@ -157,104 +237,6 @@ public class PickChoiceDialog extends MageDialog {
             this.editSearch.setText("");
         }
 
-        // listeners for incremental filtering
-        editSearch.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                choice.setSearchText(editSearch.getText());
-                loadData();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                choice.setSearchText(editSearch.getText());
-                loadData();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                choice.setSearchText(editSearch.getText());
-                loadData();
-            }
-        });
-
-        // listeners for select up and down without edit focus lost
-        editSearch.addKeyListener(new KeyListener() {
-            @Override
-            public void keyTyped(KeyEvent e) {
-                //System.out.println("types");
-            }
-
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_UP) {
-                    doPrevSelect();
-                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-                    doNextSelect();
-                }
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                //System.out.println("released");
-            }
-        });
-
-        // listeners double click
-        // you can't use mouse wheel to switch hint type, cause wheel move a scrollbar
-        listChoices.addMouseListener(new MouseAdapter() {
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (!SwingUtilities.isLeftMouseButton(e)) {
-                    return;
-                }
-                if (e.getClickCount() == 2) {
-                    doChoose();
-                }
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                choiceHintHide();
-            }
-        });
-
-        listChoices.addMouseMotionListener(new MouseMotionAdapter() {
-
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                // hint show
-                JList listSource = (JList) e.getSource();
-
-                // workaround to raise on real element, not empty space
-                int index = -1;
-                Rectangle r = listSource.getCellBounds(0, listSource.getLastVisibleIndex());
-                if (r != null && r.contains(e.getPoint())) {
-                    index = listSource.locationToIndex(e.getPoint());
-                }
-
-                if (index > -1) {
-                    choiceHintShow(index);
-                } else {
-                    choiceHintHide();
-                }
-            }
-        });
-
-        // listeners for ESC close
-        if (!choice.isRequired()) {
-            String cancelName = "cancel";
-            InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), cancelName);
-            ActionMap actionMap = getRootPane().getActionMap();
-            actionMap.put(cancelName, new AbstractAction() {
-                public void actionPerformed(ActionEvent e) {
-                    doCancel();
-                }
-            });
-        }
-
         // window settings
         MageFrame.getDesktop().remove(this);
         MageFrame.getDesktop().add(this, this.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
@@ -287,6 +269,12 @@ public class PickChoiceDialog extends MageDialog {
         this.setVisible(true);
     }
 
+    private void refreshSearch() {
+        if (choice != null) {
+            choice.setSearchText(editSearch.getText());
+            loadData();
+        }
+    }
     @Override
     public void changeGUISize() {
         super.changeGUISize();

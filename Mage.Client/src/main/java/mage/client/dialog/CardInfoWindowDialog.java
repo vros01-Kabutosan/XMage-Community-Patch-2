@@ -3,6 +3,7 @@ package mage.client.dialog;
 import java.awt.*;
 import java.beans.PropertyVetoException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
@@ -42,6 +43,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     private String lastRenderedTitle;
     private final String name;
     private Runnable userCloseListener;
+    private final AtomicBoolean resizePending = new AtomicBoolean();
 
     public CardInfoWindowDialog(ShowType showType, String name) {
         this.name = name;
@@ -242,7 +244,11 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     private void showAndPositionWindow() {
+        if (!resizePending.compareAndSet(false, true)) {
+            return;
+        }
         SwingUtilities.invokeLater(() -> {
+            resizePending.set(false);
             if (isClosed()) {
                 return;
             }
@@ -252,9 +258,9 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
             int baseWidth = Math.max(320, (int) Math.round(GUISizeHelper.otherZonesCardDimension.width * 1.4));
             int minWidth = Math.max(baseWidth, GUISizeHelper.scrollBarSize);
             int maxWidth = Math.max(minWidth, SettingsManager.instance.getScreenWidth() / 2);
-            int needWidth = Math.max(minWidth, CardInfoWindowDialog.this.cards.getPreferredSize().width);
-            needWidth = Math.min(needWidth, maxWidth);
-            int needHeight = Math.max(oldSize.height, CardInfoWindowDialog.this.cards.getPreferredSize().height + GUISizeHelper.scrollBarSize);
+            Dimension cardsPreferredSize = CardInfoWindowDialog.this.cards.getPreferredSize();
+            int needWidth = Math.min(maxWidth, Math.max(minWidth, cardsPreferredSize.width));
+            int needHeight = Math.max(oldSize.height, cardsPreferredSize.height + GUISizeHelper.scrollBarSize);
 
             CardInfoWindowDialog.this.setPreferredSize(new Dimension(needWidth, needHeight));
             CardInfoWindowDialog.this.pack();

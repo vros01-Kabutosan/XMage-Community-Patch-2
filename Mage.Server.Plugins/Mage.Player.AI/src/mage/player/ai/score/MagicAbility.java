@@ -52,6 +52,15 @@ public final class MagicAbility {
         if (ability == null) {
             return 0;
         }
+        // Hand-disruption spells need a positive tactical signal beyond hand size.
+        String rule = ability.getRule();
+        if (rule != null) {
+            String normalizedRule = rule.toLowerCase(java.util.Locale.ENGLISH);
+            if (normalizedRule.contains("reveals their hand")
+                    && normalizedRule.contains("discard")) {
+                return 55;
+            }
+        }
         Integer score = scores.get(ability.getRule());
         if (score == null) {
             //System.err.println("Couldn't find ability score: " + ability.getClass().getSimpleName() + " - " + ability.toString());

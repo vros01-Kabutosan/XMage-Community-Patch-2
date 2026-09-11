@@ -9,6 +9,7 @@ import javax.swing.event.InternalFrameEvent;
 
 import mage.cards.MageCard;
 import mage.client.cards.BigCard;
+import mage.client.cards.CardArea;
 import mage.client.components.MageDesktopIconifySupport;
 import mage.client.util.GUISizeHelper;
 import mage.client.util.ImageHelper;
@@ -51,6 +52,13 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
         this.userCloseListener = () -> {
         };
         initComponents();
+        if (this.showType == ShowType.GRAVEYARD) {
+            getContentPane().remove(cards);
+            graveyardCards = new CardArea();
+            graveyardCards.setBackground(new Color(31, 35, 43));
+            getContentPane().add(graveyardCards, BorderLayout.CENTER);
+            getContentPane().revalidate();
+        }
 
         this.setModal(false);
         switch (this.showType) {
@@ -126,7 +134,11 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     public void cleanUp() {
-        cards.cleanUp();
+        if (graveyardCards != null) {
+            graveyardCards.cleanUp();
+        } else {
+            cards.cleanUp();
+        }
     }
 
     public ShowType getShowType() {
@@ -145,6 +157,10 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
         getContentPane().setBackground(background);
         cards.setBackgroundColor(background);
         cards.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
+        if (graveyardCards != null) {
+            graveyardCards.setBackground(background);
+            graveyardCards.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
+        }
     }
     @Override
     public void changeGUISize() {
@@ -156,6 +172,9 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     private void setGUISize() {
         cards.setCardDimension(GUISizeHelper.otherZonesCardDimension);
         cards.changeGUISize();
+        if (graveyardCards != null) {
+            graveyardCards.changeGUISize();
+        }
     }
 
     public void loadCardsAndShow(ExileView exile, BigCard bigCard, UUID gameId) {
@@ -178,6 +197,15 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
     // TODO: remove oudated code with revertOrder (wait new release and delete if no bug reports for diff windows with cards, 2023-12-14)
     public void loadCardsAndShow(CardsView showCards, BigCard bigCard, UUID gameId, boolean revertOrder) {
+        if (graveyardCards != null) {
+            graveyardCards.loadCards(showCards, bigCard, gameId);
+            int qty = qtyCardTypes(showCards);
+            String newTitle = name + "'s graveyard (" + showCards.size() + ")  -  " + qty + ((qty == 1) ? " card type" : " card types");
+            setRenderedTitle(newTitle);
+            pack();
+            showAndPositionWindow();
+            return;
+        }
         boolean changed = cards.loadCards(showCards, bigCard, gameId, revertOrder);
 
         if (showType == ShowType.REVEAL || showType == ShowType.LOOKED_AT) {
@@ -249,7 +277,9 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
                     // auto-resize window, but keep it GUI friendly on too many cards (do not overlap a full screen)
                     int minWidth = CardInfoWindowDialog.this.getWidth();
                     int maxWidth = SettingsManager.instance.getScreenWidth() / 2;
-                    int needWidth = CardInfoWindowDialog.this.cards.getPreferredSize().width;
+                    int needWidth = CardInfoWindowDialog.this.graveyardCards != null
+                            ? CardInfoWindowDialog.this.graveyardCards.getPreferredSize().width
+                            : CardInfoWindowDialog.this.cards.getPreferredSize().width;
                     needWidth = Math.max(needWidth, minWidth);
                     needWidth = Math.min(needWidth, maxWidth);
                     needWidth += GUISizeHelper.scrollBarSize; // more space, so no horizontal scrolls
@@ -311,6 +341,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private mage.client.cards.Cards cards;
+    private mage.client.cards.CardArea graveyardCards;
     // End of variables declaration//GEN-END:variables
 
 }

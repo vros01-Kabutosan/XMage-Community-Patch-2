@@ -295,6 +295,27 @@ public class CardArea extends JPanel implements CardEventProducer {
         cardEventSource.clearListeners();
     }
 
+    public Map<UUID, MageCard> getMageCardsForUpdate() {
+        Map<UUID, MageCard> result = new LinkedHashMap<>();
+        for (Component component : cardArea.getComponents()) {
+            if (component instanceof MageCard) {
+                MageCard mageCard = (MageCard) component;
+                result.put(mageCard.getOriginal().getId(), mageCard);
+            }
+        }
+        return result;
+    }
+
+    public int getNumberOfCards() {
+        int count = 0;
+        for (Component component : cardArea.getComponents()) {
+            if (component instanceof MageCard) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     public void setCustomRenderMode(int customRenderMode) {
         this.customRenderMode = customRenderMode;
     }

@@ -9,6 +9,7 @@ import mage.client.cards.VirtualCardInfo;
 import mage.client.components.MageEditorPane;
 import mage.client.game.GamePanel;
 import mage.client.util.GUISizeHelper;
+import mage.client.util.SettingsManager;
 import mage.client.util.gui.MageDialogState;
 import mage.game.command.Dungeon;
 import mage.view.CardView;
@@ -224,9 +225,9 @@ public class PickChoiceDialog extends MageDialog {
             });
         }
 
-        // render optimization (use the biggest cell for one time size calculation)
-        // can help with slow search in big lists like choose card name dialog
-        this.listChoices.setPrototypeCellValue(this.biggestItem);
+        // Keep variable row heights. A prototype cell makes JList reuse one
+        // fixed height, which clips long alternative-cost descriptions.
+        this.listChoices.setPrototypeCellValue(null);
 
         // search
         if (choice.isSearchEnabled()) {
@@ -248,6 +249,19 @@ public class PickChoiceDialog extends MageDialog {
 
         // final load
         loadData();
+
+        // Recompute variable-height rows before the dialog is displayed.
+        this.listChoices.revalidate();
+        this.scrollList.revalidate();
+        this.revalidate();
+        this.pack();
+        Dimension packedSize = this.getSize();
+        int maxWidth = Math.max(760, SettingsManager.instance.getScreenWidth() - 32);
+        int maxHeight = Math.max(480, SettingsManager.instance.getScreenHeight() - 96);
+        this.setSize(
+                Math.min(maxWidth, Math.max(760, packedSize.width)),
+                Math.min(maxHeight, Math.max(480, packedSize.height))
+        );
 
         // start selection
         if (startSelectionValue != null) {
@@ -495,6 +509,12 @@ public class PickChoiceDialog extends MageDialog {
             setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(selected ? new Color(25, 105, 55) : new Color(205, 211, 220), 1, true),
                     BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+            Insets insets = getInsets();
+            Dimension labelSize = label.getPreferredSize();
+            setPreferredSize(new Dimension(
+                    Math.max(textWidth + insets.left + insets.right, list.getWidth()),
+                    labelSize.height + insets.top + insets.bottom
+            ));
             return this;
         }
     }

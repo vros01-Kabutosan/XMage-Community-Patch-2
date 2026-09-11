@@ -39,6 +39,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     private final ShowType showType;
+    private final boolean useCardAreaLayout;
     private boolean positioned;
     private String lastRenderedTitle;
     private final String name;
@@ -49,6 +50,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
         this.name = name;
         this.title = name;
         this.showType = showType;
+        this.useCardAreaLayout = showType == ShowType.GRAVEYARD;
         this.positioned = false;
         this.lastRenderedTitle = null;
         this.userCloseListener = () -> {
@@ -128,7 +130,11 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     public void cleanUp() {
-        cards.cleanUp();
+        if (useCardAreaLayout) {
+            cardArea.cleanUp();
+        } else {
+            cards.cleanUp();
+        }
     }
 
     public ShowType getShowType() {
@@ -145,8 +151,14 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
         Color background = new Color(31, 35, 43);
         getContentPane().setBackground(background);
-        cards.setBackgroundColor(background);
-        cards.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
+        if (useCardAreaLayout) {
+            cardArea.setOpaque(true);
+            cardArea.setBackground(background);
+            cardArea.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
+        } else {
+            cards.setBackgroundColor(background);
+            cards.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
+        }
     }
     @Override
     public void changeGUISize() {
@@ -156,8 +168,12 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     private void setGUISize() {
-        cards.setCardDimension(GUISizeHelper.otherZonesCardDimension);
-        cards.changeGUISize();
+        if (useCardAreaLayout) {
+            cardArea.changeGUISize();
+        } else {
+            cards.setCardDimension(GUISizeHelper.otherZonesCardDimension);
+            cards.changeGUISize();
+        }
     }
 
     public void loadCardsAndShow(ExileView exile, BigCard bigCard, UUID gameId) {
@@ -180,7 +196,13 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
     // TODO: remove oudated code with revertOrder (wait new release and delete if no bug reports for diff windows with cards, 2023-12-14)
     public void loadCardsAndShow(CardsView showCards, BigCard bigCard, UUID gameId, boolean revertOrder) {
-        boolean changed = cards.loadCards(showCards, bigCard, gameId, revertOrder);
+        boolean changed;
+        if (useCardAreaLayout) {
+            cardArea.loadCards(showCards, bigCard, gameId);
+            changed = true;
+        } else {
+            changed = cards.loadCards(showCards, bigCard, gameId, revertOrder);
+        }
         if (showCards.isEmpty()) {
             this.hideDialog();
             return;
@@ -223,7 +245,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
      * @return
      */
     public Map<UUID, MageCard> getMageCardsForUpdate() {
-        return this.cards.getMageCardsForUpdate();
+        return useCardAreaLayout ? this.cardArea.getMageCardsForUpdate() : this.cards.getMageCardsForUpdate();
     }
 
     @Override
@@ -258,9 +280,12 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
             int baseWidth = Math.max(320, (int) Math.round(GUISizeHelper.otherZonesCardDimension.width * 1.4));
             int minWidth = Math.max(baseWidth, GUISizeHelper.scrollBarSize);
             int maxWidth = Math.max(minWidth, SettingsManager.instance.getScreenWidth() / 2);
-            Dimension cardsPreferredSize = CardInfoWindowDialog.this.cards.getPreferredSize();
+            Dimension cardsPreferredSize = useCardAreaLayout
+                    ? CardInfoWindowDialog.this.cardArea.getPreferredSize()
+                    : CardInfoWindowDialog.this.cards.getPreferredSize();
             int needWidth = Math.min(maxWidth, Math.max(minWidth, cardsPreferredSize.width));
-            int needHeight = Math.max(oldSize.height, cardsPreferredSize.height + GUISizeHelper.scrollBarSize);
+            int maxHeight = Math.max(240, SettingsManager.instance.getScreenHeight() - 96);
+            int needHeight = Math.min(maxHeight, Math.max(240, cardsPreferredSize.height + GUISizeHelper.scrollBarSize));
 
             CardInfoWindowDialog.this.setPreferredSize(new Dimension(needWidth, needHeight));
             CardInfoWindowDialog.this.pack();
@@ -306,20 +331,25 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        cards = new mage.client.cards.Cards();
+        if (useCardAreaLayout) {
+            cardArea = new CardArea();
+        } else {
+            cards = new mage.client.cards.Cards();
+        }
 
         setIconifiable(true);
         setResizable(true);
         setPreferredSize(new Dimension((int) Math.round(GUISizeHelper.otherZonesCardDimension.width * 1.4),
                 (int) Math.round(GUISizeHelper.otherZonesCardDimension.height * 1.4)));
         getContentPane().setLayout(new java.awt.BorderLayout());
-        getContentPane().add(cards, java.awt.BorderLayout.CENTER);
+        getContentPane().add(useCardAreaLayout ? cardArea : cards, java.awt.BorderLayout.CENTER);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private mage.client.cards.Cards cards;
+    private mage.client.cards.CardArea cardArea;
     // End of variables declaration//GEN-END:variables
 
 }

@@ -62,6 +62,7 @@ public class PickChoiceDialog extends MageDialog {
         this.listChoices.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         this.listChoices.setFixedCellHeight(-1);
         this.listChoices.setCellRenderer(new ChoiceCellRenderer());
+        this.scrollList.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         this.setModal(true);
     }
 

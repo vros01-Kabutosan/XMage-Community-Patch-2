@@ -52,7 +52,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
     // TODO: increase maxNodes due AI skill level like max depth?
     private static final int MAX_SIMULATED_NODES_PER_CALC = 5000;
     private static final int MAX_SIMULATED_NODES_PER_ERROR = 8100; // safety ceiling for the highest skill budget
-    private static final int DEEP_STACK_RESPONSE_THRESHOLD = 8;
+    private static final int DEEP_STACK_RESPONSE_THRESHOLD = 2;
     private static final int DEEP_STACK_MAX_THINK_SECONDS = 1;
 
     // same params as Executors.newFixedThreadPool

@@ -7,7 +7,6 @@
  import mage.client.util.Event;
  import mage.client.util.Listener;
  import mage.client.util.SettingsManager;
- import mage.client.util.gui.GuiDisplayUtil;
  import mage.game.events.PlayerQueryEvent.QueryType;
  import mage.util.RandomUtil;
  import mage.view.CardsView;
@@ -86,7 +85,7 @@
                      positioned = true;
                      show();
                  }
-                 GuiDisplayUtil.keepComponentInsideFrame(centered.x, centered.y, ShowCardsDialog.this);
+                 ShowCardsDialog.this.keepInsideDesktop();
              }
          });
      }

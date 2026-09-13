@@ -15,7 +15,6 @@ import mage.client.components.MageDesktopIconifySupport;
 import mage.client.util.GUISizeHelper;
 import mage.client.util.ImageHelper;
 import mage.client.util.SettingsManager;
-import mage.client.util.gui.GuiDisplayUtil;
 import mage.constants.CardType;
 import mage.util.RandomUtil;
 import mage.view.CardView;
@@ -286,12 +285,15 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
             Point oldLocation = CardInfoWindowDialog.this.getLocation();
             int baseWidth = Math.max(320, (int) Math.round(GUISizeHelper.otherZonesCardDimension.width * 1.4));
             int minWidth = Math.max(baseWidth, GUISizeHelper.scrollBarSize);
-            int maxWidth = Math.max(minWidth, SettingsManager.instance.getScreenWidth() / 2);
+            Dimension desktop = getParent() == null ? null : getParent().getSize();
+            int availableWidth = desktop == null ? SettingsManager.instance.getScreenWidth() : desktop.width;
+            int availableHeight = desktop == null ? SettingsManager.instance.getScreenHeight() : desktop.height;
+            int maxWidth = Math.max(minWidth, availableWidth / 2);
             Dimension cardsPreferredSize = useCardAreaLayout
                     ? CardInfoWindowDialog.this.cardArea.getPreferredSize()
                     : CardInfoWindowDialog.this.cards.getPreferredSize();
             int needWidth = Math.min(maxWidth, Math.max(minWidth, cardsPreferredSize.width));
-            int maxHeight = Math.max(240, SettingsManager.instance.getScreenHeight() - 96);
+            int maxHeight = Math.max(240, availableHeight - 16);
             int needHeight = Math.min(maxHeight, Math.max(240, cardsPreferredSize.height + GUISizeHelper.scrollBarSize));
 
             CardInfoWindowDialog.this.setPreferredSize(new Dimension(needWidth, needHeight));
@@ -307,9 +309,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
                 CardInfoWindowDialog.this.setLocation(oldLocation);
             }
 
-            Point centered = SettingsManager.instance.getComponentPosition(
-                    CardInfoWindowDialog.this.getWidth(), CardInfoWindowDialog.this.getHeight());
-            GuiDisplayUtil.keepComponentInsideFrame(centered.x, centered.y, CardInfoWindowDialog.this);
+            CardInfoWindowDialog.this.keepInsideDesktop();
         });
     }
     private int qtyCardTypes(mage.view.CardsView cardsView) {

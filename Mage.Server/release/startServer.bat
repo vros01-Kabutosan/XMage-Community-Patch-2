@@ -12,4 +12,10 @@ set PATH=%JAVA_HOME%/bin;%PATH%
 :NOJAVADIR
 set "AI_DIAGNOSTICS=-Dmage.debug.printGameLogs=true -Dmage.debug.saveGameHistory=true"
 echo [RC1] Diagnostico de IA: activado (logs de partidas e historial)
-java %AI_DIAGNOSTICS% -Xmx1024m -jar ./lib/mage-server-${project.version}.jar
+set "SERVER_JAR="
+for %%J in (".\lib\mage-server-*.jar") do set "SERVER_JAR=%%~fJ"
+if not defined SERVER_JAR (
+  echo No se encontro el JAR del servidor en .\lib
+  exit /b 3
+)
+java %AI_DIAGNOSTICS% -Xmx1024m -jar "%SERVER_JAR%"

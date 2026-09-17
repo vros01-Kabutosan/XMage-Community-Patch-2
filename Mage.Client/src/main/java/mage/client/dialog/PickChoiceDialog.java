@@ -329,6 +329,7 @@ public class PickChoiceDialog extends MageDialog {
                 Math.min(maxWidth, Math.max(760, Math.max(dialogWidth, packedSize.width))),
                 Math.min(maxHeight, Math.max(480, packedSize.height))
         );
+        this.keepInsideDesktop();
         this.listChoices.revalidate();
         this.scrollList.revalidate();
         this.revalidate();

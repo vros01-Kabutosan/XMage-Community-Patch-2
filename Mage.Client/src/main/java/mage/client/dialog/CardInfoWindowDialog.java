@@ -231,6 +231,9 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
             setRenderedTitle(newTitle);
         }
 
+        if (!isVisible()) {
+            super.show();
+        }
         if (changed || !positioned) {
             showAndPositionWindow();
         }

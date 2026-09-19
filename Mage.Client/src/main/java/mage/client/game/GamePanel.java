@@ -218,8 +218,9 @@ extends JPanel {
     private JPopupMenu popupMenuTriggerOrder;
     private final LastGameData lastGameData = new LastGameData();
     private static final int BORDER_SIZE = 2;
-    private static final Border BORDER_ACTIVE = new LineBorder(Color.orange, 2);
+    private static final Border BORDER_ACTIVE = new LineBorder(Color.red, 2);
     private static final Border BORDER_NON_ACTIVE = new EmptyBorder(2, 2, 2, 2);
+    private static final Color SKIP_SELECTED_TINT = new Color(255, 0, 0, 90); // tint rojo para skip buttons seleccionados
     private static final int holdPriorityMask = System.getProperty("os.name").contains("Mac OS X") ? 256 : 128;
     private boolean holdingPriority;
     private AbilityPicker abilityPicker;
@@ -1326,6 +1327,9 @@ extends JPanel {
         this.btnSkipStack.setBorder(this.skipButtons.untilStackResolved.getBorder());
         this.btnSkipToYourTurn.setBorder(this.skipButtons.allTurns.getBorder());
         this.btnSkipToEndStepBeforeYourTurn.setBorder(this.skipButtons.untilUntilEndStepBeforeMyTurn.getBorder());
+        // tint rojo en los skip buttons de "next turn" y "end step" cuando estan seleccionados
+        this.btnSkipToNextTurn.setTint(this.skipButtons.turn.isPressed(), SKIP_SELECTED_TINT);
+        this.btnSkipToEndTurn.setTint(this.skipButtons.untilEndOfTurn.isPressed(), SKIP_SELECTED_TINT);
     }
 
     private static void setLabelTextIfChanged(JLabel label, String text) {
@@ -3757,6 +3761,10 @@ extends JPanel {
 
         public Border getBorder() {
             return this.pressState ? BORDER_ACTIVE : BORDER_NON_ACTIVE;
+        }
+
+        public boolean isPressed() {
+            return this.pressState;
         }
     }
 

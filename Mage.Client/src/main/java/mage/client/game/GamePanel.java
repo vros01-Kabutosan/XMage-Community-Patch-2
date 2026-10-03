@@ -209,6 +209,11 @@ extends JPanel {
     private static final String XCP_UI_RESIZE_V1_3 = "XCP_UI_RESIZE_V1_3";
     private final Map<String, HoverButton> phaseButtons = new LinkedHashMap<String, HoverButton>();
     private final Map<String, JLabel> phaseSummaryCells = new LinkedHashMap<String, JLabel>();
+    // PHASE-FUSION v1.2: ultima fase activa renderizada. Se
+    // usa para re-computar las letras verdes de la fase
+    // seleccionada cuando cambia el estado de skip sin
+    // cambiar de fase (el skip se activa a mitad de fase).
+    private String lastPhaseName = "Untap";
     // PHASE-FUSION v1.1: barra de fases (letras sobre la mano) ->
     // atajo nativo equivalente. Las 12 fases son clickeables; cada una
     // dispara el salto nativo mas cercano (no existe "ir a fase X"
@@ -1387,6 +1392,15 @@ extends JPanel {
         // tint rojo en los skip buttons de "next turn" y "end step" cuando estan seleccionados
         this.btnSkipToNextTurn.setTint(this.skipButtons.turn.isPressed(), SKIP_SELECTED_TINT);
         this.btnSkipToEndTurn.setTint(this.skipButtons.untilEndOfTurn.isPressed(), SKIP_SELECTED_TINT);
+        // PHASE-FUSION v1.2: refrescar las letras verdes de
+        // la fase seleccionada (objetivo del skip) en cada
+        // update, porque el skip se activa a mitad de fase.
+        // Guard: durante initComponents la barra de letras
+        // aun no existe (updateSkipButtons se invoca desde
+        // initComponents antes de crear phaseSummaryBar).
+        if (this.phaseSummaryBar != null) {
+            this.updatePhaseSummary(this.lastPhaseName);
+        }
     }
 
     private static void setLabelTextIfChanged(JLabel label, String text) {
@@ -1902,6 +1916,9 @@ extends JPanel {
     }
 
     private void updatePhaseButtons(String currentPhaseName) {
+        // PHASE-FUSION v1.2: recordar la fase activa para
+        // el resalte verde de la fase seleccionada (skip).
+        this.lastPhaseName = currentPhaseName;
         this.phaseButtons.forEach((phaseName, phaseButton) -> {
             if (phaseName.equals(currentPhaseName)) {
                 phaseButton.setAlignmentX(0.5f);
@@ -1918,14 +1935,45 @@ extends JPanel {
     }
 
     private void updatePhaseSummary(String currentPhaseName) {
+        // PHASE-FUSION v1.2: fases objetivo del skip activo
+        // (la "fase seleccionada" a la que se salta). Se
+        // marcan con letras en VERDE como indicador de
+        // seleccion. El amarillo sigue indicando la fase
+        // ACTIVA (donde esta el juego ahora).
+        java.util.Set<String> skipTargets = new java.util.HashSet<String>();
+        if (this.skipButtons.untilNextMain.isPressed()) {
+            skipTargets.add("Main1");
+            skipTargets.add("Main2");
+        }
+        if (this.skipButtons.untilEndOfTurn.isPressed()) {
+            skipTargets.add("Combat_End");
+            skipTargets.add("Cleanup");
+        }
+        if (this.skipButtons.turn.isPressed() || this.skipButtons.allTurns.isPressed()) {
+            skipTargets.add("Untap");
+            skipTargets.add("Next_Turn");
+        }
+        if (this.skipButtons.untilUntilEndStepBeforeMyTurn.isPressed()) {
+            skipTargets.add("Cleanup");
+        }
         String summaryPhase = currentPhaseName;
         for (Map.Entry<String, JLabel> entry : this.phaseSummaryCells.entrySet()) {
             boolean active = entry.getKey().equals(summaryPhase);
+            boolean skipTarget = !active && skipTargets.contains(entry.getKey());
             JLabel cell = entry.getValue();
             cell.setBackground(active ? new Color(55, 95, 125) : new Color(38, 43, 52));
             boolean combat = entry.getKey().startsWith("Combat_");
-            cell.setForeground(active ? Color.YELLOW : combat ? new Color(255, 105, 105) : new Color(190, 198, 210));
-            cell.setBorder(active ? BorderFactory.createLineBorder(combat ? new Color(255, 105, 105) : Color.YELLOW, 1, true) : BorderFactory.createEmptyBorder(1, 1, 1, 1));
+            if (active) {
+                cell.setForeground(Color.YELLOW);
+                cell.setBorder(BorderFactory.createLineBorder(combat ? new Color(255, 105, 105) : Color.YELLOW, 1, true));
+            } else if (skipTarget) {
+                // Fase seleccionada (objetivo del skip): letras en verde.
+                cell.setForeground(new Color(90, 230, 90));
+                cell.setBorder(BorderFactory.createLineBorder(new Color(90, 230, 90), 1, true));
+            } else {
+                cell.setForeground(combat ? new Color(255, 105, 105) : new Color(190, 198, 210));
+                cell.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+            }
         }
         this.updatePhaseSummaryBounds();
         this.phaseSummaryBar.repaint();

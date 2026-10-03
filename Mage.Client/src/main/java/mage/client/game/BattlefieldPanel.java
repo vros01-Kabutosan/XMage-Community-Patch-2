@@ -1,6 +1,8 @@
 package mage.client.game;
 
+import mage.abilities.icon.CardIcon;
 import mage.abilities.icon.CardIconRenderSettings;
+import mage.view.CardView;
 import mage.cards.MageCard;
 import mage.cards.MagePermanent;
 import mage.client.MageFrame;
@@ -97,7 +99,12 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
     }
 
     public void updateSize() {
-        this.jScrollPane.setSize(this.getWidth(), this.getHeight());
+        int width = this.getWidth();
+        int height = this.getHeight();
+        if (this.jScrollPane.getWidth() == width && this.jScrollPane.getHeight() == height) {
+            return;
+        }
+        this.jScrollPane.setSize(width, height);
         sortLayout();
     }
 
@@ -144,7 +151,7 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
         gameUpdateTimer.stop();
         boolean changed = false;
 
-        List<PermanentView> permanentsToAdd = new ArrayList<>();
+        List<PermanentView> permanentsToAdd = null;
         for (PermanentView permanent : battlefield.values()) {
             if (!permanent.isPhasedIn()) {
                 continue;
@@ -178,6 +185,9 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
             }
 
             if (oldMagePermanent == null) {
+                if (permanentsToAdd == null) {
+                    permanentsToAdd = new ArrayList<>();
+                }
                 permanentsToAdd.add(permanent);
                 changed = true;
             } else {
@@ -225,15 +235,20 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
                         }
                     }
                 }
-                oldMagePermanent.update(permanent);
+                if (!this.permanentViewEquals(oldMagePermanent, permanent)) {
+                    oldMagePermanent.update(permanent);
+                    changed = true;
+                }
             }
         }
 
         addedArtifact = addedCreature = addedPermanent = false;
 
-        int count = permanentsToAdd.size();
-        for (PermanentView permanent : permanentsToAdd) {
-            addPermanent(permanent, count);
+        int count = permanentsToAdd == null ? 0 : permanentsToAdd.size();
+        if (permanentsToAdd != null) {
+            for (PermanentView permanent : permanentsToAdd) {
+                addPermanent(permanent, count);
+            }
         }
 
         if (addedArtifact) {
@@ -248,7 +263,8 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
 
         for (Iterator<Entry<UUID, MageCard>> iterator = permanents.entrySet().iterator(); iterator.hasNext();) {
             Entry<UUID, MageCard> entry = iterator.next();
-            if (!battlefield.containsKey(entry.getKey()) || !battlefield.get(entry.getKey()).isPhasedIn()) {
+            PermanentView currentPermanent = battlefield.get(entry.getKey());
+            if (currentPermanent == null || !currentPermanent.isPhasedIn()) {
                 removePermanent(entry.getKey(), 1);
                 iterator.remove();
                 changed = true;
@@ -263,6 +279,38 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
             this.battlefield = battlefield;
             sortLayout();
         }
+    }
+
+    private boolean permanentViewEquals(MagePermanent oldPermanent, PermanentView newPermanent) {
+        PermanentView oldView = oldPermanent.getOriginalPermanent();
+        if (!CardView.cardViewEquals(oldView, newPermanent)) {
+            return false;
+        }
+        if (oldPermanent.isTapped() != newPermanent.isTapped()
+                || oldPermanent.isFlipped() != newPermanent.isFlipped()
+                || oldView.isCopy() != newPermanent.isCopy()
+                || oldView.isMutated() != newPermanent.isMutated()
+                || oldView.isCanAttack() != newPermanent.isCanAttack()
+                || oldView.isCanBlock() != newPermanent.isCanBlock()
+                || !Objects.equals(oldView.getAttachedTo(), newPermanent.getAttachedTo())
+                || !Objects.equals(oldView.getAttachments(), newPermanent.getAttachments())) {
+            return false;
+        }
+        List<CardIcon> oldIcons = oldView.getCardIcons();
+        List<CardIcon> newIcons = newPermanent.getCardIcons();
+        if (oldIcons.size() != newIcons.size()) {
+            return false;
+        }
+        for (int i = 0; i < oldIcons.size(); i++) {
+            CardIcon oldIcon = oldIcons.get(i);
+            CardIcon newIcon = newIcons.get(i);
+            if (oldIcon.getIconType() != newIcon.getIconType()
+                    || !Objects.equals(oldIcon.getText(), newIcon.getText())
+                    || !Objects.equals(oldIcon.getHint(), newIcon.getHint())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public void sortLayout() {
@@ -313,11 +361,19 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
                 if (mageCard.getMainPanel() instanceof MagePermanent) {
                     MagePermanent magePermanent = (MagePermanent) mageCard.getMainPanel();
                     if (magePermanent.getOriginal().getId().equals(permanentId)) {
+                        MageCard cardToRemove = mageCard;
                         Thread t = new Thread(() -> {
-                            Plugins.instance.onRemoveCard(mageCard, count);
-                            mageCard.setVisible(false);
-                            this.jPanel.remove(mageCard);
-                        });
+                            Plugins.instance.onRemoveCard(cardToRemove, count);
+                            SwingUtilities.invokeLater(() -> {
+                                if (cardToRemove.getParent() == this.jPanel) {
+                                    cardToRemove.setVisible(false);
+                                    this.jPanel.remove(cardToRemove);
+                                    this.jPanel.revalidate();
+                                    this.jPanel.repaint();
+                                }
+                            });
+                        }, "BattlefieldCardRemoval");
+                        t.setDaemon(true);
                         t.start();
                     }
                     if (magePermanent.getOriginal().isCreature()) {

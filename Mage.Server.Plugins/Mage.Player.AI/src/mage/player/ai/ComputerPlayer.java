@@ -27,6 +27,7 @@ import mage.players.Player;
 import mage.players.PlayerImpl;
 import mage.players.net.UserData;
 import mage.players.net.UserGroup;
+import mage.player.ai.score.ArtificialScoringSystem;
 import mage.target.Target;
 import mage.target.TargetAmount;
 import mage.target.TargetCard;
@@ -126,6 +127,18 @@ public class ComputerPlayer extends PlayerImpl {
         return makeChoice(outcome, target, source, game, null);
     }
 
+    private boolean isAvoidableSelfDamageTarget(MageItem item, PossibleTargetsSelector selector, Outcome outcome) {
+        if (outcome != Outcome.Damage || !(item instanceof Player) || !item.getId().equals(getId())) {
+            return false;
+        }
+        for (MageItem candidate : selector.getAny()) {
+            if (!candidate.getId().equals(getId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Default choice logic for any choose dialogs due effect's outcome and possible target priority
      */
@@ -167,6 +180,9 @@ public class ComputerPlayer extends PlayerImpl {
 
         // good targets -- choose as much as possible
         for (MageItem item : possibleTargetsSelector.getGoodTargets()) {
+            if (isAvoidableSelfDamageTarget(item, possibleTargetsSelector, outcome)) {
+                continue;
+            }
             targetAdder.accept(item);
             if (target.isChoiceCompleted(abilityControllerId, source, game, fromCards)) {
                 return true;
@@ -174,6 +190,9 @@ public class ComputerPlayer extends PlayerImpl {
         }
         // bad targets -- choose as low as possible
         for (MageItem item : possibleTargetsSelector.getBadTargets()) {
+            if (isAvoidableSelfDamageTarget(item, possibleTargetsSelector, outcome)) {
+                continue;
+            }
             if (target.isChosen(game)) {
                 break;
             }
@@ -266,7 +285,7 @@ public class ComputerPlayer extends PlayerImpl {
                 if (target.getAmountRemaining() <= 0) {
                     break;
                 }
-                if (target.contains(item.getId()) || !(item instanceof Player)) {
+                if (target.contains(item.getId()) || !(item instanceof Player) || item.getId().equals(getId())) {
                     continue;
                 }
                 int leftLife = PossibleTargetsComparator.getLifeForDamage(item, game);
@@ -300,7 +319,7 @@ public class ComputerPlayer extends PlayerImpl {
                 if (target.getAmountRemaining() <= 0) {
                     break;
                 }
-                if (target.contains(item.getId())) {
+                if (target.contains(item.getId()) || (item instanceof Player && item.getId().equals(getId()))) {
                     continue;
                 }
                 target.addTarget(item.getId(), target.getAmountRemaining(), source, game);
@@ -605,22 +624,30 @@ public class ComputerPlayer extends PlayerImpl {
 
         // pay special mana like convoke cost (tap for pay)
         // GUI: user see "special" button while pay spell's cost
-        // TODO: AI can't prioritize special mana types to pay, e.g. it will use first available
-        SpecialAction specialAction = game.getState().getSpecialActions().getControlledBy(this.getId(), true).values()
-                .stream()
-                .findFirst()
-                .orElse(null);
-        ManaOptions specialMana = specialAction == null ? null : specialAction.getManaOptions(ability, game, unpaid);
-        if (specialMana != null) {
+        List<SpecialAction> specialActions = new ArrayList<>(
+                game.getState().getSpecialActions().getControlledBy(this.getId(), true).values());
+        specialActions.sort(Comparator.comparing(
+                action -> action.getId() == null ? "" : action.getId().toString()));
+
+        for (SpecialAction specialAction : specialActions) {
+            ManaOptions specialMana;
+            try {
+                specialMana = specialAction.getManaOptions(ability, game, unpaid);
+            } catch (RuntimeException ex) {
+                continue;
+            }
+            if (specialMana == null) {
+                continue;
+            }
             for (Mana netMana : specialMana) {
                 if (cost.testPay(netMana) || hasApprovingObject) {
-                    if (netMana instanceof ConditionalMana && !((ConditionalMana) netMana).apply(ability, game, getId(), cost)) {
+                    if (netMana instanceof ConditionalMana
+                            && !((ConditionalMana) netMana).apply(ability, game, getId(), cost)) {
                         continue;
                     }
                     if (activateAbility(specialAction, game)) {
                         return true;
                     }
-                    // only one time try to pay to skip infinite AI loop
                     break;
                 }
             }
@@ -696,7 +723,16 @@ public class ComputerPlayer extends PlayerImpl {
                         a2Max = netMana.count();
                     }
                 }
-                return CardUtil.overflowDec(a2Max, a1Max);
+                int result = CardUtil.overflowDec(a2Max, a1Max);
+                if (result != 0) {
+                    return result;
+                }
+                UUID id1 = a1.getId();
+                UUID id2 = a2.getId();
+                if (id1 == null || id2 == null) {
+                    return id1 == id2 ? 0 : (id1 == null ? 1 : -1);
+                }
+                return id1.toString().compareTo(id2.toString());
             });
         }
         return manaAbilities;
@@ -747,7 +783,9 @@ public class ComputerPlayer extends PlayerImpl {
 
     private List<MageObject> sortByValue(Map<MageObject, Integer> map) {
         List<Entry<MageObject, Integer>> list = new LinkedList<>(map.entrySet());
-        Collections.sort(list, Comparator.comparing(Entry::getValue));
+        Collections.sort(list, Comparator.comparing(Entry<MageObject, Integer>::getValue)
+                .thenComparing(entry -> entry.getKey().getName())
+                .thenComparing(entry -> entry.getKey().getId()));
         List<MageObject> result = new ArrayList<>();
         for (Entry<MageObject, Integer> entry : list) {
             result.add(entry.getKey());
@@ -826,9 +864,13 @@ public class ComputerPlayer extends PlayerImpl {
             }
         }
 
-        // choose by random
-        if (!choice.isChosen()) {
-            choice.setRandomChoice();
+        // Use a stable fallback for generic choices; avoid simulation-dependent randomness.
+        if (!choice.isChosen() && !choice.getChoices().isEmpty()) {
+            List<String> choices = new ArrayList<>(choice.getChoices());
+            String preferred = outcome != null && outcome.isGood()
+                    ? choices.stream().filter(value -> "yes".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value)).findFirst().orElse(null)
+                    : choices.stream().filter(value -> "no".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)).findFirst().orElse(null);
+            choice.setChoice(preferred != null ? preferred : choices.stream().sorted().findFirst().orElse(choices.get(0)));
         }
 
         return true;
@@ -902,8 +944,31 @@ public class ComputerPlayer extends PlayerImpl {
 
     @Override
     public boolean choosePile(Outcome outcome, String message, List<? extends Card> pile1, List<? extends Card> pile2, Game game) {
-        //TODO: improve this
-        return true; // select left pile all the time
+        int pile1Score = scorePile(pile1, game);
+        int pile2Score = scorePile(pile2, game);
+
+        // For beneficial effects keep the stronger pile; for harmful effects
+        // prefer the weaker one. Equal piles keep the historical left choice.
+        if (outcome != null && outcome.isGood()) {
+            return pile1Score >= pile2Score;
+        }
+        if (outcome != null && !outcome.isGood()) {
+            return pile1Score <= pile2Score;
+        }
+        return true;
+    }
+
+    private int scorePile(List<? extends Card> pile, Game game) {
+        if (pile == null || pile.isEmpty() || game == null) {
+            return 0;
+        }
+        int score = 0;
+        for (Card card : pile) {
+            if (card != null) {
+                score += ArtificialScoringSystem.getCardDefinitionScore(game, card);
+            }
+        }
+        return score;
     }
 
     @Override
@@ -953,11 +1018,34 @@ public class ComputerPlayer extends PlayerImpl {
 
     @Override
     public TriggeredAbility chooseTriggeredAbility(List<TriggeredAbility> abilities, Game game) {
-        //TODO: improve this
-        if (!abilities.isEmpty()) {
-            return abilities.get(0); // select first trigger all the time
+        if (abilities == null || abilities.isEmpty()) {
+            return null;
         }
-        return null;
+
+        TriggeredAbility best = abilities.get(0);
+        int bestScore = triggeredAbilityScore(best, game);
+        for (int i = 1; i < abilities.size(); i++) {
+            TriggeredAbility candidate = abilities.get(i);
+            int candidateScore = triggeredAbilityScore(candidate, game);
+            if (candidateScore > bestScore) {
+                best = candidate;
+                bestScore = candidateScore;
+            }
+        }
+        return best;
+    }
+
+    private int triggeredAbilityScore(TriggeredAbility ability, Game game) {
+        if (ability == null || ability.getEffects() == null) {
+            return 0;
+        }
+        try {
+            int outcome = ability.getEffects().getOutcomeScore(ability);
+            return Math.max(-6, Math.min(6, outcome));
+        } catch (RuntimeException ex) {
+            // Trigger ordering must never prevent the game from resolving.
+            return 0;
+        }
     }
 
     @Override
@@ -1062,7 +1150,12 @@ public class ComputerPlayer extends PlayerImpl {
         Collections.sort(sortedCards, (o1, o2) -> {
             Integer score1 = RateCard.rateCard(o1, colors);
             Integer score2 = RateCard.rateCard(o2, colors);
-            return score2.compareTo(score1);
+            int scoreOrder = score2.compareTo(score1);
+            if (scoreOrder != 0) {
+                return scoreOrder;
+            }
+            int nameOrder = o1.getName().compareTo(o2.getName());
+            return nameOrder != 0 ? nameOrder : o1.getId().compareTo(o2.getId());
         });
 
         // get top cards
@@ -1327,6 +1420,9 @@ public class ComputerPlayer extends PlayerImpl {
         Map<UUID, SpellAbility> usable = PlayerImpl.getCastableSpellAbilities(game, this.getId(), card, game.getState().getZone(card.getId()), noMana);
         return usable.values().stream()
                 .filter(a -> a.getTargets().canChoose(getId(), a, game))
+                .sorted(Comparator
+                        .comparingInt((SpellAbility a) -> a.getEffects().getOutcomeScore(a)).reversed()
+                        .thenComparing(a -> a.getId().toString()))
                 .findFirst()
                 .orElse(null);
     }

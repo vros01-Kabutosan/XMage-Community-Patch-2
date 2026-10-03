@@ -20,6 +20,7 @@ public class KeyboundButton extends JButton {
     private Font keyFont;
 
     private boolean tinting = false;
+    private Color tintColor = Color.lightGray;
 
     public KeyboundButton(String key, boolean showKey) {
         this.key = key;
@@ -63,7 +64,7 @@ public class KeyboundButton extends JButton {
                     sg.setColor(new Color(0, 0, 0, 32));
                     sg.fillRoundRect(sizeMod(2), sizeMod(2), getWidth() - sizeMod(4), getHeight() - sizeMod(4), sizeMod(6), sizeMod(6));
                 }
-                sg.setColor(tinting ? Color.lightGray : Color.white);
+                sg.setColor(tinting ? tintColor : Color.white);
 
                 if (!this.drawingText.isEmpty()) {
                     sg.setFont(keyFont);
@@ -80,7 +81,14 @@ public class KeyboundButton extends JButton {
     }
 
     public void setTint(boolean tinting) {
+        this.setTint(tinting, Color.lightGray);
+    }
+
+    public void setTint(boolean tinting, Color tintColor) {
         this.tinting = tinting;
+        if (tintColor != null) {
+            this.tintColor = tintColor;
+        }
         repaint();
     }
 

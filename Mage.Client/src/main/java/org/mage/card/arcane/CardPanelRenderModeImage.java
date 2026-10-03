@@ -17,6 +17,7 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.util.List;
 import java.util.Objects;
 import java.util.StringTokenizer;
 import java.util.UUID;
@@ -83,6 +84,7 @@ extends CardPanel {
     private int loyaltyCounter;
     private int plusCounter;
     private int otherCounter;
+    private String otherCounterName;
     private int minusCounter;
     private int lastCardWidth;
     private final GlowText titleText;
@@ -677,7 +679,7 @@ extends CardPanel {
     }
 
     private void setTitle(CardView card) {
-        this.titleText.setText(!this.displayTitleAnyway && this.hasImage ? "" : card.getDisplayName());
+        setLabelTextIfChanged(this.titleText, !this.displayTitleAnyway && this.hasImage ? "" : card.getDisplayName());
     }
 
 
@@ -740,7 +742,8 @@ extends CardPanel {
     }
 
     private void updateCounters(CardView card) {
-        if (card.getCounters() != null && !card.getCounters().isEmpty()) {
+        List<CounterView> counters = card.getCounters();
+        if (counters != null && !counters.isEmpty()) {
             String name = "";
             if (this.lastCardWidth != this.getCardWidth()) {
                 this.lastCardWidth = this.getCardWidth();
@@ -748,73 +751,90 @@ extends CardPanel {
                 this.minusCounter = 0;
                 this.otherCounter = 0;
                 this.loyaltyCounter = 0;
+                this.otherCounterName = null;
             }
-            this.plusCounterLabel.setVisible(false);
-            this.minusCounterLabel.setVisible(false);
-            this.loyaltyCounterLabel.setVisible(false);
-            this.otherCounterLabel.setVisible(false);
-            block10: for (CounterView counterView : card.getCounters()) {
-                if (counterView.getCount() == 0) continue;
-                switch (counterView.getName()) {
+            setVisibleIfChanged(this.plusCounterLabel, false);
+            setVisibleIfChanged(this.minusCounterLabel, false);
+            setVisibleIfChanged(this.loyaltyCounterLabel, false);
+            setVisibleIfChanged(this.otherCounterLabel, false);
+            block10: for (CounterView counterView : counters) {
+                int count = counterView.getCount();
+                if (count == 0) continue;
+                String counterName = counterView.getName();
+                switch (counterName) {
                     case "+1/+1": {
-                        if (counterView.getCount() != this.plusCounter) {
-                            this.plusCounter = counterView.getCount();
+                        if (count != this.plusCounter) {
+                            this.plusCounter = count;
                             this.plusCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.plusCounter, ImageManagerImpl.instance.getCounterImageGreen(), this.getCardWidth()));
                         }
-                        this.plusCounterLabel.setVisible(true);
+                        setVisibleIfChanged(this.plusCounterLabel, true);
                         continue block10;
                     }
                     case "-1/-1": {
-                        if (counterView.getCount() != this.minusCounter) {
-                            this.minusCounter = counterView.getCount();
+                        if (count != this.minusCounter) {
+                            this.minusCounter = count;
                             this.minusCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.minusCounter, ImageManagerImpl.instance.getCounterImageRed(), this.getCardWidth()));
                         }
-                        this.minusCounterLabel.setVisible(true);
+                        setVisibleIfChanged(this.minusCounterLabel, true);
                         continue block10;
                     }
                     case "loyalty": {
-                        if (counterView.getCount() != this.loyaltyCounter) {
-                            this.loyaltyCounter = counterView.getCount();
+                        if (count != this.loyaltyCounter) {
+                            this.loyaltyCounter = count;
                             this.loyaltyCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.loyaltyCounter, ImageManagerImpl.instance.getCounterImageViolet(), this.getCardWidth()));
                         }
-                        this.loyaltyCounterLabel.setVisible(true);
+                        setVisibleIfChanged(this.loyaltyCounterLabel, true);
                         continue block10;
                     }
                 }
                 if (!name.isEmpty()) continue;
-                name = counterView.getName();
-                this.otherCounter = counterView.getCount();
-                this.otherCounterLabel.setToolTipText(name);
-                this.otherCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.otherCounter, ImageManagerImpl.instance.getCounterImageGrey(), this.getCardWidth()));
-                this.otherCounterLabel.setVisible(true);
+                name = counterName;
+                if (count != this.otherCounter || !Objects.equals(counterName, this.otherCounterName)) {
+                    this.otherCounter = count;
+                    this.otherCounterName = counterName;
+                    this.otherCounterLabel.setToolTipText(name);
+                    this.otherCounterLabel.setIcon(CardPanelRenderModeImage.getCounterImageWithAmount(this.otherCounter, ImageManagerImpl.instance.getCounterImageGrey(), this.getCardWidth()));
+                }
+                setVisibleIfChanged(this.otherCounterLabel, true);
             }
-            this.counterPanel.setVisible(true);
+            setVisibleIfChanged(this.counterPanel, true);
         } else {
-            this.plusCounterLabel.setVisible(false);
-            this.minusCounterLabel.setVisible(false);
-            this.loyaltyCounterLabel.setVisible(false);
-            this.otherCounterLabel.setVisible(false);
-            this.counterPanel.setVisible(false);
+            setVisibleIfChanged(this.plusCounterLabel, false);
+            setVisibleIfChanged(this.minusCounterLabel, false);
+            setVisibleIfChanged(this.loyaltyCounterLabel, false);
+            setVisibleIfChanged(this.otherCounterLabel, false);
+            setVisibleIfChanged(this.counterPanel, false);
+        }
+    }
+    private static void setLabelTextIfChanged(JLabel label, String text) {
+        if (!Objects.equals(label.getText(), text)) {
+            label.setText(text);
+        }
+    }
+
+    private static void setVisibleIfChanged(Component component, boolean visible) {
+        if (component.isVisible() != visible) {
+            component.setVisible(visible);
         }
     }
 
     private void updatePTTexts(CardView card) {
         if (card.isCreature() || card.getSubTypes().contains((Object)SubType.VEHICLE)) {
-            this.ptText1.setText(this.getGameCard().getPower());
-            this.ptText2.setText("/");
-            this.ptText3.setText(CardRendererUtils.getCardLifeWithDamage(this.getGameCard()));
+            setLabelTextIfChanged(this.ptText1, this.getGameCard().getPower());
+            setLabelTextIfChanged(this.ptText2, "/");
+            setLabelTextIfChanged(this.ptText3, CardRendererUtils.getCardLifeWithDamage(this.getGameCard()));
         } else if (card.isPlaneswalker()) {
-            this.ptText1.setText("");
-            this.ptText2.setText("");
-            this.ptText3.setText(this.getGameCard().getLoyalty());
+            setLabelTextIfChanged(this.ptText1, "");
+            setLabelTextIfChanged(this.ptText2, "");
+            setLabelTextIfChanged(this.ptText3, this.getGameCard().getLoyalty());
         } else if (card.isBattle()) {
-            this.ptText1.setText("");
-            this.ptText2.setText("");
-            this.ptText3.setText(this.getGameCard().getDefense());
+            setLabelTextIfChanged(this.ptText1, "");
+            setLabelTextIfChanged(this.ptText2, "");
+            setLabelTextIfChanged(this.ptText3, this.getGameCard().getDefense());
         } else {
-            this.ptText1.setText("");
-            this.ptText2.setText("");
-            this.ptText3.setText("");
+            setLabelTextIfChanged(this.ptText1, "");
+            setLabelTextIfChanged(this.ptText2, "");
+            setLabelTextIfChanged(this.ptText3, "");
         }
         this.ptText1.setForeground(Color.white);
         this.ptText1.setGlow(Color.black, 6, 3.0f);

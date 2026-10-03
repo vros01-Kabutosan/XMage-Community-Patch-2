@@ -1,6 +1,7 @@
 package mage.player.ai.score;
 
 import mage.MageObject;
+import mage.Mana;
 import mage.abilities.Ability;
 import mage.abilities.keyword.HasteAbility;
 import mage.cards.Card;
@@ -27,6 +28,9 @@ public final class ArtificialScoringSystem {
     private static final int LIFE_ABOVE_MULTIPLIER = 100;
 
     public static int getCardDefinitionScore(final Game game, final Card card) {
+        if (game == null || card == null) {
+            return 0;
+        }
         int value = 3; //TODO: add new rating system card value
         if (card.isLand(game)) {
             int score = (int) ((value / 2.0f) * 50);
@@ -36,15 +40,44 @@ public final class ArtificialScoringSystem {
              score += 50;
              }*/
             score += card.getMana().size() * 50;
+            score += getLandColorDiversityBonus(card);
             return score;
         }
 
         final int score = value * 100 - card.getManaCost().manaValue() * 20;
         if (card.getCardType(game).contains(CardType.CREATURE)) {
-            return score + (card.getPower().getValue() + card.getToughness().getValue()) * 10;
+            int creatureAbilityBonus = getCreatureAbilityBonus(game, card);
+            return score + (card.getPower().getValue() + card.getToughness().getValue()) * 10 + creatureAbilityBonus;
         } else {
-            return score + (/*card.getRemoval()*50*/+(card.getRarity() == null ? 0 : card.getRarity().getRating() * 30));
+            int rarityScore = card.getRarity() == null ? 0 : card.getRarity().getRating() * 30;
+            // Use effect outcomes as a restrained signal for non-creature spells.
+            int outcomeScore = card.getAbilities(game).getOutcomeTotal();
+            outcomeScore = Math.max(-3, Math.min(6, outcomeScore));
+            return score + rarityScore + outcomeScore * 20;
         }
+    }
+
+    private static int getLandColorDiversityBonus(final Card card) {
+        boolean white = false, blue = false, black = false, red = false, green = false;
+        for (Mana mana : card.getMana()) {
+            white |= mana.getWhite() > 0;
+            blue |= mana.getBlue() > 0;
+            black |= mana.getBlack() > 0;
+            red |= mana.getRed() > 0;
+            green |= mana.getGreen() > 0;
+        }
+        int colors = (white ? 1 : 0) + (blue ? 1 : 0) + (black ? 1 : 0)
+                + (red ? 1 : 0) + (green ? 1 : 0);
+        return Math.min(30, Math.max(0, colors - 1) * 10);
+    }
+
+    private static int getCreatureAbilityBonus(final Game game, final Card card) {
+        int bonus = 0;
+        for (Ability ability : card.getAbilities(game)) {
+            int abilityScore = MagicAbility.getAbilityScore(ability);
+            bonus += Math.max(-2, Math.min(4, abilityScore / 25)) * 10;
+        }
+        return Math.max(-20, Math.min(100, bonus));
     }
 
     public static int getFixedPermanentScore(final Game game, final Permanent permanent) {
@@ -68,6 +101,15 @@ public final class ArtificialScoringSystem {
         int score = permanent.getCounters(game).getCount(CounterType.CHARGE) * 30;
         score += permanent.getCounters(game).getCount(CounterType.LEVEL) * 30;
         score -= permanent.getDamage() * 2;
+        int permanentOutcomeScore = permanent.getAbilities(game).getOutcomeTotal();
+        permanentOutcomeScore = Math.max(-3, Math.min(6, permanentOutcomeScore));
+        score += permanentOutcomeScore * 20;
+        if (permanent.getCardType(game).contains(CardType.PLANESWALKER)) {
+            score += permanent.getCounters(game).getCount(CounterType.LOYALTY) * 200;
+        }
+        if (permanent.getCardType(game).contains(CardType.BATTLE)) {
+            score += permanent.getCounters(game).getCount(CounterType.DEFENSE) * 100;
+        }
         if (permanent.getCardType(game).contains(CardType.CREATURE)) {
             final int power = permanent.getPower().getValue();
             final int toughness = permanent.getToughness().getValue();

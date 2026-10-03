@@ -12,6 +12,7 @@ import mage.client.cards.CardIconsPanel;
 import mage.client.cards.CardIconsPanelFactory;
 import mage.client.dialog.PreferencesDialog;
 import mage.constants.Zone;
+import mage.players.PlayableObjectStats;
 import mage.util.DebugUtil;
 import mage.view.CardView;
 import org.apache.log4j.Logger;
@@ -26,6 +27,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Additional layer for mage cards (example: layer with card icons).
@@ -43,6 +46,9 @@ public class MageLayer extends MageCard {
     JPanel mainLayerCard;
     JPanel mainLayerIcons;
     JPanel mainLayerDebug = null;
+    private UUID lastIconCardId;
+    private int lastIconSignature;
+    private boolean iconSignatureKnown;
 
     MageCard mainPanel;
 
@@ -305,15 +311,35 @@ public class MageLayer extends MageCard {
     }
 
     private void updateCardIcons(CardView card) {
+        List<CardIcon> cardIcons = card.getCardIcons();
+        PlayableObjectStats playableStats = card.getPlayableStats();
+        int playableImportantAmount = playableStats.getPlayableImportantAmount();
+        int iconSignature = 1;
+        for (CardIcon icon : cardIcons) {
+            iconSignature = 31 * iconSignature + Objects.hashCode(icon.getIconType());
+            iconSignature = 31 * iconSignature + Objects.hashCode(icon.getText());
+            iconSignature = 31 * iconSignature + Objects.hashCode(icon.getHint());
+            iconSignature = 31 * iconSignature + (icon.canBeCombined() ? 1 : 0);
+        }
+        iconSignature = 31 * iconSignature + playableImportantAmount;
+        if (playableImportantAmount > 0) {
+            iconSignature = 31 * iconSignature + playableStats.getPlayableAmount();
+            iconSignature = 31 * iconSignature + Objects.hashCode(playableStats.getPlayableAbilityNames());
+        }
+        if (this.iconSignatureKnown
+                && Objects.equals(this.lastIconCardId, card.getId())
+                && this.lastIconSignature == iconSignature) {
+            return;
+        }
         Map<CardIconsPanel, List<CardIcon>> newIcons = new HashMap<>();
         this.iconsPanels.forEach(panel -> newIcons.put(panel, new ArrayList<>()));
 
         List<CardIcon> allIcons = new ArrayList<>();
         // main icons
-        allIcons.addAll(card.getCardIcons());
+        allIcons.addAll(cardIcons);
         // playable icons
-        if (card.getPlayableStats().getPlayableImportantAmount() > 0) {
-            allIcons.add(new PlayableCountIcon(card.getPlayableStats()));
+        if (playableImportantAmount > 0) {
+            allIcons.add(new PlayableCountIcon(playableStats));
         }
 
         // create panels
@@ -340,6 +366,9 @@ public class MageLayer extends MageCard {
             }
         });
         this.iconsPanels.forEach(panel -> panel.updateIcons(newIcons.get(panel)));
+        this.lastIconCardId = card.getId();
+        this.lastIconSignature = iconSignature;
+        this.iconSignatureKnown = true;
     }
 
     @Override
@@ -424,6 +453,9 @@ public class MageLayer extends MageCard {
 
     @Override
     public void cleanUp() {
+        this.lastIconCardId = null;
+        this.lastIconSignature = 0;
+        this.iconSignatureKnown = false;
         mainPanel.cleanUp();
     }
 

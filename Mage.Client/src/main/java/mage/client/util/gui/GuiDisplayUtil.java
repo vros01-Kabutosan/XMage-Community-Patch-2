@@ -4,6 +4,7 @@
 package mage.client.util.gui;
 
 import java.awt.Color;
+import java.net.URL;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -18,6 +19,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -382,11 +384,19 @@ public final class GuiDisplayUtil {
     }
 
     private static String replaceNamesInRule(String rule, String cardName) {
-        return rule.replaceAll("\\{this\\}", cardName.isEmpty() ? "this" : cardName);
+        if (rule == null || rule.isEmpty()) {
+            return rule == null ? "" : rule;
+        }
+        String safeCardName = cardName == null || cardName.isEmpty() ? "this" : cardName;
+        return rule.replaceAll("\\{this\\}", Matcher.quoteReplacement(safeCardName));
     }
 
     private static String getResourcePath(String image) {
-        return GuiDisplayUtil.class.getClassLoader().getResource(image).toString();
+        if (image == null || image.isEmpty()) {
+            return "";
+        }
+        URL resource = GuiDisplayUtil.class.getClassLoader().getResource(image);
+        return resource == null ? "" : resource.toString();
     }
 
     private static String getTypes(CardView card) {

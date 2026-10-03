@@ -119,10 +119,12 @@ public class CardArea extends JPanel implements CardEventProducer {
     }
 
     private void fixDialogSize() {
-        // fix panel size (must include scrolls)
+        // fix panel size (must include scrolls and scrollbar clearance)
         Dimension newSize = new Dimension(cardArea.getPreferredSize());
-        newSize.width += 20;
-        newSize.height += 20;
+        int minWidth = Math.max(480, (int) Math.round(cardDimension.width * 2.2));
+        int scrollBarPad = Math.max(20, GUISizeHelper.scrollBarSize);
+        newSize.width = Math.max(minWidth, newSize.width + scrollBarPad + 24);
+        newSize.height += scrollBarPad + 24;
         this.setPreferredSize(newSize);
         scrollPane.getHorizontalScrollBar().setUnitIncrement(GUISizeHelper.getCardsScrollbarUnitInc(cardDimension.width));
         scrollPane.getVerticalScrollBar().setUnitIncrement(GUISizeHelper.getCardsScrollbarUnitInc(cardDimension.height));
@@ -185,7 +187,7 @@ public class CardArea extends JPanel implements CardEventProducer {
             cardsAdded++;
         }
         cardArea.setPreferredSize(new Dimension(
-                cardDimension.width * showCards.size() + (cardsAdded * xOffsetBetweenCardsOrColumns),
+                cardDimension.width * showCards.size() + (Math.max(0, cardsAdded - 1) * xOffsetBetweenCardsOrColumns),
                 cardDimension.height + verticalCardOffset
         ));
     }
@@ -230,22 +232,28 @@ public class CardArea extends JPanel implements CardEventProducer {
 
     private void loadCardsMany(CardsView showCards, BigCard bigCard, UUID gameId) {
         int columns = 1;
+        int rows = 0;
         if (showCards != null && !showCards.isEmpty()) {
             Rectangle rectangle = new Rectangle(cardDimension.width, cardDimension.height);
-            int count = 0;
-            for (CardView card : getSortedList(showCards)) {
+            List<CardView> sortedCards = getSortedList(showCards);
+            for (int i = 0; i < sortedCards.size(); i++) {
+                CardView card = sortedCards.get(i);
                 addCard(card, bigCard, gameId, rectangle);
-                if (count >= MAX_CARDS_PER_COLUMN) {
-                    rectangle.translate(cardDimension.width + xOffsetBetweenCardsOrColumns, -(MAX_CARDS_PER_COLUMN * verticalCardOffset));
+                int cardsInColumn = (i % MAX_CARDS_PER_COLUMN) + 1;
+                rows = Math.max(rows, cardsInColumn);
+                if (cardsInColumn == MAX_CARDS_PER_COLUMN && i + 1 < sortedCards.size()) {
+                    rectangle.setLocation(rectangle.x + cardDimension.width + xOffsetBetweenCardsOrColumns, 0);
                     columns++;
-                    count = 0;
-                } else {
+                } else if (i + 1 < sortedCards.size()) {
                     rectangle.translate(0, verticalCardOffset);
-                    count++;
                 }
             }
         }
-        cardArea.setPreferredSize(new Dimension(cardDimension.width * columns + xOffsetBetweenCardsOrColumns * (columns - 1), cardDimension.height + (MAX_CARDS_PER_COLUMN * verticalCardOffset)));
+        int extraBottomPadding = Math.max(24, verticalCardOffset);
+        cardArea.setPreferredSize(new Dimension(
+                cardDimension.width * columns + xOffsetBetweenCardsOrColumns * (columns - 1),
+                cardDimension.height + (Math.max(0, rows - 1) * verticalCardOffset) + extraBottomPadding
+        ));
     }
 
     public boolean isReloaded() {
@@ -293,6 +301,27 @@ public class CardArea extends JPanel implements CardEventProducer {
 
     public void clearCardEventListeners() {
         cardEventSource.clearListeners();
+    }
+
+    public Map<UUID, MageCard> getMageCardsForUpdate() {
+        Map<UUID, MageCard> result = new LinkedHashMap<>();
+        for (Component component : cardArea.getComponents()) {
+            if (component instanceof MageCard) {
+                MageCard mageCard = (MageCard) component;
+                result.put(mageCard.getOriginal().getId(), mageCard);
+            }
+        }
+        return result;
+    }
+
+    public int getNumberOfCards() {
+        int count = 0;
+        for (Component component : cardArea.getComponents()) {
+            if (component instanceof MageCard) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public void setCustomRenderMode(int customRenderMode) {

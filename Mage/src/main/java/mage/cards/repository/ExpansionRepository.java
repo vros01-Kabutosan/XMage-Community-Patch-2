@@ -206,6 +206,10 @@ public enum ExpansionRepository {
     }
 
     public List<ExpansionInfo> getAll() {
+        if (expansionDao == null) {
+            logger.warn("Expansion repository is not initialized; returning no expansions");
+            return Collections.emptyList();
+        }
         try {
             QueryBuilder<ExpansionInfo, Object> qb = expansionDao.queryBuilder();
             qb.orderBy("releaseDate", true);

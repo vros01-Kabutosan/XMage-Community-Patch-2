@@ -2,6 +2,7 @@ package mage.player.ai;
 
 import mage.MageObject;
 import mage.abilities.Ability;
+import mage.abilities.Mode;
 import mage.abilities.ActivatedAbility;
 import mage.abilities.TriggeredAbility;
 import mage.abilities.common.PassAbility;
@@ -9,6 +10,7 @@ import mage.abilities.costs.mana.ManaCost;
 import mage.abilities.costs.mana.ManaCostsImpl;
 import mage.abilities.costs.mana.VariableManaCost;
 import mage.abilities.effects.Effect;
+import mage.abilities.effects.common.SacrificeAllEffect;
 import mage.game.Game;
 import mage.game.combat.Combat;
 import mage.game.events.GameEvent;
@@ -33,6 +35,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
     private static final Logger logger = Logger.getLogger(SimulatedPlayer2.class);
 
     private static final boolean AI_SIMULATE_ALL_BAD_AND_GOOD_TARGETS = false; // TODO: enable and do performance test (it's increase calculations by x2, but is it useful?)
+    // This bounds only the AI's internal combat search. Real combat rules and
+    // declarations remain unchanged.
+    private static final int MAX_COMBAT_SIMULATIONS = 4096;
 
     // warning, simulated player do not restore own data by game rollback
     private final boolean isSimulatedPlayer;
@@ -77,6 +82,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         allActions = new ConcurrentLinkedQueue<>();
         Game sim = game.createSimulationForAI();
         simulateOptions(sim);
+        if (Thread.currentThread().isInterrupted()) {
+            return Collections.singletonList(new PassAbility());
+        }
 
         // possible actions
         List<Ability> list = new ArrayList<>(allActions);
@@ -105,18 +113,81 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         return list;
     }
 
+
+    /**
+     * Return one already-targeted legal action without constructing the full
+     * priority list. Used only when bounded search is interrupted.
+     */
+    public Ability getFastFallbackAction(Game game) {
+        Game sim = game.createSimulationForAI();
+        List<ActivatedAbility> playables = sim.getPlayer(playerId).getPlayable(sim, isSimulatedPlayer);
+        for (ActivatedAbility ability : playables) {
+            if (Thread.currentThread().isInterrupted() || ability.isManaAbility()) {
+                continue;
+            }
+            List<Ability> options = sim.getPlayer(playerId).getPlayableOptions(ability, sim);
+            options = optimizeOptions(sim, options, ability);
+            options.removeIf(option -> hasDeadModalMode(option, sim));
+            if (!options.isEmpty()) {
+                return options.get(0);
+            }
+            if (ability.getTargets().isEmpty()) {
+                return ability;
+            }
+        }
+        return new PassAbility();
+    }
+
+    /**
+     * Modal effects such as Sheoldred's Edict may be legally cast with a mode
+     * that has no affected permanent. That is correct rules behavior, but it
+     * is a poor emergency AI action. Remove only those no-op mode choices from
+     * the timeout fallback; normal player choices and full search are untouched.
+     */
+    private boolean hasDeadModalMode(Ability ability, Game game) {
+        if (!ability.isModal() || ability.getModes().getSelectedModes().isEmpty()) {
+            return false;
+        }
+        for (UUID modeId : ability.getModes().getSelectedModes()) {
+            Mode mode = ability.getModes().get(modeId);
+            if (mode == null) {
+                continue;
+            }
+            for (Effect effect : mode.getEffects()) {
+                if (effect instanceof SacrificeAllEffect
+                        && !((SacrificeAllEffect) effect).hasEligiblePermanent(game, ability)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private void simulateOptions(Game game) {
         List<ActivatedAbility> playables = game.getPlayer(playerId).getPlayable(game, isSimulatedPlayer);
         for (ActivatedAbility ability : playables) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             if (ability.isManaAbility()) {
                 continue;
             }
             List<Ability> options = game.getPlayer(playerId).getPlayableOptions(ability, game);
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             options = optimizeOptions(game, options, ability);
+            // Avoid selecting a modal line with no legal object to affect.
+            options.removeIf(option -> hasDeadModalMode(option, game));
             if (options.isEmpty()) {
-                allActions.add(ability);
+                if (!ability.isModal()) {
+                    allActions.add(ability);
+                }
             } else {
                 for (Ability option : options) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        return;
+                    }
                     allActions.add(option);
                 }
             }
@@ -141,6 +212,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
                 int xInstancesCount = variableManaCost.getXInstancesCount();
 
                 for (int mana = variableManaCost.getMinX(); mana <= numAvailable; mana++) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        break;
+                    }
                     if (mana % xInstancesCount == 0) { // use only values dependant from multiplier
                         // find possible X value to pay
                         int xAnnounceValue = mana / xInstancesCount;
@@ -178,9 +252,11 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
 
         // remove invalid targets
         // TODO: is it useless cause it already filtered before?
-        options.removeIf(option -> !option.getTargets().isChosen(game));
+        options.removeIf(option -> option == null || option.getTargets() == null || !option.getTargets().isChosen(game));
 
-        if (AI_SIMULATE_ALL_BAD_AND_GOOD_TARGETS) {
+        // Small option sets are cheap to search and may contain tactical
+        // choices that do not match the effect's coarse good/bad outcome.
+        if (AI_SIMULATE_ALL_BAD_AND_GOOD_TARGETS || options.size() <= 12) {
             return options;
         }
 
@@ -191,6 +267,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
 
         // TODO: add custom outcome from ability?
         for (Effect effect : ability.getEffects()) {
+            if (effect == null || effect.getOutcome() == null) {
+                continue;
+            }
             if (effect.getOutcome().isGood()) {
                 bad = false;
             } else {
@@ -239,18 +318,21 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
         //useful only for two player games - will only attack first opponent
         UUID defenderId = game.getOpponents(playerId, true).iterator().next();
         List<Permanent> attackersList = super.getAvailableAttackers(defenderId, game);
-        //use binary digits to calculate powerset of attackers
-        int powerElements = (int) Math.pow(2, attackersList.size());
-        StringBuilder binary = new StringBuilder();
-        for (int i = powerElements - 1; i >= 0; i--) {
-            Game sim = game.createSimulationForAI();
-            binary.setLength(0);
-            binary.append(Integer.toBinaryString(i));
-            while (binary.length() < attackersList.size()) {
-                binary.insert(0, '0');
+        // Use bit masks for the powerset. For large boards the full powerset
+        // is not tractable, so search a deterministic bounded prefix and keep
+        // the no-attack line as well. This does not restrict real combat.
+        int attackerCount = attackersList.size();
+        long totalCombinations = attackerCount < Long.SIZE ? 1L << attackerCount : Long.MAX_VALUE;
+        long combinationsToEvaluate = Math.min(totalCombinations, MAX_COMBAT_SIMULATIONS);
+        long firstMask = totalCombinations == Long.MAX_VALUE ? Long.MAX_VALUE : totalCombinations - 1;
+        for (long offset = 0; offset < combinationsToEvaluate; offset++) {
+            if (Thread.currentThread().isInterrupted()) {
+                break;
             }
-            for (int j = 0; j < attackersList.size(); j++) {
-                if (binary.charAt(j) == '1') {
+            Game sim = game.createSimulationForAI();
+            long mask = firstMask - offset;
+            for (int j = 0; j < attackerCount; j++) {
+                if ((mask & (1L << j)) != 0) {
                     setStoredBookmark(sim.bookmarkState()); // makes it possible to UNDO a declared attacker with costs from e.g. Propaganda
                     if (!sim.getCombat().declareAttacker(attackersList.get(j).getId(), defenderId, playerId, sim)) {
                         sim.undo(playerId);
@@ -258,10 +340,16 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
                 }
             }
             if (engagements.put(sim.getCombat().getValue().hashCode(), sim.getCombat()) != null) {
-                logger.debug("simulating -- found redundant attack combination");
-            } else {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("simulating -- found redundant attack combination");
+                }
+            } else if (logger.isDebugEnabled()) {
                 logger.debug("simulating -- attack:" + sim.getCombat().getGroups().size());
             }
+        }
+        if (combinationsToEvaluate < totalCombinations && !Thread.currentThread().isInterrupted()) {
+            Game noAttackSim = game.createSimulationForAI();
+            engagements.put(noAttackSim.getCombat().getValue().hashCode(), noAttackSim.getCombat());
         }
         List list = new ArrayList<>(engagements.values());
         Collections.sort(list, new Comparator<Combat>() {
@@ -292,20 +380,33 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
     }
 
     protected void addBlocker(Game game, List<Permanent> blockers, Map<Integer, Combat> engagements) {
+        if (Thread.currentThread().isInterrupted()) {
+            return;
+        }
+        if (engagements.size() >= MAX_COMBAT_SIMULATIONS) {
+            return;
+        }
         if (blockers.isEmpty()) {
             return;
         }
         int numGroups = game.getCombat().getGroups().size();
         //try to block each attacker with each potential blocker
         Permanent blocker = blockers.get(0);
-        logger.debug("simulating -- block:" + blocker);
+        if (logger.isDebugEnabled()) {
+            logger.debug("simulating -- block:" + blocker);
+        }
         List<Permanent> remaining = remove(blockers, blocker);
         for (int i = 0; i < numGroups; i++) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             if (game.getCombat().getGroups().get(i).canBlock(blocker, game)) {
                 Game sim = game.createSimulationForAI();
                 sim.getCombat().getGroups().get(i).addBlocker(blocker.getId(), playerId, sim);
                 if (engagements.put(sim.getCombat().getValue().hashCode(), sim.getCombat()) != null) {
-                    logger.debug("simulating -- found redundant block combination");
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("simulating -- found redundant block combination");
+                    }
                 }
                 addBlocker(sim, remaining, engagements);  // and recurse minus the used blocker
             }
@@ -336,6 +437,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
             }
             logger.debug("simulating -- triggered ability - adding children:" + options.size());
             for (Ability option : options) {
+                if (Thread.currentThread().isInterrupted()) {
+                    return true;
+                }
                 addAbilityNode(parent, option, depth, game);
             }
         }
@@ -343,6 +447,9 @@ public final class SimulatedPlayer2 extends ComputerPlayer {
     }
 
     protected void addAbilityNode(SimulationNode2 parent, Ability ability, int depth, Game game) {
+        if (Thread.currentThread().isInterrupted()) {
+            return;
+        }
         Game sim = game.createSimulationForAI();
         sim.getStack().push(sim, new StackAbility(ability, playerId));
         if (ability.activate(sim, false) && ability.isUsesStack()) {

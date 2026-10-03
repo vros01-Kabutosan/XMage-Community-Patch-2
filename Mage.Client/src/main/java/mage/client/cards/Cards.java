@@ -10,8 +10,11 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.swing.BorderFactory;
@@ -20,6 +23,7 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
+import mage.abilities.icon.CardIcon;
 import mage.abilities.icon.CardIconRenderSettings;
 import mage.abilities.icon.CardIconType;
 import mage.cards.MageCard;
@@ -61,12 +65,6 @@ implements CardEventProducer {
 
     public void setVerticalStackLayout(boolean enabled) {
         this.verticalStackLayout = enabled;
-        for (MageCard mageCard : this.cards.values()) {
-            mageCard.setCardContainerRef((Container)(enabled ? this : this.cardArea));
-        }
-        for (MageCard mageCard : this.cards.values()) {
-            mageCard.setCardContainerRef((Container)(enabled ? this : this.cardArea));
-        }
         for (MageCard mageCard : this.cards.values()) {
             mageCard.setCardContainerRef((Container)(enabled ? this : this.cardArea));
         }
@@ -183,16 +181,17 @@ implements CardEventProducer {
                 this.cardArea.remove(comp);
             }
         }
-        ArrayList<CardView> orderedList = new ArrayList<CardView>();
-        ArrayList<UUID> arrayList = verticalStackOrder = this.verticalStackLayout ? new ArrayList<UUID>() : null;
+        verticalStackOrder = this.verticalStackLayout ? new ArrayList<UUID>() : null;
+        ArrayList<CardView> orderedList = null;
+        Iterable<CardView> orderedCards;
         if (revertOrder && !this.verticalStackLayout) {
-            for (CardView card : cardsView.values()) {
-                orderedList.add(0, card);
-            }
+            orderedList = new ArrayList<CardView>(cardsView.values());
+            Collections.reverse(orderedList);
+            orderedCards = orderedList;
         } else {
-            orderedList.addAll(cardsView.values());
+            orderedCards = cardsView.values();
         }
-        for (CardView card : orderedList) {
+        for (CardView card : orderedCards) {
             if (this.verticalStackLayout && card.getCardIcons() != null) {
                 card.getCardIcons().removeIf(icon -> icon.getIconType() == CardIconType.OTHER_HAS_TARGETS);
             }
@@ -221,8 +220,12 @@ implements CardEventProducer {
             if (!this.cards.containsKey(card.getId())) {
                 this.addCard(card, bigCard, gameId);
                 changed = true;
+            } else {
+                MageCard mageCard = this.cards.get(card.getId());
+                if (!this.cardViewEquals(mageCard.getOriginal(), card)) {
+                    mageCard.update(card);
+                }
             }
-            this.cards.get(card.getId()).update(card);
         }
         if (verticalStackOrder != null) {
             LinkedHashMap<UUID, MageCard> reorderedCards = new LinkedHashMap<UUID, MageCard>();
@@ -238,14 +241,16 @@ implements CardEventProducer {
             this.cards.putAll(reorderedCards);
         }
         if (changed) {
-            this.layoutCards();
+            if (!this.verticalStackLayout) {
+                this.layoutCards();
+            }
+            this.sizeCards(this.getCardDimension());
+            this.revalidate();
+            this.repaint();
         }
-        if (!this.isVisibleIfEmpty) {
+        if (!this.isVisibleIfEmpty && this.cardArea.isVisible() != !this.cards.isEmpty()) {
             this.cardArea.setVisible(!this.cards.isEmpty());
         }
-        this.sizeCards(this.getCardDimension());
-        this.revalidate();
-        this.repaint();
         if (changed && moveScrollbar) {
             SwingUtilities.invokeLater(() -> {
                 if (this.jScrollPane1 != null) {
@@ -326,12 +331,47 @@ implements CardEventProducer {
         newCard.setCardLocation(dx += newCard.getCardLocation().getCardWidth() + MageActionCallback.getHandOrStackBetweenGapX(newCard.getZone()), MageActionCallback.getHandOrStackMargins(newCard.getZone()).getTop());
     }
 
+    private boolean cardViewEquals(CardView oldCard, CardView newCard) {
+        if (!CardView.cardViewEquals(oldCard, newCard)) {
+            return false;
+        }
+        if (oldCard.isChoosable() != newCard.isChoosable()
+                || oldCard.isSelected() != newCard.isSelected()
+                || oldCard.isPlayable() != newCard.isPlayable()
+                || oldCard.isTransformed() != newCard.isTransformed()
+                || oldCard.isAbility() != newCard.isAbility()
+                || oldCard.getAbilityType() != newCard.getAbilityType()
+                || oldCard.isCanAttack() != newCard.isCanAttack()
+                || oldCard.isCanBlock() != newCard.isCanBlock()
+                || !java.util.Objects.equals(oldCard.getTargets(), newCard.getTargets())
+                || !java.util.Objects.equals(oldCard.getPlayableStats().getPlayableAbilityIds(), newCard.getPlayableStats().getPlayableAbilityIds())
+                || !java.util.Objects.equals(oldCard.getPlayableStats().getPlayableAbilityNames(), newCard.getPlayableStats().getPlayableAbilityNames())) {
+            return false;
+        }
+        List<CardIcon> oldIcons = oldCard.getCardIcons();
+        List<CardIcon> newIcons = newCard.getCardIcons();
+        if (oldIcons.size() != newIcons.size()) {
+            return false;
+        }
+        for (int i = 0; i < oldIcons.size(); i++) {
+            CardIcon oldIcon = oldIcons.get(i);
+            CardIcon newIcon = newIcons.get(i);
+            if (oldIcon.getIconType() != newIcon.getIconType()
+                    || !java.util.Objects.equals(oldIcon.getText(), newIcon.getText())
+                    || !java.util.Objects.equals(oldIcon.getHint(), newIcon.getHint())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private boolean removeOutdatedCards(CardsView cardsView) {
         boolean changed = false;
         this.cards.keySet().removeIf(id -> !cardsView.containsKey(id));
+        HashSet<MageCard> cardsToKeep = new HashSet<MageCard>(this.cards.values());
         for (Component comp : this.cardArea.getComponents()) {
             if (comp instanceof MageCard) {
-                if (this.cards.containsValue(comp)) continue;
+                if (cardsToKeep.contains((MageCard) comp)) continue;
                 this.cardArea.remove(comp);
                 changed = true;
                 continue;

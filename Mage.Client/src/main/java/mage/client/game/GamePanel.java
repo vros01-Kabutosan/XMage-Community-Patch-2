@@ -48,6 +48,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -184,6 +185,7 @@ extends JPanel {
     private static final int CARD_INFO_WINDOW_CLOSE_DELAY_MS = 250;
     private final Map<String, CardsView> graveyards = new HashMap<String, CardsView>();
     private final Map<String, CardInfoWindowDialog> graveyardWindows = new HashMap<String, CardInfoWindowDialog>();
+    private final Map<String, String> graveyardWindowFingerprints = new HashMap<String, String>();
     private final Map<String, CardInfoWindowDialog> companion = new HashMap<String, CardInfoWindowDialog>();
     private final Map<String, CardsView> sideboards = new HashMap<String, CardsView>();
     private final Map<String, CardInfoWindowDialog> sideboardWindows = new HashMap<String, CardInfoWindowDialog>();
@@ -207,6 +209,32 @@ extends JPanel {
     private static final String XCP_UI_RESIZE_V1_3 = "XCP_UI_RESIZE_V1_3";
     private final Map<String, HoverButton> phaseButtons = new LinkedHashMap<String, HoverButton>();
     private final Map<String, JLabel> phaseSummaryCells = new LinkedHashMap<String, JLabel>();
+    // PHASE-FUSION v1.1: barra de fases (letras sobre la mano) ->
+    // atajo nativo equivalente. Las 12 fases son clickeables; cada una
+    // dispara el salto nativo mas cercano (no existe "ir a fase X"
+    // exacta en el engine, por lo que es una aproximacion):
+    //   fases de inicio de turno (Untap/Upkeep/Draw) -> siguiente turno
+    //   fases principales (Main1/Main2)               -> siguiente fase principal
+    //   combate (Combat_*)                            -> fin de turno
+    //   fin de turno (Cleanup)                        -> fin de turno
+    //   Next_Turn                                     -> siguiente turno
+    private static final Map<String, String> PHASE_FUSION_SKIP_KEYS;
+    static {
+        Map<String, String> phaseFusionSkipKeys = new LinkedHashMap<String, String>();
+        phaseFusionSkipKeys.put("Untap", "controlNextTurn");
+        phaseFusionSkipKeys.put("Upkeep", "controlNextTurn");
+        phaseFusionSkipKeys.put("Draw", "controlNextTurn");
+        phaseFusionSkipKeys.put("Main1", "controlMainStep");
+        phaseFusionSkipKeys.put("Combat_Start", "controlEndStep");
+        phaseFusionSkipKeys.put("Combat_Attack", "controlEndStep");
+        phaseFusionSkipKeys.put("Combat_Block", "controlEndStep");
+        phaseFusionSkipKeys.put("Combat_Damage", "controlEndStep");
+        phaseFusionSkipKeys.put("Combat_End", "controlEndStep");
+        phaseFusionSkipKeys.put("Main2", "controlMainStep");
+        phaseFusionSkipKeys.put("Cleanup", "controlEndStep");
+        phaseFusionSkipKeys.put("Next_Turn", "controlNextTurn");
+        PHASE_FUSION_SKIP_KEYS = Collections.unmodifiableMap(phaseFusionSkipKeys);
+    }
     private final Map<String, MageSplitter> splitters = new LinkedHashMap<String, MageSplitter>();
     private boolean isSplittersFullyRestored = false;
     private MageDialogState choiceWindowState;
@@ -216,8 +244,9 @@ extends JPanel {
     private JPopupMenu popupMenuTriggerOrder;
     private final LastGameData lastGameData = new LastGameData();
     private static final int BORDER_SIZE = 2;
-    private static final Border BORDER_ACTIVE = new LineBorder(Color.orange, 2);
+    private static final Border BORDER_ACTIVE = new LineBorder(Color.red, 2);
     private static final Border BORDER_NON_ACTIVE = new EmptyBorder(2, 2, 2, 2);
+    private static final Color SKIP_SELECTED_TINT = new Color(255, 0, 0, 90); // tint rojo para skip buttons seleccionados
     private static final int holdPriorityMask = System.getProperty("os.name").contains("Mac OS X") ? 256 : 128;
     private boolean holdingPriority;
     private AbilityPicker abilityPicker;
@@ -231,6 +260,7 @@ extends JPanel {
     private KeyboundButton btnSkipToYourTurn;
     private KeyboundButton btnSkipToEndStepBeforeYourTurn;
     private JButton btnConcede;
+    private JButton btnExitMatch;
     private JButton btnSwitchHands;
     private JButton btnNextPlay;
     private JButton btnPlay;
@@ -273,6 +303,14 @@ extends JPanel {
     private Point floatingStackResizeOrigin;
     private Dimension floatingStackResizeStartSize;
     private boolean floatingStackHadObjects = false;
+    private Timer floatingStackHideTimer;
+    private String floatingStackLastOrderLabel = "";
+    private int floatingStackLastObjectCount = -1;
+    private String floatingStackLastTypeLabel = "";
+    private String floatingStackLastAudit;
+    private int floatingStackLastAuditSignature;
+    private boolean floatingStackAuditSignatureKnown;
+    private PhaseStep lastRenderedStep;
     private boolean floatingStackRestoringBounds = false;
     private static final String XCP_STACK_PREF_NODE = "xcpFloatingStackV5";
     private static final String XCP_STACK_X = "x";
@@ -308,12 +346,13 @@ extends JPanel {
         for (PlayAreaPanel playArea : this.players.values()) {
             BattlefieldPanel battlefield = playArea.getBattlefieldPanel();
             battlefield.updateSize();
-            this.xcpNormalizeBattlefieldViewport(battlefield);
-            battlefield.revalidate();
+            if (this.xcpNormalizeBattlefieldViewport(battlefield)) {
+                battlefield.revalidate();
+            }
         }
     }
 
-    private void xcpNormalizeBattlefieldViewport(BattlefieldPanel battlefield) {
+    private boolean xcpNormalizeBattlefieldViewport(BattlefieldPanel battlefield) {
         JLayeredPane mainPanel = battlefield.getMainPanel();
         Dimension preferred = mainPanel.getPreferredSize();
         int maxBottom = 0;
@@ -325,7 +364,9 @@ extends JPanel {
         int normalizedHeight = Math.max(1, maxBottom);
         if (preferred.height > normalizedHeight) {
             mainPanel.setPreferredSize(new Dimension(preferred.width, normalizedHeight));
+            return true;
         }
+        return false;
     }
 
     public LastGameData getLastGameData() {
@@ -356,7 +397,30 @@ extends JPanel {
         pnlCommandsFeedbackAndHand.add((Component)pnlPhaseAndHand, "Center");
         JPanel pnlCommandsSkipAndStack = new JPanel(new BorderLayout());
         pnlCommandsSkipAndStack.setOpaque(false);
-        pnlCommandsSkipAndStack.add((Component)this.pnlShortCuts, "South");
+        // PHASE-FUSION v1: margen inferior = fila de atajos + fila separada con Concede centrado.
+        JPanel pnlPhaseFusionBottom = new JPanel(new GridBagLayout());
+        pnlPhaseFusionBottom.setOpaque(false);
+        GridBagConstraints gbcPhaseFusionShortCuts = new GridBagConstraints();
+        gbcPhaseFusionShortCuts.gridx = 0;
+        gbcPhaseFusionShortCuts.gridy = 0;
+        gbcPhaseFusionShortCuts.fill = GridBagConstraints.HORIZONTAL;
+        gbcPhaseFusionShortCuts.weightx = 1.0;
+        pnlPhaseFusionBottom.add((Component)this.pnlShortCuts, gbcPhaseFusionShortCuts);
+        JPanel pnlConcedeCenter = new JPanel(new GridBagLayout());
+        pnlConcedeCenter.setOpaque(false);
+        GridBagConstraints gbcPhaseFusionConcedeRow = new GridBagConstraints();
+        gbcPhaseFusionConcedeRow.gridx = 0;
+        gbcPhaseFusionConcedeRow.gridy = 1;
+        gbcPhaseFusionConcedeRow.fill = GridBagConstraints.HORIZONTAL;
+        gbcPhaseFusionConcedeRow.weightx = 1.0;
+        pnlPhaseFusionBottom.add((Component)pnlConcedeCenter, gbcPhaseFusionConcedeRow);
+        GridBagConstraints gbcPhaseFusionConcede = new GridBagConstraints();
+        gbcPhaseFusionConcede.gridx = 0;
+        gbcPhaseFusionConcede.gridy = 0;
+        gbcPhaseFusionConcede.weightx = 1.0;
+        gbcPhaseFusionConcede.anchor = GridBagConstraints.CENTER;
+        pnlConcedeCenter.add((Component)this.btnConcede, gbcPhaseFusionConcede);
+        pnlCommandsSkipAndStack.add((Component)pnlPhaseFusionBottom, "South");
         pnlCommandsFeedbackAndHand.setMinimumSize(new Dimension(0, 0));
         pnlCommandsSkipAndStack.setMinimumSize(new Dimension(0, 0));
         pnlCommandsRoot.add((Component)pnlCommandsFeedbackAndHand, "Center");
@@ -367,6 +431,8 @@ extends JPanel {
         }
         this.pnlShortCuts.removeAll();
         this.pnlShortCuts.setLayout(null);
+        // Keep the match-exit control first so it remains visible on compact screens.
+        this.pnlShortCuts.add(this.btnExitMatch);
         this.pnlShortCuts.add(this.btnSkipToNextTurn);
         this.pnlShortCuts.add(this.btnSkipToEndTurn);
         this.pnlShortCuts.add(this.btnSkipToNextMain);
@@ -376,8 +442,13 @@ extends JPanel {
         this.pnlShortCuts.add(this.btnCancelSkip);
         this.pnlShortCuts.add(this.txtHoldPriority);
         this.pnlShortCuts.add(this.btnSwitchHands);
-        this.pnlShortCuts.add(this.btnConcede);
+        // PHASE-FUSION v1: btnConcede fue reubicado a pnlConcedeCenter (fila centrada del margen inferior).
         this.pnlShortCuts.add(this.btnStopWatching);
+        // PHASE-FUSION v1: los botones "F" de salto de fase quedan ocultos (su
+        // funcionalidad se migra a la barra de fases). No se eliminan: los
+        // listeners, KeyStrokes y estados siguen vivos para que los atajos de
+        // teclado nativos (MageFrame) continuen operando sin regresiones.
+        this.applyPhaseFusionHiddenShortcuts();
         this.pickNumber = new PickNumberDialog();
         MageFrame.getDesktop().add((Component)this.pickNumber, this.pickNumber.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         this.pickMultiNumber = new PickMultiNumberDialog();
@@ -501,6 +572,7 @@ extends JPanel {
         this.pendingCardInfoWindowClosures.values().forEach(Timer::stop);
         this.pendingCardInfoWindowClosures.clear();
         this.retainedReveals.clear();
+        this.graveyardWindowFingerprints.clear();
         this.activeSpellRevealName = null;
         this.handContainer.cleanUp();
         this.disposeFloatingStackWindow();
@@ -510,6 +582,7 @@ extends JPanel {
         }
         this.players.clear();
         this.playersWhoLeft.clear();
+        this.lastRenderedStep = null;
         this.uninstallComponents();
         if (this.pickNumber != null) {
             this.pickNumber.removeDialog();
@@ -661,6 +734,11 @@ extends JPanel {
         this.setSkipButtonSize(this.btnSkipToNextMain, guiScale, strictSize);
         this.setSkipButtonSize(this.btnSkipStack, guiScale, strictSize);
         this.setSkipButtonSize(this.btnConcede, guiScale, strictSize);
+        this.setSkipButtonSize(this.btnExitMatch, guiScale, strictSize);
+        int exitButtonWidth = GUISizeHelper.guiSizeScale(92, guiScale);
+        Dimension exitButtonSize = new Dimension(Math.max(strictSize.width, exitButtonWidth), strictSize.height);
+        this.btnExitMatch.setPreferredSize(exitButtonSize);
+        this.btnExitMatch.setMinimumSize(exitButtonSize);
         this.setSkipButtonSize(this.btnToggleMacro, guiScale, strictSize);
         this.setSkipButtonSize(this.btnSwitchHands, guiScale, strictSize);
         this.setSkipButtonSize(this.btnStopWatching, guiScale, strictSize);
@@ -886,6 +964,7 @@ extends JPanel {
         this.pickMultiNumber.init(gameId, this.bigCard);
         this.abilityPicker.init(gameId, this.bigCard);
         this.btnConcede.setVisible(true);
+        this.btnExitMatch.setVisible(true);
         this.btnStopWatching.setVisible(false);
         this.btnSwitchHands.setVisible(false);
         this.btnCancelSkip.setVisible(true);
@@ -898,6 +977,9 @@ extends JPanel {
         this.btnSkipStack.setVisible(true);
         this.btnSkipToYourTurn.setVisible(true);
         this.btnSkipToEndStepBeforeYourTurn.setVisible(true);
+        // PHASE-FUSION v1: mantener los botones "F" ocultos tras el re-encendido
+        // de visibilidad al iniciar el juego.
+        this.applyPhaseFusionHiddenShortcuts();
         this.pnlReplay.setVisible(false);
         this.gameChatPanel.clear();
         SessionHandler.getGameChatId(gameId).ifPresent(uuid -> this.gameChatPanel.connect((UUID)uuid));
@@ -922,6 +1004,7 @@ extends JPanel {
         this.feedbackPanel.init(gameId, this.bigCard);
         this.feedbackPanel.clear();
         this.btnConcede.setVisible(false);
+        this.btnExitMatch.setVisible(false);
         this.btnStopWatching.setVisible(true);
         this.btnSwitchHands.setVisible(false);
         this.chosenHandKey = "";
@@ -953,6 +1036,7 @@ extends JPanel {
         this.feedbackPanel.init(gameId, this.bigCard);
         this.feedbackPanel.clear();
         this.btnConcede.setVisible(false);
+        this.btnExitMatch.setVisible(false);
         this.btnSkipToNextTurn.setVisible(false);
         this.btnSwitchHands.setVisible(false);
         this.btnStopWatching.setVisible(false);
@@ -987,6 +1071,7 @@ extends JPanel {
         int playerNum;
         this.players.clear();
         this.playersWhoLeft.clear();
+        this.lastRenderedStep = null;
         this.pnlBattlefield.removeAll();
         int numSeats = game.getPlayers().size();
         int numColumns = (numSeats + 1) / 2;
@@ -1086,9 +1171,9 @@ extends JPanel {
 
     public synchronized void updateGame() {
         if (this.playerId == null && this.lastGameData.game.getWatchedHands().isEmpty()) {
-            this.handContainer.setVisible(false);
+            setVisibleIfChanged(this.handContainer, false);
         } else {
-            this.handContainer.setVisible(true);
+            setVisibleIfChanged(this.handContainer, true);
             this.handCards.clear();
             if (!this.lastGameData.game.getWatchedHands().isEmpty()) {
                 for (Map.Entry hand : this.lastGameData.game.getWatchedHands().entrySet()) {
@@ -1114,7 +1199,7 @@ extends JPanel {
             this.hideAll();
             if (this.playerId != null) {
                 boolean change;
-                this.btnSwitchHands.setVisible(this.handCards.size() > 1);
+                setVisibleIfChanged(this.btnSwitchHands, this.handCards.size() > 1);
                 boolean bl = change = this.handCardsOfOpponentAvailable == this.lastGameData.game.getOpponentHands().isEmpty();
                 if (change) {
                     boolean bl2 = this.handCardsOfOpponentAvailable = !this.handCardsOfOpponentAvailable;
@@ -1125,24 +1210,26 @@ extends JPanel {
                     }
                 }
             } else {
-                this.btnSwitchHands.setVisible(!this.handCards.isEmpty());
+                setVisibleIfChanged(this.btnSwitchHands, !this.handCards.isEmpty());
             }
         }
-        if (this.lastGameData.game.getPhase() != null) {
-            this.txtPhase.setText(this.lastGameData.game.getPhase().toString());
-        } else {
-            this.txtPhase.setText("");
-        }
-        if (this.lastGameData.game.getStep() != null) {
-            this.updateActivePhase(this.lastGameData.game.getStep());
-            this.txtStep.setText(this.lastGameData.game.getStep().toString());
+        String phaseText = this.lastGameData.game.getPhase() == null ? "" : this.lastGameData.game.getPhase().toString();
+        setLabelTextIfChanged(this.txtPhase, phaseText);
+        PhaseStep currentStep = this.lastGameData.game.getStep();
+        if (currentStep != null) {
+            if (currentStep != this.lastRenderedStep) {
+                this.updateActivePhase(currentStep);
+                this.lastRenderedStep = currentStep;
+            }
+            setLabelTextIfChanged(this.txtStep, currentStep.toString());
         } else {
             logger.debug((Object)"Step is empty");
-            this.txtStep.setText("");
+            setLabelTextIfChanged(this.txtStep, "");
+            this.lastRenderedStep = null;
         }
-        this.txtActivePlayer.setText(this.lastGameData.game.getActivePlayerName());
-        this.txtPriority.setText(this.lastGameData.game.getPriorityPlayerName());
-        this.txtTurn.setText(Integer.toString(this.lastGameData.game.getTurn()));
+        setLabelTextIfChanged(this.txtActivePlayer, this.lastGameData.game.getActivePlayerName());
+        setLabelTextIfChanged(this.txtPriority, this.lastGameData.game.getPriorityPlayerName());
+        setLabelTextIfChanged(this.txtTurn, Integer.toString(this.lastGameData.game.getTurn()));
         List<UUID> possibleAttackers = new ArrayList<>();
         if (this.lastGameData.options != null && this.lastGameData.options.containsKey("possibleAttackers") && this.lastGameData.options.get("possibleAttackers") instanceof List) {
             possibleAttackers.addAll((List<UUID>) this.lastGameData.options.get("possibleAttackers"));
@@ -1172,11 +1259,16 @@ extends JPanel {
                 }
                 this.graveyards.put(player.getName(), player.getGraveyard());
                 if (this.graveyardWindows.containsKey(player.getName())) {
-                    windowDialog2 = this.graveyardWindows.get(player.getName());
-                    if (windowDialog2.isClosed()) {
+                    CardInfoWindowDialog graveyardWindow = this.graveyardWindows.get(player.getName());
+                    if (graveyardWindow.isClosed()) {
                         this.graveyardWindows.remove(player.getName());
+                        this.graveyardWindowFingerprints.remove(player.getName());
                     } else {
-                        windowDialog2.loadCardsAndShow(player.getGraveyard(), this.bigCard, this.gameId, false);
+                        String fingerprint = getCardsFingerprint(player.getGraveyard());
+                        if (!fingerprint.equals(this.graveyardWindowFingerprints.get(player.getName()))) {
+                            graveyardWindow.loadCardsAndShow(player.getGraveyard(), this.bigCard, this.gameId, false);
+                            this.graveyardWindowFingerprints.put(player.getName(), fingerprint);
+                        }
                     }
                 }
                 this.sideboards.put(player.getName(), player.getSideboard());
@@ -1280,18 +1372,39 @@ extends JPanel {
     }
 
     private void updateSkipButtons() {
-        this.btnSkipToNextTurn.setToolTipText(this.skipButtons.turn.getTooltip());
-        this.btnSkipToEndTurn.setToolTipText(this.skipButtons.untilEndOfTurn.getTooltip());
-        this.btnSkipToNextMain.setToolTipText(this.skipButtons.untilNextMain.getTooltip());
-        this.btnSkipStack.setToolTipText(this.skipButtons.untilStackResolved.getTooltip());
-        this.btnSkipToYourTurn.setToolTipText(this.skipButtons.allTurns.getTooltip());
-        this.btnSkipToEndStepBeforeYourTurn.setToolTipText(this.skipButtons.untilUntilEndStepBeforeMyTurn.getTooltip());
+        setToolTipIfChanged(this.btnSkipToNextTurn, this.skipButtons.turn.getTooltip());
+        setToolTipIfChanged(this.btnSkipToEndTurn, this.skipButtons.untilEndOfTurn.getTooltip());
+        setToolTipIfChanged(this.btnSkipToNextMain, this.skipButtons.untilNextMain.getTooltip());
+        setToolTipIfChanged(this.btnSkipStack, this.skipButtons.untilStackResolved.getTooltip());
+        setToolTipIfChanged(this.btnSkipToYourTurn, this.skipButtons.allTurns.getTooltip());
+        setToolTipIfChanged(this.btnSkipToEndStepBeforeYourTurn, this.skipButtons.untilUntilEndStepBeforeMyTurn.getTooltip());
         this.btnSkipToNextTurn.setBorder(this.skipButtons.turn.getBorder());
         this.btnSkipToEndTurn.setBorder(this.skipButtons.untilEndOfTurn.getBorder());
         this.btnSkipToNextMain.setBorder(this.skipButtons.untilNextMain.getBorder());
         this.btnSkipStack.setBorder(this.skipButtons.untilStackResolved.getBorder());
         this.btnSkipToYourTurn.setBorder(this.skipButtons.allTurns.getBorder());
         this.btnSkipToEndStepBeforeYourTurn.setBorder(this.skipButtons.untilUntilEndStepBeforeMyTurn.getBorder());
+        // tint rojo en los skip buttons de "next turn" y "end step" cuando estan seleccionados
+        this.btnSkipToNextTurn.setTint(this.skipButtons.turn.isPressed(), SKIP_SELECTED_TINT);
+        this.btnSkipToEndTurn.setTint(this.skipButtons.untilEndOfTurn.isPressed(), SKIP_SELECTED_TINT);
+    }
+
+    private static void setLabelTextIfChanged(JLabel label, String text) {
+        if (!Objects.equals(label.getText(), text)) {
+            label.setText(text);
+        }
+    }
+
+    private static void setVisibleIfChanged(Component component, boolean visible) {
+        if (component.isVisible() != visible) {
+            component.setVisible(visible);
+        }
+    }
+
+    private static void setToolTipIfChanged(JComponent component, String tooltip) {
+        if (!Objects.equals(component.getToolTipText(), tooltip)) {
+            component.setToolTipText(tooltip);
+        }
     }
 
     public void setMenuStates(boolean manaPoolAutomatic, boolean manaPoolAutomaticRestricted, boolean useFirstManaAbility, boolean holdPriority) {
@@ -1591,6 +1704,16 @@ extends JPanel {
         this.floatingStackResizeOrigin = null;
         this.floatingStackResizeStartSize = null;
         this.floatingStackHadObjects = false;
+        if (this.floatingStackHideTimer != null) {
+            this.floatingStackHideTimer.stop();
+            this.floatingStackHideTimer = null;
+        }
+        this.floatingStackLastOrderLabel = "";
+        this.floatingStackLastObjectCount = -1;
+        this.floatingStackLastTypeLabel = "";
+        this.floatingStackLastAudit = null;
+        this.floatingStackLastAuditSignature = 0;
+        this.floatingStackAuditSignatureKnown = false;
     }
 
     private String getFloatingStackTypeLabel(CardView card) {
@@ -1641,27 +1764,63 @@ extends JPanel {
         }
         boolean bl = hasObjects = objectCount > 0;
         if (this.floatingStackFrame != null) {
-            if (this.floatingStackTitleLabel != null) {
-                this.floatingStackTitleLabel.setText("The Stack (" + objectCount + ")");
-                this.floatingStackTitleLabel.setToolTipText("The object marked 1st resolves first (" + objectCount + " object" + (objectCount == 1 ? "" : "s") + ")");
+            if (this.floatingStackTitleLabel != null && objectCount != this.floatingStackLastObjectCount) {
+                String title = "The Stack (" + objectCount + ")";
+                String titleTooltip = "The object marked 1st resolves first (" + objectCount + " object" + (objectCount == 1 ? "" : "s") + ")";
+                this.floatingStackTitleLabel.setText(title);
+                this.floatingStackTitleLabel.setToolTipText(titleTooltip);
+                this.floatingStackLastObjectCount = objectCount;
             }
             if (this.floatingStackTypeLabel != null) {
-                this.floatingStackTypeLabel.setText(type);
-                this.floatingStackTypeLabel.setVisible(!type.isEmpty());
+                if (!type.equals(this.floatingStackLastTypeLabel)) {
+                    this.floatingStackTypeLabel.setText(type);
+                    this.floatingStackLastTypeLabel = type;
+                }
+                boolean typeVisible = !type.isEmpty();
+                if (this.floatingStackTypeLabel.isVisible() != typeVisible) {
+                    this.floatingStackTypeLabel.setVisible(typeVisible);
+                }
             }
             if (this.floatingStackOrderLabel != null) {
-                this.floatingStackOrderLabel.setText(this.getFloatingStackOrderLabel(topStackObject));
-                this.floatingStackOrderLabel.setVisible(hasObjects);
-                this.floatingStackHeader.revalidate();
-                this.floatingStackHeader.repaint();
-                logger.info((Object)("Floating stack guide: text=" + this.floatingStackOrderLabel.getText() + " visible=" + this.floatingStackOrderLabel.isVisible()));
+                String orderLabel = this.getFloatingStackOrderLabel(topStackObject);
+                if (!orderLabel.equals(this.floatingStackLastOrderLabel)) {
+                    this.floatingStackOrderLabel.setText(orderLabel);
+                    this.floatingStackHeader.revalidate();
+                    this.floatingStackHeader.repaint();
+                    this.floatingStackLastOrderLabel = orderLabel;
+                    logger.debug((Object)("Floating stack guide: text=" + orderLabel + " visible=" + hasObjects));
+                }
+                if (this.floatingStackOrderLabel.isVisible() != hasObjects) {
+                    this.floatingStackOrderLabel.setVisible(hasObjects);
+                }
             }
-            if (hasObjects && !this.floatingStackHadObjects) {
-                this.floatingStackFrame.setVisible(true);
-                this.floatingStackFrame.toFront();
-            } else if (!hasObjects && this.floatingStackHadObjects) {
-                this.saveFloatingStackBounds();
-                this.floatingStackFrame.setVisible(false);
+            if (hasObjects) {
+                if (this.floatingStackHideTimer != null) {
+                    this.floatingStackHideTimer.stop();
+                    this.floatingStackHideTimer = null;
+                }
+                if (!this.floatingStackFrame.isVisible()) {
+                    this.floatingStackFrame.setVisible(true);
+                    this.floatingStackFrame.toFront();
+                }
+            } else if (this.floatingStackHadObjects) {
+                // Network updates can briefly report an empty stack between
+                // two resolution states. Delay hiding so the window does not
+                // disappear while known cards are still being refreshed.
+                if (this.floatingStackHideTimer == null) {
+                    this.floatingStackHideTimer = new Timer(600, event -> {
+                        if (this.floatingStackHideTimer != null) {
+                            this.floatingStackHideTimer.stop();
+                            this.floatingStackHideTimer = null;
+                        }
+                        if (this.floatingStackFrame != null && this.stackObjects.getNumberOfCards() == 0) {
+                            this.saveFloatingStackBounds();
+                            this.floatingStackFrame.setVisible(false);
+                        }
+                    });
+                    this.floatingStackHideTimer.setRepeats(false);
+                }
+                this.floatingStackHideTimer.restart();
             }
         }
         this.floatingStackHadObjects = hasObjects;
@@ -1669,8 +1828,22 @@ extends JPanel {
 
     private void displayStack(GameView game, BigCard bigCard, FeedbackPanel feedbackPanel, UUID gameId) {
         this.stackObjects.loadCards(game.getStack(), bigCard, gameId, false);
-        String stackAudit = game.getStack().values().stream().map(card -> card.getName() + "[" + card.getId() + "]").collect(Collectors.joining(" -> "));
-        logger.info((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
+        if (logger.isDebugEnabled()) {
+            int stackAuditSignature = 1;
+            for (CardView card : game.getStack().values()) {
+                stackAuditSignature = 31 * stackAuditSignature + Objects.hashCode(card.getId());
+                stackAuditSignature = 31 * stackAuditSignature + Objects.hashCode(card.getName());
+            }
+            if (!this.floatingStackAuditSignatureKnown || stackAuditSignature != this.floatingStackLastAuditSignature) {
+                String stackAudit = game.getStack().values().stream().map(card -> card.getName() + "[" + card.getId() + "]").collect(Collectors.joining(" -> "));
+                if (!stackAudit.equals(this.floatingStackLastAudit)) {
+                    logger.debug((Object)("Floating stack update: count=" + game.getStack().size() + " resolutionOrder=" + stackAudit));
+                    this.floatingStackLastAudit = stackAudit;
+                }
+                this.floatingStackLastAuditSignature = stackAuditSignature;
+                this.floatingStackAuditSignatureKnown = true;
+            }
+        }
         this.updateFloatingStackVisibility(game);
     }
 
@@ -1732,8 +1905,12 @@ extends JPanel {
         this.phaseButtons.forEach((phaseName, phaseButton) -> {
             if (phaseName.equals(currentPhaseName)) {
                 phaseButton.setAlignmentX(0.5f);
+                // highlight the active phase button in red
+                phaseButton.setActiveColor(new Color(220, 30, 30));
             } else {
                 phaseButton.setAlignmentX(0.0f);
+                // clear the highlight on all other phase buttons
+                phaseButton.setActiveColor(null);
             }
         });
         this.jPhases.invalidate();
@@ -1832,6 +2009,16 @@ extends JPanel {
         this.graveyardWindows.put(playerName, newGraveyard);
         MageFrame.getDesktop().add((Component)newGraveyard, newGraveyard.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         newGraveyard.loadCardsAndShow(this.graveyards.get(playerName), this.bigCard, this.gameId, false);
+        this.graveyardWindowFingerprints.put(playerName, getCardsFingerprint(this.graveyards.get(playerName)));
+
+    }
+
+    private String getCardsFingerprint(CardsView cards) {
+        StringBuilder fingerprint = new StringBuilder(cards.size() * 37);
+        for (UUID cardId : cards.keySet()) {
+            fingerprint.append(cardId).append(';');
+        }
+        return fingerprint.toString();
     }
 
     private void clearClosedCardHintsWindows() {
@@ -1889,11 +2076,15 @@ extends JPanel {
 
     private void showRevealed(GameView game) {
         Set<String> activeWindows = new HashSet<>();
-        Set<UUID> publicCardIds = collectPublicCardIds(game);
+        Set<UUID> publicCardIds = null;
         for (RevealedView revealView : game.getRevealed()) {
             String name = revealView.getName();
             this.cancelPendingCardInfoWindowClosure(this.revealed, name);
-            if (isSpellReveal(game, revealView)) {
+            boolean spellReveal = isSpellReveal(game, revealView);
+            if (spellReveal) {
+                if (publicCardIds == null) {
+                    publicCardIds = collectPublicCardIds(game);
+                }
                 if (!name.equals(this.activeSpellRevealName)) {
                     for (String previousName : new ArrayList<String>(this.retainedReveals.keySet())) {
                         if (!previousName.equals(name)) {
@@ -1926,6 +2117,9 @@ extends JPanel {
                 activeWindows.add(name);
                 this.handleGameInfoWindow(this.revealed, CardInfoWindowDialog.ShowType.REVEAL, name, (LinkedHashMap) revealView.getCards());
             }
+        }
+        if (publicCardIds == null && !this.retainedReveals.isEmpty()) {
+            publicCardIds = collectPublicCardIds(game);
         }
         // The server may omit the reveal entry after the discard resolves.
         // Keep only the still-private cards alive until each one becomes public.
@@ -2618,6 +2812,7 @@ extends JPanel {
         this.btnSkipToYourTurn = new KeyboundButton("controlYourTurn", displayButtonText);
         this.btnSkipToEndStepBeforeYourTurn = new KeyboundButton("controlPriorEnd", displayButtonText);
         this.btnConcede = new JButton();
+        this.btnExitMatch = new JButton("SALIR");
         this.btnSwitchHands = new JButton();
         this.btnStopWatching = new JButton();
         this.bigCard = new BigCard();
@@ -2844,6 +3039,14 @@ extends JPanel {
         this.btnConcede.setToolTipText("CONCEDE current game");
         this.btnConcede.setFocusable(false);
         this.btnConcede.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnConcedeActionPerformed(null)));
+        this.btnExitMatch.setToolTipText("Salir y cerrar el match actual");
+        this.btnExitMatch.setContentAreaFilled(false);
+        this.btnExitMatch.setBorderPainted(false);
+        this.btnExitMatch.setOpaque(false);
+        this.btnExitMatch.setMargin(new java.awt.Insets(2, 12, 2, 12));
+        this.btnExitMatch.setFont(this.btnExitMatch.getFont().deriveFont(Font.BOLD));
+        this.btnExitMatch.setFocusable(false);
+        this.btnExitMatch.addMouseListener(new FirstButtonMousePressedAction(e -> this.btnExitMatchActionPerformed(null)));
         this.updateSkipButtons();
         KeyStroke ks2 = PreferencesDialog.getCachedKeystroke("controlConfirm");
         this.getInputMap(c).put(ks2, "F2_PRESS");
@@ -2977,12 +3180,10 @@ extends JPanel {
         for (String name : phases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"}) {
             this.createPhaseButton(name, phasesMouseAdapter);
         }
+        // PHASE-FUSION v1.1: la barra de resumen (letras sobre la
+        // mano) es la barra de fases visible y clickeable. Se quita
+        // el contains(){return false} para que reciba eventos de raton.
         this.phaseSummaryBar = new JPanel(new java.awt.GridLayout(1, 12, 3, 0)) {
-            @Override
-            public boolean contains(int x, int y) {
-                return false;
-            }
-
             @Override
             protected void paintComponent(Graphics graphics) {
                 Graphics2D g = (Graphics2D) graphics.create();
@@ -3010,6 +3211,28 @@ extends JPanel {
             cell.setForeground(new Color(190, 198, 210));
             cell.setBackground(new Color(0, 0, 0, 0));
             cell.setOpaque(false);
+            // PHASE-FUSION v1.1: celda clickeable -> ejecuta el
+            // salto nativo asociado a esta fase (misma accion que
+            // las teclas F). Cursor de mano + tooltip informativo.
+            final String pfPhase = phaseName;
+            cell.addMouseListener(new MouseAdapter(){
+                @Override
+                public void mouseClicked(MouseEvent evt) {
+                    if (SwingUtilities.isLeftMouseButton(evt)) {
+                        String skipKey = PHASE_FUSION_SKIP_KEYS.get(pfPhase);
+                        if (skipKey != null) {
+                            runPhaseFusionShortcut(skipKey);
+                        }
+                    }
+                }
+            });
+            cell.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            String pfKeyText = PreferencesDialog.getCachedKeyText(PHASE_FUSION_SKIP_KEYS.get(phaseName));
+            String pfTooltip = phaseName.replace("_", " ");
+            if (pfKeyText != null && !pfKeyText.isEmpty()) {
+                pfTooltip = pfTooltip + " (salta - " + pfKeyText + ")";
+            }
+            cell.setToolTipText(pfTooltip);
             this.phaseSummaryCells.put(phaseName, cell);
             this.phaseSummaryBar.add(cell);
         }
@@ -3117,6 +3340,14 @@ extends JPanel {
         MageFrame.getInstance().showUserRequestDialog(message);
     }
 
+    private void btnExitMatchActionPerformed(ActionEvent evt) {
+        UserRequestMessage message = new UserRequestMessage("Salir de la partida", "¿Cerrar la partida y abandonar el match completo?");
+        message.setButton1("No", null);
+        message.setButton2("Sí, salir", PlayerAction.CLIENT_CONCEDE_MATCH);
+        message.setGameId(this.gameId);
+        MageFrame.getInstance().showUserRequestDialog(message);
+    }
+
     private void btnToggleMacroActionPerformed(ActionEvent evt) {
         SessionHandler.sendPlayerAction(PlayerAction.TOGGLE_RECORD_MACRO, this.gameId, null);
         this.skipButtons.activateSkipButton("");
@@ -3196,9 +3427,72 @@ extends JPanel {
     }
 
     private void mouseClickPhaseBar(MouseEvent evt) {
+        // PHASE-FUSION v1: enlaza el clic de la barra de fases con los atajos nativos "F".
+        // Cada HoverButton de jPhases dispara este handler; se identifica la fase por
+        // evt.getSource() contra phaseButtons y se ejecuta el mismo manejador privado
+        // que usa el boton nativo equivalente (misma accion PlayerAction, sonido y
+        // resalte de skipButtons). Las fases sin equivalente nativo y el clic derecho
+        // conservan el comportamiento original del mod (tab de fases de preferencias).
         if (SwingUtilities.isLeftMouseButton(evt)) {
-            PreferencesDialog.main(new String[]{"Open-Phases-Tab"});
+            String phaseName = this.resolvePhaseNameByComponent(evt.getSource());
+            String skipKey = (phaseName != null) ? PHASE_FUSION_SKIP_KEYS.get(phaseName) : null;
+            if (skipKey != null) {
+                this.runPhaseFusionShortcut(skipKey);
+                return;
+            }
         }
+        PreferencesDialog.main(new String[]{"Open-Phases-Tab"});
+    }
+
+    private String resolvePhaseNameByComponent(Object source) {
+        if (!(source instanceof HoverButton)) {
+            return null;
+        }
+        HoverButton clicked = (HoverButton)source;
+        for (Map.Entry<String, HoverButton> entry : this.phaseButtons.entrySet()) {
+            if (entry.getValue() == clicked) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    private void runPhaseFusionShortcut(String skipKey) {
+        switch (skipKey) {
+            case "controlNextTurn":
+                this.btnEndTurnActionPerformed(null);
+                break;
+            case "controlEndStep":
+                this.btnUntilEndOfTurnActionPerformed(null);
+                break;
+            case "controlMainStep":
+                this.btnUntilNextMainPhaseActionPerformed(null);
+                break;
+            case "controlYourTurn":
+                this.btnPassPriorityUntilNextYourTurnActionPerformed(null);
+                break;
+            case "controlSkipStack":
+                this.btnPassPriorityUntilStackResolvedActionPerformed(null);
+                break;
+            case "controlPriorEnd":
+                this.btnSkipToEndStepBeforeYourTurnActionPerformed(null);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void applyPhaseFusionHiddenShortcuts() {
+        this.btnSkipToNextTurn.setVisible(false);
+        this.btnSkipToEndTurn.setVisible(false);
+        this.btnSkipToNextMain.setVisible(false);
+        this.btnSkipToYourTurn.setVisible(false);
+        this.btnSkipStack.setVisible(false);
+        this.btnSkipToEndStepBeforeYourTurn.setVisible(false);
+        // PHASE-FUSION v1.1: Cancel Skip queda oculto de la barra
+        // inferior; la funcion sigue disponible por teclado (F3 /
+        // controlCancelSkip) y desde el menu de fases.
+        this.btnCancelSkip.setVisible(false);
     }
 
     private void btnSwitchHandActionPerformed(ActionEvent evt) {
@@ -3287,7 +3581,16 @@ extends JPanel {
         int buttonSize = GUISizeHelper.gamePhaseButtonSize;
         Rectangle rect = new Rectangle(buttonSize, buttonSize);
         HoverButton button = new HoverButton("", ImageManagerImpl.instance.getPhaseImage(name, buttonSize), rect);
-        button.setToolTipText(name.replaceAll("_", " "));
+        String phaseTooltip = name.replaceAll("_", " ");
+        // PHASE-FUSION v1: indicar el atajo nativo asociado a esta fase.
+        String phaseFusionKey = PHASE_FUSION_SKIP_KEYS.get(name);
+        if (phaseFusionKey != null) {
+            String phaseFusionKeyText = PreferencesDialog.getCachedKeyText(phaseFusionKey);
+            if (phaseFusionKeyText != null && !phaseFusionKeyText.isEmpty()) {
+                phaseTooltip = phaseTooltip + " - " + phaseFusionKeyText;
+            }
+        }
+        button.setToolTipText(phaseTooltip);
         button.setPreferredSize(new Dimension(buttonSize, buttonSize));
         button.addMouseListener(mouseAdapter);
         this.phaseButtons.put(name, button);
@@ -3611,6 +3914,10 @@ extends JPanel {
 
         public Border getBorder() {
             return this.pressState ? BORDER_ACTIVE : BORDER_NON_ACTIVE;
+        }
+
+        public boolean isPressed() {
+            return this.pressState;
         }
     }
 

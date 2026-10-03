@@ -9,6 +9,7 @@ import mage.client.cards.VirtualCardInfo;
 import mage.client.components.MageEditorPane;
 import mage.client.game.GamePanel;
 import mage.client.util.GUISizeHelper;
+import mage.client.util.SettingsManager;
 import mage.client.util.gui.MageDialogState;
 import mage.game.command.Dungeon;
 import mage.view.CardView;
@@ -40,6 +41,7 @@ public class PickChoiceDialog extends MageDialog {
 
     java.util.List<KeyValueItem> allItems = new ArrayList<>();
     KeyValueItem biggestItem = null; // for render optimization
+    private final ChoiceCellRenderer choiceCellRenderer;
     PickChoiceCallback callback = null;
 
     final private static String HTML_HEADERS_TEMPLATE = "<html><div style='text-align: center;'>%s</div></html>";
@@ -54,9 +56,97 @@ public class PickChoiceDialog extends MageDialog {
 
         // pick choice shared in multiple dialogs, so modify window size only one time
         this.setSize(GUISizeHelper.dialogGuiScaleSize(this.getSize()));
+        Dimension currentSize = this.getSize();
+        this.setSize(Math.max(760, currentSize.width), Math.max(480, currentSize.height));
+        this.setMinimumSize(new Dimension(640, 360));
 
         this.listChoices.setModel(new DefaultListModel<KeyValueItem>());
+        this.listChoices.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        this.listChoices.setFixedCellHeight(-1);
+        this.choiceCellRenderer = new ChoiceCellRenderer();
+        this.listChoices.setCellRenderer(this.choiceCellRenderer);
+        this.scrollList.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        installInteractionListeners();
         this.setModal(true);
+    }
+
+    /**
+     * Install the dialog interaction handlers once. This dialog is reused for
+     * many choices; registering them from showDialog() made every reuse add
+     * another set of listeners and progressively slowed filtering and hover
+     * handling.
+     */
+    private void installInteractionListeners() {
+        editSearch.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                refreshSearch();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                refreshSearch();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                refreshSearch();
+            }
+        });
+
+        editSearch.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    doPrevSelect();
+                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    doNextSelect();
+                }
+            }
+        });
+
+        listChoices.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 2) {
+                    doChoose();
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                choiceHintHide();
+            }
+        });
+
+        listChoices.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                int index = -1;
+                Rectangle visibleCells = listChoices.getCellBounds(0, listChoices.getLastVisibleIndex());
+                if (visibleCells != null && visibleCells.contains(e.getPoint())) {
+                    index = listChoices.locationToIndex(e.getPoint());
+                }
+
+                if (index >= 0) {
+                    choiceHintShow(index);
+                } else {
+                    choiceHintHide();
+                }
+            }
+        });
+
+        String cancelName = "cancel";
+        InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), cancelName);
+        getRootPane().getActionMap().put(cancelName, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (choice != null && !choice.isRequired()) {
+                    doCancel();
+                }
+            }
+        });
     }
 
     public interface PickChoiceCallback {
@@ -137,9 +227,9 @@ public class PickChoiceDialog extends MageDialog {
             });
         }
 
-        // render optimization (use the biggest cell for one time size calculation)
-        // can help with slow search in big lists like choose card name dialog
-        this.listChoices.setPrototypeCellValue(this.biggestItem);
+        // Keep variable row heights. A prototype cell makes JList reuse one
+        // fixed height, which clips long alternative-cost descriptions.
+        this.listChoices.setPrototypeCellValue(null);
 
         // search
         if (choice.isSearchEnabled()) {
@@ -148,104 +238,6 @@ public class PickChoiceDialog extends MageDialog {
         } else {
             panelSearch.setVisible(false);
             this.editSearch.setText("");
-        }
-
-        // listeners for incremental filtering
-        editSearch.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                choice.setSearchText(editSearch.getText());
-                loadData();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                choice.setSearchText(editSearch.getText());
-                loadData();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                choice.setSearchText(editSearch.getText());
-                loadData();
-            }
-        });
-
-        // listeners for select up and down without edit focus lost
-        editSearch.addKeyListener(new KeyListener() {
-            @Override
-            public void keyTyped(KeyEvent e) {
-                //System.out.println("types");
-            }
-
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_UP) {
-                    doPrevSelect();
-                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-                    doNextSelect();
-                }
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                //System.out.println("released");
-            }
-        });
-
-        // listeners double click
-        // you can't use mouse wheel to switch hint type, cause wheel move a scrollbar
-        listChoices.addMouseListener(new MouseAdapter() {
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (!SwingUtilities.isLeftMouseButton(e)) {
-                    return;
-                }
-                if (e.getClickCount() == 2) {
-                    doChoose();
-                }
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                choiceHintHide();
-            }
-        });
-
-        listChoices.addMouseMotionListener(new MouseMotionAdapter() {
-
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                // hint show
-                JList listSource = (JList) e.getSource();
-
-                // workaround to raise on real element, not empty space
-                int index = -1;
-                Rectangle r = listSource.getCellBounds(0, listSource.getLastVisibleIndex());
-                if (r != null && r.contains(e.getPoint())) {
-                    index = listSource.locationToIndex(e.getPoint());
-                }
-
-                if (index > -1) {
-                    choiceHintShow(index);
-                } else {
-                    choiceHintHide();
-                }
-            }
-        });
-
-        // listeners for ESC close
-        if (!choice.isRequired()) {
-            String cancelName = "cancel";
-            InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), cancelName);
-            ActionMap actionMap = getRootPane().getActionMap();
-            actionMap.put(cancelName, new AbstractAction() {
-                public void actionPerformed(ActionEvent e) {
-                    doCancel();
-                }
-            });
         }
 
         // window settings
@@ -259,6 +251,10 @@ public class PickChoiceDialog extends MageDialog {
 
         // final load
         loadData();
+
+        // Compute the renderer width before layout. Swing otherwise measures
+        // HTML while the list is still width zero and keeps clipped rows.
+        autoFitChoiceDialog();
 
         // start selection
         if (startSelectionValue != null) {
@@ -278,6 +274,65 @@ public class PickChoiceDialog extends MageDialog {
         }
 
         this.setVisible(true);
+    }
+
+    private void refreshSearch() {
+        if (choice != null) {
+            choice.setSearchText(editSearch.getText());
+            loadData();
+            autoFitChoiceDialog();
+        }
+    }
+
+    private void autoFitChoiceDialog() {
+        if (choice == null) {
+            return;
+        }
+
+        int screenWidth = Math.max(800, SettingsManager.instance.getScreenWidth());
+        int screenHeight = Math.max(600, SettingsManager.instance.getScreenHeight());
+        FontMetrics metrics = listChoices.getFontMetrics(listChoices.getFont());
+        int contentWidth = 520;
+        for (KeyValueItem item : allItems) {
+            String plainText = item.getValue() == null
+                    ? ""
+                    : item.getValue().replaceAll("<[^>]*>", " ");
+            contentWidth = Math.max(contentWidth,
+                    Math.min(1200, metrics.stringWidth(plainText) + 72));
+        }
+
+        int maxWidth = Math.max(760, screenWidth - 32);
+        int dialogWidth = Math.min(maxWidth, Math.max(760, contentWidth));
+        int textWidth = Math.max(420, dialogWidth - 64);
+        choiceCellRenderer.setRenderTextWidth(textWidth);
+
+        int rowsHeight = 0;
+        ListModel<KeyValueItem> model = listChoices.getModel();
+        for (int i = 0; i < model.getSize(); i++) {
+            Component renderer = choiceCellRenderer.getListCellRendererComponent(
+                    listChoices, model.getElementAt(i), i, false, false);
+            renderer.setSize(textWidth + 24, Integer.MAX_VALUE);
+            rowsHeight += renderer.getPreferredSize().height;
+        }
+
+        int maxListHeight = Math.max(220, screenHeight - 300);
+        int listHeight = Math.min(maxListHeight, Math.max(268, rowsHeight + 4));
+        Dimension listSize = new Dimension(Math.max(640, dialogWidth - 32), listHeight);
+        scrollList.setPreferredSize(listSize);
+        listChoices.setPreferredSize(new Dimension(listSize.width, Math.max(1, rowsHeight)));
+
+        this.pack();
+
+        Dimension packedSize = this.getSize();
+        int maxHeight = Math.max(480, screenHeight - 96);
+        this.setSize(
+                Math.min(maxWidth, Math.max(760, Math.max(dialogWidth, packedSize.width))),
+                Math.min(maxHeight, Math.max(480, packedSize.height))
+        );
+        this.keepInsideDesktop();
+        this.listChoices.revalidate();
+        this.scrollList.revalidate();
+        this.revalidate();
     }
 
     @Override
@@ -474,6 +529,48 @@ public class PickChoiceDialog extends MageDialog {
         }
     }
 
+    private static final class ChoiceCellRenderer extends JPanel implements ListCellRenderer<KeyValueItem> {
+
+        private final JLabel label = new JLabel();
+        private int renderTextWidth = -1;
+
+        ChoiceCellRenderer() {
+            super(new BorderLayout());
+            setOpaque(true);
+            label.setOpaque(false);
+            label.setVerticalAlignment(SwingConstants.CENTER);
+            add(label, BorderLayout.CENTER);
+        }
+
+        @Override
+        public Component getListCellRendererComponent(JList<? extends KeyValueItem> list,
+                                                       KeyValueItem item, int index,
+                                                       boolean selected, boolean focused) {
+            int textWidth = list.getWidth() > 0
+                    ? Math.max(420, list.getWidth() - 44)
+                    : Math.max(420, renderTextWidth);
+            String value = item == null || item.getValue() == null ? "" : item.getValue();
+            String html = ManaSymbols.replaceSymbolsWithHTML(value, ManaSymbols.Type.TABLE);
+            label.setText("<html><body style='width:" + textWidth + "px;'>" + html + "</body></html>");
+            label.setFont(list.getFont());
+            label.setForeground(selected ? new Color(235, 255, 240) : new Color(35, 40, 48));
+            setBackground(selected ? new Color(42, 150, 82) : new Color(244, 246, 249));
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(selected ? new Color(25, 105, 55) : new Color(205, 211, 220), 1, true),
+                    BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+            Insets insets = getInsets();
+            Dimension labelSize = label.getPreferredSize();
+            setPreferredSize(new Dimension(
+                    Math.max(textWidth + insets.left + insets.right, list.getWidth()),
+                    labelSize.height + insets.top + insets.bottom
+            ));
+            return this;
+        }
+
+        void setRenderTextWidth(int width) {
+            this.renderTextWidth = Math.max(420, width);
+        }
+    }
     static class KeyValueItem {
 
         protected final String key;

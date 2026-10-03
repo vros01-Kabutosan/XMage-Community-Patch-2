@@ -3,17 +3,18 @@ package mage.client.dialog;
 import java.awt.*;
 import java.beans.PropertyVetoException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 
 import mage.cards.MageCard;
 import mage.client.cards.BigCard;
+import mage.client.cards.CardArea;
 import mage.client.components.MageDesktopIconifySupport;
 import mage.client.util.GUISizeHelper;
 import mage.client.util.ImageHelper;
 import mage.client.util.SettingsManager;
-import mage.client.util.gui.GuiDisplayUtil;
 import mage.constants.CardType;
 import mage.util.RandomUtil;
 import mage.view.CardView;
@@ -37,19 +38,23 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     private final ShowType showType;
+    private final boolean useCardAreaLayout;
     private boolean positioned;
+    private String lastRenderedTitle;
     private final String name;
     private Runnable userCloseListener;
+    private final AtomicBoolean resizePending = new AtomicBoolean();
 
     public CardInfoWindowDialog(ShowType showType, String name) {
         this.name = name;
         this.title = name;
         this.showType = showType;
+        this.useCardAreaLayout = showType == ShowType.GRAVEYARD;
         this.positioned = false;
+        this.lastRenderedTitle = null;
         this.userCloseListener = () -> {
         };
         initComponents();
-
         this.setModal(false);
         switch (this.showType) {
             case LOOKED_AT:
@@ -124,7 +129,11 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     public void cleanUp() {
-        cards.cleanUp();
+        if (useCardAreaLayout) {
+            cardArea.cleanUp();
+        } else {
+            cards.cleanUp();
+        }
     }
 
     public ShowType getShowType() {
@@ -141,8 +150,21 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
         Color background = new Color(31, 35, 43);
         getContentPane().setBackground(background);
-        cards.setBackgroundColor(background);
-        cards.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
+        if (useCardAreaLayout) {
+            // Match ShowCardsDialog: cemetery uses the same CardArea and the
+            // same native panel background instead of the legacy dark frame.
+            Color panelBackground = UIManager.getColor("Panel.background");
+            if (panelBackground == null) {
+                panelBackground = background;
+            }
+            getContentPane().setBackground(panelBackground);
+            cardArea.setOpaque(true);
+            cardArea.setBackground(panelBackground);
+            cardArea.setBorder(null);
+        } else {
+            cards.setBackgroundColor(background);
+            cards.setBorder(BorderFactory.createLineBorder(new Color(78, 87, 102)));
+        }
     }
     @Override
     public void changeGUISize() {
@@ -152,15 +174,18 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     private void setGUISize() {
-        cards.setCardDimension(GUISizeHelper.otherZonesCardDimension);
-        cards.changeGUISize();
+        if (useCardAreaLayout) {
+            cardArea.changeGUISize();
+        } else {
+            cards.setCardDimension(GUISizeHelper.otherZonesCardDimension);
+            cards.changeGUISize();
+        }
     }
 
     public void loadCardsAndShow(ExileView exile, BigCard bigCard, UUID gameId) {
         boolean changed = cards.loadCards(exile, bigCard, gameId, true);
         String titel = name + " (" + exile.size() + ')';
-        setTitle(titel);
-        this.setTitelBarToolTip(titel);
+        setRenderedTitle(titel);
         if (!exile.isEmpty()) {
             show();
             if (changed) {
@@ -177,29 +202,49 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
 
     // TODO: remove oudated code with revertOrder (wait new release and delete if no bug reports for diff windows with cards, 2023-12-14)
     public void loadCardsAndShow(CardsView showCards, BigCard bigCard, UUID gameId, boolean revertOrder) {
-        cards.loadCards(showCards, bigCard, gameId, revertOrder);
+        boolean changed;
+        if (useCardAreaLayout) {
+            cardArea.loadCards(showCards, bigCard, gameId);
+            changed = true;
+        } else {
+            changed = cards.loadCards(showCards, bigCard, gameId, revertOrder);
+        }
+        if (showCards.isEmpty()) {
+            this.hideDialog();
+            return;
+        }
 
         if (showType == ShowType.REVEAL || showType == ShowType.LOOKED_AT) {
             String newTitle = name + " (" + showCards.size() + ")";
-            setTitle(newTitle);
-            this.setTitelBarToolTip(newTitle);
+            setRenderedTitle(newTitle);
         }
         // additional info for grave windows
-        if (showType == ShowType.GRAVEYARD) {
+        if (showType == ShowType.GRAVEYARD && (changed || lastRenderedTitle == null)) {
             int qty = qtyCardTypes(showCards);
             String newTitle = name + "'s graveyard (" + showCards.size() + ")  -  " + qty + ((qty == 1) ? " card type" : " card types");
-            setTitle(newTitle);
-            this.setTitelBarToolTip(newTitle);
+            setRenderedTitle(newTitle);
         }
 
         // additional info for sideboard window
         if (showType == ShowType.SIDEBOARD) {
             String newTitle = name + "'s sideboard";
-            setTitle(newTitle);
-            this.setTitelBarToolTip(newTitle);
+            setRenderedTitle(newTitle);
         }
 
-        showAndPositionWindow();
+        if (!isVisible()) {
+            super.show();
+        }
+        if (changed || !positioned) {
+            showAndPositionWindow();
+        }
+    }
+
+    private void setRenderedTitle(String newTitle) {
+        if (!Objects.equals(newTitle, lastRenderedTitle)) {
+            setTitle(newTitle);
+            this.setTitelBarToolTip(newTitle);
+            lastRenderedTitle = newTitle;
+        }
     }
 
     /**
@@ -209,7 +254,7 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
      * @return
      */
     public Map<UUID, MageCard> getMageCardsForUpdate() {
-        return this.cards.getMageCardsForUpdate();
+        return useCardAreaLayout ? this.cardArea.getMageCardsForUpdate() : this.cards.getMageCardsForUpdate();
     }
 
     @Override
@@ -230,39 +275,46 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     }
 
     private void showAndPositionWindow() {
+        if (!resizePending.compareAndSet(false, true)) {
+            return;
+        }
         SwingUtilities.invokeLater(() -> {
-            int width = CardInfoWindowDialog.this.getWidth();
-            int height = CardInfoWindowDialog.this.getHeight();
-            if (width > 0 && height > 0) {
-                Point centered = SettingsManager.instance.getComponentPosition(width, height);
-                if (!positioned) {
-                    // starting position
-
-                    // auto-resize window, but keep it GUI friendly on too many cards (do not overlap a full screen)
-                    int minWidth = CardInfoWindowDialog.this.getWidth();
-                    int maxWidth = SettingsManager.instance.getScreenWidth() / 2;
-                    int needWidth = CardInfoWindowDialog.this.cards.getPreferredSize().width;
-                    needWidth = Math.max(needWidth, minWidth);
-                    needWidth = Math.min(needWidth, maxWidth);
-                    needWidth += GUISizeHelper.scrollBarSize; // more space, so no horizontal scrolls
-                    int needHeight = CardInfoWindowDialog.this.getHeight(); // keep default height
-                    CardInfoWindowDialog.this.setPreferredSize(new Dimension(needWidth, needHeight));
-                    CardInfoWindowDialog.this.pack();
-                    centered = SettingsManager.instance.getComponentPosition(needWidth, needHeight);
-
-                    // little randomize to see multiple opened windows
-                    int xPos = centered.x / 2 + RandomUtil.nextInt(50);
-                    int yPos = centered.y / 2 + RandomUtil.nextInt(50);
-
-                    CardInfoWindowDialog.this.setLocation(xPos, yPos);
-                    show();
-                    positioned = true;
-                }
-                GuiDisplayUtil.keepComponentInsideFrame(centered.x, centered.y, CardInfoWindowDialog.this);
+            resizePending.set(false);
+            if (isClosed()) {
+                return;
             }
+
+            Dimension oldSize = CardInfoWindowDialog.this.getSize();
+            Point oldLocation = CardInfoWindowDialog.this.getLocation();
+            int baseWidth = Math.max(320, (int) Math.round(GUISizeHelper.otherZonesCardDimension.width * 1.4));
+            int minWidth = Math.max(baseWidth, GUISizeHelper.scrollBarSize);
+            Dimension desktop = getParent() == null ? null : getParent().getSize();
+            int availableWidth = desktop == null ? SettingsManager.instance.getScreenWidth() : desktop.width;
+            int availableHeight = desktop == null ? SettingsManager.instance.getScreenHeight() : desktop.height;
+            int maxWidth = Math.max(minWidth, availableWidth / 2);
+            Dimension cardsPreferredSize = useCardAreaLayout
+                    ? CardInfoWindowDialog.this.cardArea.getPreferredSize()
+                    : CardInfoWindowDialog.this.cards.getPreferredSize();
+            int needWidth = Math.min(maxWidth, Math.max(minWidth, cardsPreferredSize.width));
+            int maxHeight = Math.max(240, availableHeight - 16);
+            int needHeight = Math.min(maxHeight, Math.max(240, cardsPreferredSize.height + GUISizeHelper.scrollBarSize));
+
+            CardInfoWindowDialog.this.setPreferredSize(new Dimension(needWidth, needHeight));
+            CardInfoWindowDialog.this.pack();
+
+            if (!positioned) {
+                Point centered = SettingsManager.instance.getComponentPosition(needWidth, needHeight);
+                int xPos = centered.x / 2 + RandomUtil.nextInt(50);
+                int yPos = centered.y / 2 + RandomUtil.nextInt(50);
+                CardInfoWindowDialog.this.setLocation(xPos, yPos);
+                positioned = true;
+            } else {
+                CardInfoWindowDialog.this.setLocation(oldLocation);
+            }
+
+            CardInfoWindowDialog.this.keepInsideDesktop();
         });
     }
-
     private int qtyCardTypes(mage.view.CardsView cardsView) {
         Set<String> cardTypesPresent = new LinkedHashSet<String>() {
         };
@@ -289,20 +341,27 @@ public class CardInfoWindowDialog extends MageDialog implements MageDesktopIconi
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        cards = new mage.client.cards.Cards();
+        if (useCardAreaLayout) {
+            cardArea = new CardArea();
+        } else {
+            cards = new mage.client.cards.Cards();
+        }
 
         setIconifiable(true);
         setResizable(true);
-        setPreferredSize(new Dimension((int) Math.round(GUISizeHelper.otherZonesCardDimension.width * 1.4),
-                (int) Math.round(GUISizeHelper.otherZonesCardDimension.height * 1.4)));
+        if (!useCardAreaLayout) {
+            setPreferredSize(new Dimension((int) Math.round(GUISizeHelper.otherZonesCardDimension.width * 1.4),
+                    (int) Math.round(GUISizeHelper.otherZonesCardDimension.height * 1.4)));
+        }
         getContentPane().setLayout(new java.awt.BorderLayout());
-        getContentPane().add(cards, java.awt.BorderLayout.CENTER);
+        getContentPane().add(useCardAreaLayout ? cardArea : cards, java.awt.BorderLayout.CENTER);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private mage.client.cards.Cards cards;
+    private mage.client.cards.CardArea cardArea;
     // End of variables declaration//GEN-END:variables
 
 }

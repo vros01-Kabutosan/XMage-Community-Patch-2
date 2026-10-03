@@ -106,8 +106,34 @@ public class MageDialog extends javax.swing.JInternalFrame {
         //*/
     }
 
+    /**
+     * Keeps floating dialogs large enough for their current content while
+     * respecting the available desktop area. Content that is larger than the
+     * desktop remains scrollable in its owning component.
+     */
+    protected final void autoFitToPreferredContent() {
+        if (isIcon()) {
+            return;
+        }
+
+        Dimension preferred = getPreferredSize();
+        Dimension current = getSize();
+        Dimension desktop = getParent() == null ? null : getParent().getSize();
+        int availableWidth = desktop == null ? SettingsManager.instance.getScreenWidth() : desktop.width;
+        int availableHeight = desktop == null ? SettingsManager.instance.getScreenHeight() : desktop.height;
+        int maxWidth = Math.max(320, availableWidth - 16);
+        int maxHeight = Math.max(240, availableHeight - 16);
+        int width = Math.min(maxWidth, Math.max(current.width, preferred.width));
+        int height = Math.min(maxHeight, Math.max(current.height, preferred.height));
+
+        if (width != current.width || height != current.height) {
+            setSize(width, height);
+            revalidate();
+        }
+    }
     @Override
     public void show() {
+        autoFitToPreferredContent();
         super.show();
 
         // frames desktop ordering
@@ -124,6 +150,7 @@ public class MageDialog extends javax.swing.JInternalFrame {
         }
 
         this.toFront();
+        keepInsideDesktop();
 
         if (modal) {
             startModal();
@@ -272,7 +299,31 @@ public class MageDialog extends javax.swing.JInternalFrame {
     public static void makeWindowCentered(Component component, int width, int height) {
         Point centered = SettingsManager.instance.getComponentPosition(width, height);
         component.setLocation(centered.x, centered.y);
-        GuiDisplayUtil.keepComponentInsideScreen(centered.x, centered.y, component);
+        if (component.getParent() != null) {
+            keepComponentInsideDesktop(component);
+        } else {
+            GuiDisplayUtil.keepComponentInsideScreen(centered.x, centered.y, component);
+        }
+    }
+
+    protected final void keepInsideDesktop() {
+        keepComponentInsideDesktop(this);
+    }
+
+    private static void keepComponentInsideDesktop(Component component) {
+        Container parent = component.getParent();
+        if (parent == null) {
+            return;
+        }
+
+        int margin = 8;
+        int maxX = Math.max(margin, parent.getWidth() - component.getWidth() - margin);
+        int maxY = Math.max(margin, parent.getHeight() - component.getHeight() - margin);
+        int x = Math.max(margin, Math.min(component.getX(), maxX));
+        int y = Math.max(margin, Math.min(component.getY(), maxY));
+        if (x != component.getX() || y != component.getY()) {
+            component.setLocation(x, y);
+        }
     }
 
     /**

@@ -7,7 +7,6 @@
  import mage.client.util.Event;
  import mage.client.util.Listener;
  import mage.client.util.SettingsManager;
- import mage.client.util.gui.GuiDisplayUtil;
  import mage.game.events.PlayerQueryEvent.QueryType;
  import mage.util.RandomUtil;
  import mage.view.CardsView;
@@ -66,7 +65,7 @@
          super.show();
 
          // auto-position on first usage
-         if (positioned) {
+         if (!positioned) {
              showAndPositionWindow();
          }
      }
@@ -83,10 +82,10 @@
                      int xPos = centered.x / 2 + RandomUtil.nextInt(50);
                      int yPos = centered.y / 2 + RandomUtil.nextInt(50);
                      ShowCardsDialog.this.setLocation(xPos, yPos);
-                     show();
                      positioned = true;
+                     show();
                  }
-                 GuiDisplayUtil.keepComponentInsideFrame(centered.x, centered.y, ShowCardsDialog.this);
+                 ShowCardsDialog.this.keepInsideDesktop();
              }
          });
      }
@@ -120,6 +119,15 @@
 
          pack();
 
+         Container desktop = getParent() != null ? getParent() : MageFrame.getDesktop();
+         if (desktop != null && desktop.getWidth() > 0 && desktop.getHeight() > 0) {
+             int maxWidth = Math.max(480, desktop.getWidth() - 32);
+             int maxHeight = Math.max(320, desktop.getHeight() - 48);
+             int width = Math.min(maxWidth, Math.max(480, this.getWidth()));
+             int height = Math.min(maxHeight, Math.max(320, this.getHeight()));
+             this.setSize(width, height);
+         }
+
          this.revalidate();
          this.repaint();
          this.setModal(modal);
@@ -127,6 +135,7 @@
          // window settings
          MageFrame.getDesktop().remove(this);
          MageFrame.getDesktop().add(this, this.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+         this.keepInsideDesktop();
      }
 
      private void initComponents() {
@@ -135,6 +144,7 @@
 
          setClosable(true);
          setResizable(true);
+         setMinimumSize(new Dimension(480, 320));
          getContentPane().setLayout(new java.awt.BorderLayout());
          getContentPane().add(cardArea, java.awt.BorderLayout.CENTER);
          setGUISize();

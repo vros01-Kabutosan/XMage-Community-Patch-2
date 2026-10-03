@@ -17,6 +17,7 @@ import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static mage.client.game.FeedbackPanel.FeedbackMode.QUESTION;
@@ -91,6 +92,9 @@ public class HelperPanel extends JPanel {
     private boolean ownTurn;
     private int largestDecisionSurfaceHeight;
     private int largestDecisionSurfaceWidth;
+    private int lastAutoSizeSignature;
+    private int lastAutoSizePanelWidth = -1;
+    private boolean autoSizeSignatureKnown;
     private JLabel turnBadge;
 
     private Timer needFeedbackTimer;
@@ -366,6 +370,13 @@ public class HelperPanel extends JPanel {
         // two mode: same size for small texts (flow), different size for long texts (grid)
         // also colorize feedback panel on player's priority and enable sound notification
 
+        int autoSizeSignature = getAutoSizeSignature();
+        int panelWidth = getWidth();
+        if (autoSizeSignatureKnown
+                && lastAutoSizeSignature == autoSizeSignature
+                && lastAutoSizePanelWidth == panelWidth) {
+            return;
+        }
         int BUTTONS_H_GAP = 15;
 
         // cleanup current settings to default (flow layout - different sizes)
@@ -393,6 +404,7 @@ public class HelperPanel extends JPanel {
         this.buttonGrid.removeAll();
         if (buttons.isEmpty()) {
             refreshDecisionGeometry();
+            rememberAutoSizeSignature(autoSizeSignature, panelWidth);
             this.buttonGrid.revalidate();
             this.buttonContainer.revalidate();
             this.decisionSurface.revalidate();
@@ -418,12 +430,44 @@ public class HelperPanel extends JPanel {
         this.buttonGrid.setLayout(new FlowLayout(FlowLayout.CENTER, BUTTONS_H_GAP, 0));
         this.buttonGrid.setPreferredSize(null);
         refreshDecisionGeometry();
+        rememberAutoSizeSignature(autoSizeSignature, panelWidth);
         this.buttonGrid.revalidate();
         this.buttonContainer.revalidate();
         this.decisionSurface.revalidate();
         this.mainPanel.revalidate();
         this.revalidate();
         this.repaint();
+    }
+
+    private int getAutoSizeSignature() {
+        int signature = 1;
+        signature = 31 * signature + getButtonLayoutSignature(btnSpecial);
+        signature = 31 * signature + getButtonLayoutSignature(btnLeft);
+        signature = 31 * signature + getButtonLayoutSignature(btnRight);
+        signature = 31 * signature + getButtonLayoutSignature(btnUndo);
+        if (turnBadge != null) {
+            signature = 31 * signature + (turnBadge.isVisible() ? 1 : 0);
+            signature = 31 * signature + Objects.hashCode(turnBadge.getText());
+            signature = 31 * signature + turnBadge.getPreferredSize().hashCode();
+        }
+        return signature;
+    }
+
+    private int getButtonLayoutSignature(JButton button) {
+        int signature = button.isVisible() ? 1 : 0;
+        signature = 31 * signature + Objects.hashCode(button.getText());
+        Font font = button.getFont();
+        if (font != null) {
+            signature = 31 * signature + font.getSize();
+            signature = 31 * signature + font.getStyle();
+        }
+        return signature;
+    }
+
+    private void rememberAutoSizeSignature(int signature, int panelWidth) {
+        lastAutoSizeSignature = signature;
+        lastAutoSizePanelWidth = panelWidth;
+        autoSizeSignatureKnown = true;
     }
 
     private static int getDecisionSurfaceHeightForCurrentSize() {

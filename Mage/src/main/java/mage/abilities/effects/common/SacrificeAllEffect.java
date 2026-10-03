@@ -72,6 +72,29 @@ public class SacrificeAllEffect extends OneShotEffect {
         return new SacrificeAllEffect(this);
     }
 
+    /**
+     * Returns whether this effect can actually ask any affected player to
+     * sacrifice a permanent in the current game state. This is an AI hint;
+     * it does not change the legality or resolution of the effect.
+     */
+    public boolean hasEligiblePermanent(Game game, Ability source) {
+        int num = amount.calculate(game, source, this);
+        if (num < 1) {
+            return false;
+        }
+        Collection<UUID> players = onlyOpponents
+                ? game.getOpponents(source.getControllerId())
+                : game.getState().getPlayersInRange(source.getControllerId(), game);
+        for (UUID playerId : players) {
+            Player player = game.getPlayer(playerId);
+            if (player != null && game.getBattlefield().count(
+                    TargetSacrifice.makeFilter(filter), playerId, source, game) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public boolean apply(Game game, Ability source) {
         int num = amount.calculate(game, source, this);

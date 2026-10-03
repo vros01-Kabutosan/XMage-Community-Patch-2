@@ -64,6 +64,10 @@ public class TablePlayerPanel extends javax.swing.JPanel {
         return newPlayerPanel.getDeckFile();
     }
 
+    public void setPlayerDeck(String playerDeck) {
+        this.newPlayerPanel.setDeckFile(playerDeck);
+    }
+
     public void addPlayerTypeEventListener(Listener<Event> listener) {
         playerTypeEventSource.addListener(listener);
     }

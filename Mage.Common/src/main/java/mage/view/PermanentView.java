@@ -267,4 +267,14 @@ public class PermanentView extends CardView {
     public boolean hasActiveTrigger() {
         return activeTrigger;
     }
+
+    // oficial 1.4.62: la imagen renderizada se cachea y se comparte entre
+    // vistas, asi que estos campos deben entrar en la firma de render.
+    @Override
+    protected void appendRenderSignature(StringBuilder sb) {
+        super.appendRenderSignature(sb);
+        // tapped, flipped and the mutate button are drawn by the panel, not baked into the image
+        appendField(sb, hasSummoningSickness());
+        appendField(sb, getDamage());
+    }
 }

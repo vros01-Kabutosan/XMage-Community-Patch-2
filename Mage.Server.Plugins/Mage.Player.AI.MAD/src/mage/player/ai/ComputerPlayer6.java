@@ -69,8 +69,6 @@ public class ComputerPlayer6 extends ComputerPlayer {
     protected int maxNodes;
     protected int maxThinkTimeSecs;
     protected LinkedList<Ability> actions = new LinkedList<>();
-    protected List<UUID> targets = new ArrayList<>();
-    protected List<String> choices = new ArrayList<>();
     protected Combat combat;
     protected int currentScore;
     protected SimulationNode2 root;
@@ -122,8 +120,6 @@ public class ComputerPlayer6 extends ComputerPlayer {
             this.combat = player.combat.copy();
         }
         this.actions.addAll(player.actions);
-        this.targets.addAll(player.targets);
-        this.choices.addAll(player.choices);
         this.actionCache = new HashSet<>(player.actionCache);
         this.transpositionTable = new HashMap<>();
     }
@@ -1059,65 +1055,26 @@ public class ComputerPlayer6 extends ComputerPlayer {
 
     @Override
     public boolean choose(Outcome outcome, Choice choice, Game game) {
-        if (choices.isEmpty()) {
-            return super.choose(outcome, choice, game);
-        }
-        if (!choice.isChosen()) {
-            if (!choice.setChoiceByAnswers(choices, true)) {
-                choice.setRandomChoice();
-            }
-        }
-        return true;
+        // oficial 1.4.62: se revierte la simulacion de choices (no estaba
+        // implementada y perturbaba la simulacion del AI).
+        // TODO: implement choices simulation?
+        return super.choose(outcome, choice, game);
     }
 
     @Override
     public boolean chooseTarget(Outcome outcome, Cards cards, TargetCard target, Ability source, Game game) {
-        if (targets.isEmpty()) {
-            return super.chooseTarget(outcome, cards, target, source, game);
-        }
-
-        UUID abilityControllerId = target.getAffectedAbilityControllerId(getId());
-        if (!target.isChoiceCompleted(abilityControllerId, source, game, cards)) {
-            Set<UUID> legalTargets = target.possibleTargets(abilityControllerId, source, game, cards);
-            for (UUID targetId : targets) {
-                if (!legalTargets.contains(targetId)) {
-                    continue;
-                }
-                target.addTarget(targetId, source, game);
-                if (target.isChoiceCompleted(abilityControllerId, source, game, cards)) {
-                    targets.clear();
-                    return true;
-                }
-            }
-            targets.clear();
-            return super.chooseTarget(outcome, cards, target, source, game);
-        }
-        return true;
+        // oficial 1.4.62: revertida la simulacion de targets al lanzar/activar.
+        // resolver habilidad puede abrir dialogos de eleccion y no usa simulacion.
+        // TODO: implement it here?
+        return super.chooseTarget(outcome, cards, target, source, game);
     }
 
     @Override
     public boolean choose(Outcome outcome, Cards cards, TargetCard target, Ability source, Game game) {
-        if (targets.isEmpty()) {
-            return super.choose(outcome, cards, target, source, game);
-        }
-
-        UUID abilityControllerId = target.getAffectedAbilityControllerId(getId());
-        if (!target.isChoiceCompleted(abilityControllerId, source, game, cards)) {
-            Set<UUID> legalTargets = target.possibleTargets(abilityControllerId, source, game);
-            for (UUID targetId : targets) {
-                if (!legalTargets.contains(targetId)) {
-                    continue;
-                }
-                target.add(targetId, game);
-                if (target.isChoiceCompleted(abilityControllerId, source, game, cards)) {
-                    targets.clear();
-                    return true;
-                }
-            }
-            targets.clear();
-            return super.choose(outcome, cards, target, source, game);
-        }
-        return true;
+        // oficial 1.4.62: revertida la simulacion de targets al lanzar/activar.
+        // resolver habilidad puede abrir dialogos de eleccion y no usa simulacion.
+        // TODO: implement it here?
+        return super.choose(outcome, cards, target, source, game);
     }
 
     private void declareBlockers(Game game, UUID activePlayerId) {

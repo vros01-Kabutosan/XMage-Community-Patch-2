@@ -31,6 +31,10 @@ import org.mage.card.arcane.TextboxRule;
 import org.mage.card.arcane.TextboxRuleParser;
 import org.mage.card.arcane.TextboxRuleType;
 
+// oficial 1.4.62: las imagenes renderizadas se cachean y se comparten
+// entre vistas con el mismo CardPanelRenderModeMTGO.imageKey, asi que
+// cualquier campo de CardView que se lea aqui o en una subclase debe
+// anadirse tambien a CardView.appendRenderSignature.
 public abstract class CardRenderer {
     protected final CardView cardView;
     protected BufferedImage artImage;

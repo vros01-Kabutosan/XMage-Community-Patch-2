@@ -119,10 +119,12 @@ public class CardArea extends JPanel implements CardEventProducer {
     }
 
     private void fixDialogSize() {
-        // fix panel size (must include scrolls)
+        // fix panel size (must include scrolls and scrollbar clearance)
         Dimension newSize = new Dimension(cardArea.getPreferredSize());
-        newSize.width += 20;
-        newSize.height += 20;
+        int minWidth = Math.max(480, (int) Math.round(cardDimension.width * 2.2));
+        int scrollBarPad = Math.max(20, GUISizeHelper.scrollBarSize);
+        newSize.width = Math.max(minWidth, newSize.width + scrollBarPad + 24);
+        newSize.height += scrollBarPad + 24;
         this.setPreferredSize(newSize);
         scrollPane.getHorizontalScrollBar().setUnitIncrement(GUISizeHelper.getCardsScrollbarUnitInc(cardDimension.width));
         scrollPane.getVerticalScrollBar().setUnitIncrement(GUISizeHelper.getCardsScrollbarUnitInc(cardDimension.height));
@@ -240,16 +242,17 @@ public class CardArea extends JPanel implements CardEventProducer {
                 int cardsInColumn = (i % MAX_CARDS_PER_COLUMN) + 1;
                 rows = Math.max(rows, cardsInColumn);
                 if (cardsInColumn == MAX_CARDS_PER_COLUMN && i + 1 < sortedCards.size()) {
-                    rectangle.translate(cardDimension.width + xOffsetBetweenCardsOrColumns, -(MAX_CARDS_PER_COLUMN * verticalCardOffset));
+                    rectangle.setLocation(rectangle.x + cardDimension.width + xOffsetBetweenCardsOrColumns, 0);
                     columns++;
                 } else if (i + 1 < sortedCards.size()) {
                     rectangle.translate(0, verticalCardOffset);
                 }
             }
         }
+        int extraBottomPadding = Math.max(24, verticalCardOffset);
         cardArea.setPreferredSize(new Dimension(
                 cardDimension.width * columns + xOffsetBetweenCardsOrColumns * (columns - 1),
-                cardDimension.height + (Math.max(1, rows) * verticalCardOffset)
+                cardDimension.height + (Math.max(0, rows - 1) * verticalCardOffset) + extraBottomPadding
         ));
     }
 

@@ -26,6 +26,9 @@ public class CombatEvaluator {
     private String lastGameStateValue;
 
     public int evaluate(Permanent creature, Game game) {
+        if (creature == null || game == null) {
+            return 0;
+        }
         String gameStateValue = game.getState().getValue(true);
         if (!gameStateValue.equals(lastGameStateValue)) {
             values.clear();

@@ -59,9 +59,16 @@ public final class GameStateEvaluator2 {
     }
 
     public static PlayerEvaluateScore evaluate(UUID playerId, Game game, boolean useCombatPermanentScore) {
+        if (game == null || playerId == null) {
+            return new PlayerEvaluateScore(playerId, LOSE_GAME_SCORE);
+        }
         Player player = game.getPlayer(playerId);
+        if (player == null) {
+            return new PlayerEvaluateScore(playerId, LOSE_GAME_SCORE);
+        }
         // must find all leaved opponents
-        Player opponent = game.getPlayer(findMostThreateningOpponent(playerId, game));
+        UUID threatOpponentId = findMostThreateningOpponent(playerId, game);
+        Player opponent = threatOpponentId == null ? null : game.getPlayer(threatOpponentId);
         if (opponent == null) {
             return new PlayerEvaluateScore(playerId, WIN_GAME_SCORE);
         }

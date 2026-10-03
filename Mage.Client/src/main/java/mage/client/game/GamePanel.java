@@ -209,14 +209,30 @@ extends JPanel {
     private static final String XCP_UI_RESIZE_V1_3 = "XCP_UI_RESIZE_V1_3";
     private final Map<String, HoverButton> phaseButtons = new LinkedHashMap<String, HoverButton>();
     private final Map<String, JLabel> phaseSummaryCells = new LinkedHashMap<String, JLabel>();
-    // PHASE-FUSION v1: botones de la barra de fases -> atajo nativo equivalente.
+    // PHASE-FUSION v1.1: barra de fases (letras sobre la mano) ->
+    // atajo nativo equivalente. Las 12 fases son clickeables; cada una
+    // dispara el salto nativo mas cercano (no existe "ir a fase X"
+    // exacta en el engine, por lo que es una aproximacion):
+    //   fases de inicio de turno (Untap/Upkeep/Draw) -> siguiente turno
+    //   fases principales (Main1/Main2)               -> siguiente fase principal
+    //   combate (Combat_*)                            -> fin de turno
+    //   fin de turno (Cleanup)                        -> fin de turno
+    //   Next_Turn                                     -> siguiente turno
     private static final Map<String, String> PHASE_FUSION_SKIP_KEYS;
     static {
         Map<String, String> phaseFusionSkipKeys = new LinkedHashMap<String, String>();
+        phaseFusionSkipKeys.put("Untap", "controlNextTurn");
+        phaseFusionSkipKeys.put("Upkeep", "controlNextTurn");
+        phaseFusionSkipKeys.put("Draw", "controlNextTurn");
         phaseFusionSkipKeys.put("Main1", "controlMainStep");
+        phaseFusionSkipKeys.put("Combat_Start", "controlEndStep");
+        phaseFusionSkipKeys.put("Combat_Attack", "controlEndStep");
+        phaseFusionSkipKeys.put("Combat_Block", "controlEndStep");
+        phaseFusionSkipKeys.put("Combat_Damage", "controlEndStep");
+        phaseFusionSkipKeys.put("Combat_End", "controlEndStep");
         phaseFusionSkipKeys.put("Main2", "controlMainStep");
-        phaseFusionSkipKeys.put("Next_Turn", "controlNextTurn");
         phaseFusionSkipKeys.put("Cleanup", "controlEndStep");
+        phaseFusionSkipKeys.put("Next_Turn", "controlNextTurn");
         PHASE_FUSION_SKIP_KEYS = Collections.unmodifiableMap(phaseFusionSkipKeys);
     }
     private final Map<String, MageSplitter> splitters = new LinkedHashMap<String, MageSplitter>();
@@ -3164,12 +3180,10 @@ extends JPanel {
         for (String name : phases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"}) {
             this.createPhaseButton(name, phasesMouseAdapter);
         }
+        // PHASE-FUSION v1.1: la barra de resumen (letras sobre la
+        // mano) es la barra de fases visible y clickeable. Se quita
+        // el contains(){return false} para que reciba eventos de raton.
         this.phaseSummaryBar = new JPanel(new java.awt.GridLayout(1, 12, 3, 0)) {
-            @Override
-            public boolean contains(int x, int y) {
-                return false;
-            }
-
             @Override
             protected void paintComponent(Graphics graphics) {
                 Graphics2D g = (Graphics2D) graphics.create();
@@ -3197,6 +3211,28 @@ extends JPanel {
             cell.setForeground(new Color(190, 198, 210));
             cell.setBackground(new Color(0, 0, 0, 0));
             cell.setOpaque(false);
+            // PHASE-FUSION v1.1: celda clickeable -> ejecuta el
+            // salto nativo asociado a esta fase (misma accion que
+            // las teclas F). Cursor de mano + tooltip informativo.
+            final String pfPhase = phaseName;
+            cell.addMouseListener(new MouseAdapter(){
+                @Override
+                public void mouseClicked(MouseEvent evt) {
+                    if (SwingUtilities.isLeftMouseButton(evt)) {
+                        String skipKey = PHASE_FUSION_SKIP_KEYS.get(pfPhase);
+                        if (skipKey != null) {
+                            runPhaseFusionShortcut(skipKey);
+                        }
+                    }
+                }
+            });
+            cell.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            String pfKeyText = PreferencesDialog.getCachedKeyText(PHASE_FUSION_SKIP_KEYS.get(phaseName));
+            String pfTooltip = phaseName.replace("_", " ");
+            if (pfKeyText != null && !pfKeyText.isEmpty()) {
+                pfTooltip = pfTooltip + " (salta - " + pfKeyText + ")";
+            }
+            cell.setToolTipText(pfTooltip);
             this.phaseSummaryCells.put(phaseName, cell);
             this.phaseSummaryBar.add(cell);
         }
@@ -3453,6 +3489,10 @@ extends JPanel {
         this.btnSkipToYourTurn.setVisible(false);
         this.btnSkipStack.setVisible(false);
         this.btnSkipToEndStepBeforeYourTurn.setVisible(false);
+        // PHASE-FUSION v1.1: Cancel Skip queda oculto de la barra
+        // inferior; la funcion sigue disponible por teclado (F3 /
+        // controlCancelSkip) y desde el menu de fases.
+        this.btnCancelSkip.setVisible(false);
     }
 
     private void btnSwitchHandActionPerformed(ActionEvent evt) {

@@ -70,6 +70,9 @@ public class HoverButton extends JPanel implements MouseListener {
 
     private boolean alignTextLeft = false;
 
+    // overlay tint used to highlight the button (e.g. the active game phase)
+    private Color activeColor = null;
+
     Timer faderGainLife = null;
     Timer faderLoseLife = null;
     private int loseX = 0;
@@ -158,6 +161,9 @@ public class HoverButton extends JPanel implements MouseListener {
                     setCenterColor(origCenterTextColor);
                 }
                 g.drawImage(image, 0, 0, imageSize.width, imageSize.height, this);
+                if (activeColor != null) {
+                    applyActiveTint(g2d);
+                }
             }
             if (isSelected) {
                 if (selectedImage != null) {
@@ -165,6 +171,9 @@ public class HoverButton extends JPanel implements MouseListener {
                 } else {
                     System.err.println("No selectedImage for button.");
                 }
+            }
+            if (isHovered && activeColor != null) {
+                applyActiveTint(g2d);
             }
         } else {
             g.drawImage(disabledImage, 0, 0, imageSize.width, imageSize.height, this);
@@ -228,6 +237,35 @@ public class HoverButton extends JPanel implements MouseListener {
 
     public void setCenterColor(Color c) {
         centerTextColor = c;
+    }
+
+    /**
+     * Set the highlight color used to tint this button when it represents the
+     * active game phase. Pass {@code null} to disable the tint.
+     */
+    public void setActiveColor(Color c) {
+        this.activeColor = c;
+    }
+
+    private void applyActiveTint(Graphics2D g2d) {
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.25f));
+        g2d.setColor(activeColor);
+        g2d.fillRect(0, 0, imageSize.width, imageSize.height);
+        // soft red glow drawn around the button edges (inside the button bounds)
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        int w = imageSize.width - 1;
+        int h = imageSize.height - 1;
+        int arc = sizeMod(8);
+        float[] alphas = {0.18f, 0.38f, 0.85f};
+        int[] insets = {0, 3, 7};
+        float[] strokes = {9.0f, 5.0f, 2.5f};
+        for (int i = 0; i < alphas.length; i++) {
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphas[i]));
+            g2d.setColor(activeColor);
+            g2d.setStroke(new BasicStroke(strokes[i]));
+            g2d.drawRoundRect(insets[i], insets[i], w - 2 * insets[i], h - 2 * insets[i], arc, arc);
+        }
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
     }
 
     private int calculateOffset(Graphics2D g2d) {

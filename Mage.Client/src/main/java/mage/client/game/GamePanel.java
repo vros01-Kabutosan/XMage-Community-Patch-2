@@ -209,6 +209,16 @@ extends JPanel {
     private static final String XCP_UI_RESIZE_V1_3 = "XCP_UI_RESIZE_V1_3";
     private final Map<String, HoverButton> phaseButtons = new LinkedHashMap<String, HoverButton>();
     private final Map<String, JLabel> phaseSummaryCells = new LinkedHashMap<String, JLabel>();
+    // PHASE-FUSION v1: botones de la barra de fases -> atajo nativo equivalente.
+    private static final Map<String, String> PHASE_FUSION_SKIP_KEYS;
+    static {
+        Map<String, String> phaseFusionSkipKeys = new LinkedHashMap<String, String>();
+        phaseFusionSkipKeys.put("Main1", "controlMainStep");
+        phaseFusionSkipKeys.put("Main2", "controlMainStep");
+        phaseFusionSkipKeys.put("Next_Turn", "controlNextTurn");
+        phaseFusionSkipKeys.put("Cleanup", "controlEndStep");
+        PHASE_FUSION_SKIP_KEYS = Collections.unmodifiableMap(phaseFusionSkipKeys);
+    }
     private final Map<String, MageSplitter> splitters = new LinkedHashMap<String, MageSplitter>();
     private boolean isSplittersFullyRestored = false;
     private MageDialogState choiceWindowState;
@@ -371,7 +381,30 @@ extends JPanel {
         pnlCommandsFeedbackAndHand.add((Component)pnlPhaseAndHand, "Center");
         JPanel pnlCommandsSkipAndStack = new JPanel(new BorderLayout());
         pnlCommandsSkipAndStack.setOpaque(false);
-        pnlCommandsSkipAndStack.add((Component)this.pnlShortCuts, "South");
+        // PHASE-FUSION v1: margen inferior = fila de atajos + fila separada con Concede centrado.
+        JPanel pnlPhaseFusionBottom = new JPanel(new GridBagLayout());
+        pnlPhaseFusionBottom.setOpaque(false);
+        GridBagConstraints gbcPhaseFusionShortCuts = new GridBagConstraints();
+        gbcPhaseFusionShortCuts.gridx = 0;
+        gbcPhaseFusionShortCuts.gridy = 0;
+        gbcPhaseFusionShortCuts.fill = GridBagConstraints.HORIZONTAL;
+        gbcPhaseFusionShortCuts.weightx = 1.0;
+        pnlPhaseFusionBottom.add((Component)this.pnlShortCuts, gbcPhaseFusionShortCuts);
+        JPanel pnlConcedeCenter = new JPanel(new GridBagLayout());
+        pnlConcedeCenter.setOpaque(false);
+        GridBagConstraints gbcPhaseFusionConcedeRow = new GridBagConstraints();
+        gbcPhaseFusionConcedeRow.gridx = 0;
+        gbcPhaseFusionConcedeRow.gridy = 1;
+        gbcPhaseFusionConcedeRow.fill = GridBagConstraints.HORIZONTAL;
+        gbcPhaseFusionConcedeRow.weightx = 1.0;
+        pnlPhaseFusionBottom.add((Component)pnlConcedeCenter, gbcPhaseFusionConcedeRow);
+        GridBagConstraints gbcPhaseFusionConcede = new GridBagConstraints();
+        gbcPhaseFusionConcede.gridx = 0;
+        gbcPhaseFusionConcede.gridy = 0;
+        gbcPhaseFusionConcede.weightx = 1.0;
+        gbcPhaseFusionConcede.anchor = GridBagConstraints.CENTER;
+        pnlConcedeCenter.add((Component)this.btnConcede, gbcPhaseFusionConcede);
+        pnlCommandsSkipAndStack.add((Component)pnlPhaseFusionBottom, "South");
         pnlCommandsFeedbackAndHand.setMinimumSize(new Dimension(0, 0));
         pnlCommandsSkipAndStack.setMinimumSize(new Dimension(0, 0));
         pnlCommandsRoot.add((Component)pnlCommandsFeedbackAndHand, "Center");
@@ -393,8 +426,13 @@ extends JPanel {
         this.pnlShortCuts.add(this.btnCancelSkip);
         this.pnlShortCuts.add(this.txtHoldPriority);
         this.pnlShortCuts.add(this.btnSwitchHands);
-        this.pnlShortCuts.add(this.btnConcede);
+        // PHASE-FUSION v1: btnConcede fue reubicado a pnlConcedeCenter (fila centrada del margen inferior).
         this.pnlShortCuts.add(this.btnStopWatching);
+        // PHASE-FUSION v1: los botones "F" de salto de fase quedan ocultos (su
+        // funcionalidad se migra a la barra de fases). No se eliminan: los
+        // listeners, KeyStrokes y estados siguen vivos para que los atajos de
+        // teclado nativos (MageFrame) continuen operando sin regresiones.
+        this.applyPhaseFusionHiddenShortcuts();
         this.pickNumber = new PickNumberDialog();
         MageFrame.getDesktop().add((Component)this.pickNumber, this.pickNumber.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         this.pickMultiNumber = new PickMultiNumberDialog();
@@ -923,6 +961,9 @@ extends JPanel {
         this.btnSkipStack.setVisible(true);
         this.btnSkipToYourTurn.setVisible(true);
         this.btnSkipToEndStepBeforeYourTurn.setVisible(true);
+        // PHASE-FUSION v1: mantener los botones "F" ocultos tras el re-encendido
+        // de visibilidad al iniciar el juego.
+        this.applyPhaseFusionHiddenShortcuts();
         this.pnlReplay.setVisible(false);
         this.gameChatPanel.clear();
         SessionHandler.getGameChatId(gameId).ifPresent(uuid -> this.gameChatPanel.connect((UUID)uuid));
@@ -1848,8 +1889,12 @@ extends JPanel {
         this.phaseButtons.forEach((phaseName, phaseButton) -> {
             if (phaseName.equals(currentPhaseName)) {
                 phaseButton.setAlignmentX(0.5f);
+                // highlight the active phase button in red
+                phaseButton.setActiveColor(new Color(220, 30, 30));
             } else {
                 phaseButton.setAlignmentX(0.0f);
+                // clear the highlight on all other phase buttons
+                phaseButton.setActiveColor(null);
             }
         });
         this.jPhases.invalidate();
@@ -3346,9 +3391,68 @@ extends JPanel {
     }
 
     private void mouseClickPhaseBar(MouseEvent evt) {
+        // PHASE-FUSION v1: enlaza el clic de la barra de fases con los atajos nativos "F".
+        // Cada HoverButton de jPhases dispara este handler; se identifica la fase por
+        // evt.getSource() contra phaseButtons y se ejecuta el mismo manejador privado
+        // que usa el boton nativo equivalente (misma accion PlayerAction, sonido y
+        // resalte de skipButtons). Las fases sin equivalente nativo y el clic derecho
+        // conservan el comportamiento original del mod (tab de fases de preferencias).
         if (SwingUtilities.isLeftMouseButton(evt)) {
-            PreferencesDialog.main(new String[]{"Open-Phases-Tab"});
+            String phaseName = this.resolvePhaseNameByComponent(evt.getSource());
+            String skipKey = (phaseName != null) ? PHASE_FUSION_SKIP_KEYS.get(phaseName) : null;
+            if (skipKey != null) {
+                this.runPhaseFusionShortcut(skipKey);
+                return;
+            }
         }
+        PreferencesDialog.main(new String[]{"Open-Phases-Tab"});
+    }
+
+    private String resolvePhaseNameByComponent(Object source) {
+        if (!(source instanceof HoverButton)) {
+            return null;
+        }
+        HoverButton clicked = (HoverButton)source;
+        for (Map.Entry<String, HoverButton> entry : this.phaseButtons.entrySet()) {
+            if (entry.getValue() == clicked) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    private void runPhaseFusionShortcut(String skipKey) {
+        switch (skipKey) {
+            case "controlNextTurn":
+                this.btnEndTurnActionPerformed(null);
+                break;
+            case "controlEndStep":
+                this.btnUntilEndOfTurnActionPerformed(null);
+                break;
+            case "controlMainStep":
+                this.btnUntilNextMainPhaseActionPerformed(null);
+                break;
+            case "controlYourTurn":
+                this.btnPassPriorityUntilNextYourTurnActionPerformed(null);
+                break;
+            case "controlSkipStack":
+                this.btnPassPriorityUntilStackResolvedActionPerformed(null);
+                break;
+            case "controlPriorEnd":
+                this.btnSkipToEndStepBeforeYourTurnActionPerformed(null);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void applyPhaseFusionHiddenShortcuts() {
+        this.btnSkipToNextTurn.setVisible(false);
+        this.btnSkipToEndTurn.setVisible(false);
+        this.btnSkipToNextMain.setVisible(false);
+        this.btnSkipToYourTurn.setVisible(false);
+        this.btnSkipStack.setVisible(false);
+        this.btnSkipToEndStepBeforeYourTurn.setVisible(false);
     }
 
     private void btnSwitchHandActionPerformed(ActionEvent evt) {
@@ -3437,7 +3541,16 @@ extends JPanel {
         int buttonSize = GUISizeHelper.gamePhaseButtonSize;
         Rectangle rect = new Rectangle(buttonSize, buttonSize);
         HoverButton button = new HoverButton("", ImageManagerImpl.instance.getPhaseImage(name, buttonSize), rect);
-        button.setToolTipText(name.replaceAll("_", " "));
+        String phaseTooltip = name.replaceAll("_", " ");
+        // PHASE-FUSION v1: indicar el atajo nativo asociado a esta fase.
+        String phaseFusionKey = PHASE_FUSION_SKIP_KEYS.get(name);
+        if (phaseFusionKey != null) {
+            String phaseFusionKeyText = PreferencesDialog.getCachedKeyText(phaseFusionKey);
+            if (phaseFusionKeyText != null && !phaseFusionKeyText.isEmpty()) {
+                phaseTooltip = phaseTooltip + " - " + phaseFusionKeyText;
+            }
+        }
+        button.setToolTipText(phaseTooltip);
         button.setPreferredSize(new Dimension(buttonSize, buttonSize));
         button.addMouseListener(mouseAdapter);
         this.phaseButtons.put(name, button);

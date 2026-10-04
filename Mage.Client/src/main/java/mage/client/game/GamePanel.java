@@ -19,6 +19,7 @@ import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Image;
+import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -3248,13 +3249,15 @@ extends JPanel {
         this.phaseSummaryBar.setOpaque(false);
         this.phaseSummaryBar.setBackground(new Color(24, 27, 34));
         this.phaseSummaryBar.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
-        this.phaseSummaryBar.setPreferredSize(new Dimension(0, 44));
-        this.phaseSummaryBar.setMinimumSize(new Dimension(0, 44));
-        this.phaseSummaryBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        this.phaseSummaryBar.setPreferredSize(new Dimension(0, 56));
+        this.phaseSummaryBar.setMinimumSize(new Dimension(0, 56));
+        this.phaseSummaryBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
         this.phaseSummaryBar.setVisible(false);
         String[] summaryPhases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"};
         for (String phaseName : summaryPhases) {
-            JLabel cell = new JLabel(phaseName.replace("_", " "), JLabel.CENTER);
+            // PHASE-FUSION v1.3: la celda dibuja el nombre de la fase y, debajo y en
+            // chiquitito, la tecla que salta a esa fase (F4 / F5 / F7 por defecto).
+            JLabel cell = new PhaseSummaryCell(phaseName, PHASE_FUSION_SKIP_KEYS.get(phaseName));
             cell.setFont(cell.getFont().deriveFont(Font.BOLD, 16.0f));
             cell.setForeground(new Color(190, 198, 210));
             cell.setBackground(new Color(0, 0, 0, 0));
@@ -3505,6 +3508,73 @@ extends JPanel {
         return null;
     }
 
+    /**
+     * PHASE-FUSION v1.3: celda de la barra de fases. Dibuja el nombre de la fase en la
+     * linea superior y, debajo, la tecla que salta a esa fase en cuerpo pequeno. Es un
+     * JLabel para que setForeground / setBorder sigan mandando en el color de la fase
+     * (activa, objetivo del skip, combate) tal cual los usa updatePhaseSummary.
+     * La tecla se resuelve al pintar, asi que si el usuario reasigna una tecla en
+     * Preferencias se refleja sin recrear la barra.
+     */
+    private static class PhaseSummaryCell extends JLabel {
+
+        private static final float NAME_SIZE = 16.0f;
+        private static final float KEY_SIZE = 9.5f;
+        private static final Color KEY_COLOR = new Color(122, 132, 148);
+
+        private final String skipKey;
+
+        PhaseSummaryCell(String phaseName, String skipKey) {
+            super(phaseName.replace("_", " "), JLabel.CENTER);
+            this.skipKey = skipKey;
+            setFont(getFont().deriveFont(Font.BOLD, NAME_SIZE));
+        }
+
+        String getSkipKey() {
+            return this.skipKey;
+        }
+
+        /** Tecla visible en la celda, ya resuelta segun las preferencias del usuario. */
+        String getKeyText() {
+            if (this.skipKey == null) {
+                return "";
+            }
+            String text = PreferencesDialog.getCachedKeyText(this.skipKey);
+            return text == null ? "" : text;
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            String name = getText();
+            if (name == null || name.isEmpty()) {
+                super.paintComponent(graphics);
+                return;
+            }
+            Graphics2D g = (Graphics2D) graphics.create();
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                    RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+            Insets insets = getInsets();
+            int y = insets.top + getFontMetrics(getFont()).getAscent();
+            g.setColor(getForeground());
+            g.setFont(getFont());
+            g.drawString(name, getWidth() / 2, y);
+
+            String key = getKeyText();
+            if (!key.isEmpty()) {
+                Font keyFont = getFont().deriveFont(Font.PLAIN, KEY_SIZE);
+                g.setFont(keyFont);
+                y += 2 + getFontMetrics(keyFont).getAscent();
+                g.setColor(KEY_COLOR);
+                g.drawString(key, getWidth() / 2, y);
+            }
+            g.dispose();
+        }
+    }
+
+    /**
+     * Ejecuta el atajo nativo de salto asociado a una fase (la misma accion que las teclas F).
+     */
     private void runPhaseFusionShortcut(String skipKey) {
         switch (skipKey) {
             case "controlNextTurn":

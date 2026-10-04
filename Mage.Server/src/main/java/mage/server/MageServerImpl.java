@@ -966,6 +966,32 @@ public class MageServerImpl implements MageServer {
         });
     }
 
+    /**
+     * El servidor acepta el login antes de terminar de registrar los tipos de juego (la primera
+     * carga tras instalar una version nueva puede tardar minutos). Si devolviesemos el estado
+     * a esta hora vacio, el cliente lo cachea para siempre y se queda sin tipos de juego ni de jugador,
+     * sin poder crear mesas. Esperamos a que la carga termine.
+     */
+    private void waitForGameTypesLoaded() {
+        long deadline = System.currentTimeMillis() + 180_000L;
+        while (System.currentTimeMillis() < deadline) {
+            try {
+                if (!GameFactory.instance.getGameTypes().isEmpty()) {
+                    return;
+                }
+            } catch (Exception ignore) {
+                return;
+            }
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+        logger.warn("Server state requested before game types finished loading");
+    }
+
     @Override
     public ServerState getServerState() throws MageException {
         // called one time per login, must work without auth and with diff versions
@@ -974,6 +1000,8 @@ public class MageServerImpl implements MageServer {
             Thread.sleep(1000);
         } catch (InterruptedException ignore) {
         }
+
+        waitForGameTypesLoaded();
 
         try {
             return new ServerState(

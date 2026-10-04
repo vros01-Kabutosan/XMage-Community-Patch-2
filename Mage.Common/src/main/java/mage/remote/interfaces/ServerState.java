@@ -31,4 +31,14 @@ public interface ServerState {
 
     Boolean isServerReady();
 
+    /**
+     * Vuelve a pedir el estado al servidor y lo cachea solo si ya viene completo.
+     * Hace falta porque el servidor acepta el login antes de terminar de cargar los tipos de
+     * juego: si el cliente conecta en esa ventana, cachea un estado vacio y se queda sin
+     * tipos de juego ni de jugador hasta que se vuelva a conectar.
+     *
+     * @return true si el estado se ha refrescado con datos completos
+     */
+    Boolean refreshServerState();
+
 }

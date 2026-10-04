@@ -867,6 +867,28 @@ public class NewTableDialog extends MageDialog {
         MageFrame.getInstance().showErrorDialog("CLIENT - error on join table", e);
     }
 
+    /**
+     * Re-pide al servidor su estado hasta que publique los tipos de juego. El servidor ya
+     * espera a tenerlos cargados antes de responder, asi que basta con preguntar.
+     */
+    private List<GameTypeView> waitForServerReady() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+            if (SessionHandler.refreshServerState()) {
+                List<GameTypeView> types = SessionHandler.getGameTypes();
+                if (types != null && !types.isEmpty()) {
+                    return types;
+                }
+            }
+        }
+        return null;
+    }
+
     public void showDialog(UUID roomId) {
         this.roomId = roomId;
         if (!lastSessionId.equals(SessionHandler.getSessionId())) {
@@ -874,6 +896,11 @@ public class NewTableDialog extends MageDialog {
             // Si se abre el dialogo en esa ventana, getGameTypes()/getPlayerTypes()
             // llegan vacios y el dialogo reventaba con NullPointerException.
             List<GameTypeView> availableGameTypes = SessionHandler.getGameTypes();
+            if (availableGameTypes == null || availableGameTypes.isEmpty()) {
+                // Se re-pide el estado al servidor: si ya termino de arrancar, asi se recupera
+                // sin obligar al usuario a reiniciar el cliente.
+                availableGameTypes = waitForServerReady();
+            }
             if (availableGameTypes == null || availableGameTypes.isEmpty()) {
                 JOptionPane.showMessageDialog(MageFrame.getDesktop(),
                         "El servidor todavia no esta listo.\n"

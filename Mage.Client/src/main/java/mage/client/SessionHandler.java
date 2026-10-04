@@ -144,6 +144,26 @@ public final class SessionHandler {
         return session.getPlayerTypes();
     }
 
+    /**
+     * Re-pide el estado al servidor. Necesario cuando el cliente se conecto mientras el
+     * servidor arrancaba y cacheo un estado sin tipos de juego ni de jugador.
+     */
+    public static boolean refreshServerState() {
+        try {
+            return Boolean.TRUE.equals(session.refreshServerState());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static boolean isServerReady() {
+        try {
+            return Boolean.TRUE.equals(session.isServerReady());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static boolean joinTournamentTable(UUID roomId, UUID tableId, String text, PlayerType selectedItem, Integer integer, DeckCardLists deckCardLists, String s) {
         return session.joinTournamentTable(roomId, tableId, text, selectedItem, integer, deckCardLists, s);
     }

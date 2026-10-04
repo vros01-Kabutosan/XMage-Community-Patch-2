@@ -680,6 +680,28 @@ public class SessionImpl implements Session {
     }
 
     @Override
+    public Boolean refreshServerState() {
+        // Vuelve a pedir el estado al servidor. El servidor lo devuelve ya completo porque
+        // espera a tener los tipos de juego cargados, asi que esto recupera al cliente que se
+        // conecto durante el arranque del servidor.
+        try {
+            if (!isConnected()) {
+                return false;
+            }
+            ServerState newState = server.getServerState();
+            if (newState != null && newState.getGameTypes() != null && !newState.getGameTypes().isEmpty()) {
+                serverState = newState;
+                logger.info("Server state refreshed: " + newState.getGameTypes().size() + " game types");
+                return true;
+            }
+            logger.warn("Server state refresh got an incomplete state (no game types)");
+        } catch (Exception e) {
+            logger.warn("Can't refresh server state: " + e);
+        }
+        return false;
+    }
+
+    @Override
     public PlayerType[] getPlayerTypes() {
         return serverState.getPlayerTypes();
     }

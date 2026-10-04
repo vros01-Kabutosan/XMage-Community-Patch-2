@@ -504,6 +504,9 @@ public class NewTableDialog extends MageDialog {
     private void btnOKActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnOKActionPerformed
 
         MatchOptions options = getMatchOptions();
+        if (options == null) {
+            return;
+        }
         if (!checkMatchOptions(options)) {
             return;
         }
@@ -522,7 +525,8 @@ public class NewTableDialog extends MageDialog {
 
             // join AI
             for (TablePlayerPanel player : players) {
-                if (player.getPlayerType() != PlayerType.HUMAN) {
+                PlayerType panelType = player.getPlayerType();
+                if (panelType != null && panelType != PlayerType.HUMAN) {
                     if (!player.joinTable(roomId, table.getTableId())) {
                         // error message must be sent by a server
                         SessionHandler.removeTable(roomId, table.getTableId());
@@ -612,10 +616,20 @@ public class NewTableDialog extends MageDialog {
     private MatchOptions getMatchOptions() {
         // current settings
         GameTypeView gameType = (GameTypeView) cbGameType.getSelectedItem();
+        if (gameType == null) {
+            // servidor aun inicializando: no se puede crear la mesa
+            JOptionPane.showMessageDialog(MageFrame.getDesktop(),
+                    "El servidor todavia no esta listo.\nEspera unos segundos y vuelve a intentarlo.",
+                    "Servidor no listo", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
         MatchOptions options = new MatchOptions(this.txtName.getText(), gameType.getName(), false);
         options.getPlayerTypes().add(PlayerType.HUMAN);
         for (TablePlayerPanel player : players) {
-            options.getPlayerTypes().add(player.getPlayerType());
+            PlayerType panelType = player.getPlayerType();
+            if (panelType != null) {
+                options.getPlayerTypes().add(panelType);
+            }
         }
         options.setDeckType((String) this.cbDeckType.getSelectedItem());
         options.setMatchTimeLimit((MatchTimeLimit) this.cbTimeLimit.getSelectedItem());
@@ -756,6 +770,10 @@ public class NewTableDialog extends MageDialog {
 
     private void setGameOptions() {
         GameTypeView gameType = (GameTypeView) cbGameType.getSelectedItem();
+        if (gameType == null) {
+            // sin tipo de juego no hay nada que configurar (servidor aun inicializando)
+            return;
+        }
         int oldValue = (Integer) this.spnNumPlayers.getValue();
         this.spnNumPlayers.setModel(new SpinnerNumberModel(gameType.getMinPlayers(), gameType.getMinPlayers(), gameType.getMaxPlayers(), 1));
         this.spnNumPlayers.setEnabled(gameType.getMinPlayers() != gameType.getMaxPlayers());
@@ -852,6 +870,19 @@ public class NewTableDialog extends MageDialog {
     public void showDialog(UUID roomId) {
         this.roomId = roomId;
         if (!lastSessionId.equals(SessionHandler.getSessionId())) {
+            // El servidor acepta el login antes de terminar de cargar los tipos de juego.
+            // Si se abre el dialogo en esa ventana, getGameTypes()/getPlayerTypes()
+            // llegan vacios y el dialogo reventaba con NullPointerException.
+            List<GameTypeView> availableGameTypes = SessionHandler.getGameTypes();
+            if (availableGameTypes == null || availableGameTypes.isEmpty()) {
+                JOptionPane.showMessageDialog(MageFrame.getDesktop(),
+                        "El servidor todavia no esta listo.\n"
+                                + "Espera unos segundos a que termine de iniciar y vuelve a intentarlo.",
+                        "Servidor no listo", JOptionPane.WARNING_MESSAGE);
+                setVisible(false);
+                dispose();
+                return;
+            }
             lastSessionId = SessionHandler.getSessionId();
             this.player1Panel.setPlayerName(SessionHandler.getUserName());
             cbGameType.setModel(new DefaultComboBoxModel(SessionHandler.getGameTypes().toArray()));
@@ -1056,7 +1087,7 @@ public class NewTableDialog extends MageDialog {
         // save player data
         // player type
         String playerData = players.stream()
-                .map(panel -> panel.getPlayerType().toString())
+                .map(panel -> panel.getPlayerType() == null ? PlayerType.HUMAN.toString() : panel.getPlayerType().toString())
                 .collect(Collectors.joining(PLAYER_DATA_DELIMETER_OLD));
         PreferencesDialog.saveValue(PreferencesDialog.KEY_NEW_TABLE_PLAYER_TYPES + versionStr, playerData);
         // player skill

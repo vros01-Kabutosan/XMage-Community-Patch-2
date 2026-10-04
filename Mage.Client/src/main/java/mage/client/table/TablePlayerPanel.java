@@ -26,7 +26,9 @@ public class TablePlayerPanel extends javax.swing.JPanel {
     public void init(int playerNum, PlayerType playerType, int playerSkill, String playerDeck) {
         cbPlayerType.setModel(new DefaultComboBoxModel(SessionHandler.getPlayerTypes()));
         this.lblPlayerNum.setText("Player " + playerNum);
-        if (ClientDefaultSettings.otherPlayerIndex != null) {
+        // Si el servidor aun no ha publicado los tipos de jugador, getItemCount() es 0 y
+        // setSelectedIndex(-1) disparaba el action listener con la seleccion nula (NPE).
+        if (cbPlayerType.getItemCount() > 0 && ClientDefaultSettings.otherPlayerIndex != null) {
             Integer index = Integer.parseInt(ClientDefaultSettings.otherPlayerIndex);
             if (index >= cbPlayerType.getItemCount()) {
                 cbPlayerType.setSelectedIndex(cbPlayerType.getItemCount() - 1);
@@ -53,6 +55,10 @@ public class TablePlayerPanel extends javax.swing.JPanel {
     }
 
     public PlayerType getPlayerType() {
+        if (this.cbPlayerType.getSelectedItem() == null) {
+            // sin tipos de jugador publicados todavia (servidor inicializando)
+            return null;
+        }
         return PlayerType.getByDescription(this.cbPlayerType.getSelectedItem().toString());
     }
 
@@ -130,7 +136,11 @@ public class TablePlayerPanel extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void cbPlayerTypeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbPlayerTypeActionPerformed
-        if (getPlayerType() != PlayerType.HUMAN) {
+        PlayerType selected = getPlayerType();
+        if (selected == null) {
+            return;
+        }
+        if (selected != PlayerType.HUMAN) {
             this.newPlayerPanel.setVisible(true);
             this.newPlayerPanel.setPlayerName(extractAiPlayerNumberFromLabel(this.lblPlayerNum.getText()));
         } else {

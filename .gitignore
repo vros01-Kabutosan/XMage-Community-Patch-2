@@ -64,3 +64,6 @@ mage-bundle.zip
 
 # dev tools
 .devcontainer/**/*lock.json
+
+# artefactos que generan los smoke tests al construir los iconos de carta
+plugins/

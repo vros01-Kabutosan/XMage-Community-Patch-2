@@ -9,6 +9,7 @@ import mage.client.MageFrame;
 import mage.client.cards.BigCard;
 import mage.client.dialog.PreferencesDialog;
 import mage.client.plugins.impl.Plugins;
+import mage.client.util.CardViewEquality;
 import mage.client.util.ClientDefaultSettings;
 import mage.client.util.GUISizeHelper;
 import mage.client.util.audio.AudioManager;
@@ -283,7 +284,7 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
 
     private boolean permanentViewEquals(MagePermanent oldPermanent, PermanentView newPermanent) {
         PermanentView oldView = oldPermanent.getOriginalPermanent();
-        if (!CardView.cardViewEquals(oldView, newPermanent)) {
+        if (!CardViewEquality.cardViewEquals(oldView, newPermanent)) {
             return false;
         }
         if (oldPermanent.isTapped() != newPermanent.isTapped()

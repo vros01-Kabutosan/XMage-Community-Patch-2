@@ -331,52 +331,8 @@ implements CardEventProducer {
         newCard.setCardLocation(dx += newCard.getCardLocation().getCardWidth() + MageActionCallback.getHandOrStackBetweenGapX(newCard.getZone()), MageActionCallback.getHandOrStackMargins(newCard.getZone()).getTop());
     }
 
-    // oficial 1.4.62 elimino CardView.cardViewEquals (la deteccion de
-    // cambios paso a la firma de render). Para no perder este mod
-    // (evitar updates redundantes) reimplementamos aqui la comparacion
-    // que hacia ese helper.
-    private static boolean baseCardViewEquals(CardView a, CardView b) {
-        if (a == b) {
-            return true;
-        }
-        if (a == null || b == null || a.getClass() != b.getClass()) {
-            return false;
-        }
-        if (!(a.getDisplayName().equals(b.getDisplayName())
-                && a.getPower().equals(b.getPower())
-                && a.getToughness().equals(b.getToughness())
-                && a.getLoyalty().equals(b.getLoyalty())
-                && a.getDefense().equals(b.getDefense())
-                && 0 == a.getColor().compareTo(b.getColor())
-                && a.getCardTypes().equals(b.getCardTypes())
-                && a.getSubTypes().equals(b.getSubTypes())
-                && a.getSuperTypes().equals(b.getSuperTypes())
-                && a.getManaCostStr().equals(b.getManaCostStr())
-                && a.getRules().equals(b.getRules())
-                && java.util.Objects.equals(a.getRarity(), b.getRarity())
-                && a.getFrameStyle() == b.getFrameStyle()
-                && java.util.Objects.equals(a.getCounters(), b.getCounters())
-                && a.isFaceDown() == b.isFaceDown())) {
-            return false;
-        }
-        if (!(java.util.Objects.equals(a.getExpansionSetCode(), b.getExpansionSetCode())
-                && java.util.Objects.equals(a.getCardNumber(), b.getCardNumber())
-                && java.util.Objects.equals(a.getImageNumber(), b.getImageNumber())
-                && java.util.Objects.equals(a.getImageFileName(), b.getImageFileName())
-                && java.util.Objects.equals(a.getUsesVariousArt(), b.getUsesVariousArt()))) {
-            return false;
-        }
-        if (!(a instanceof PermanentView)) {
-            return true;
-        }
-        PermanentView aa = (PermanentView) a;
-        PermanentView bb = (PermanentView) b;
-        return aa.hasSummoningSickness() == bb.hasSummoningSickness()
-                && aa.getDamage() == bb.getDamage();
-    }
-
     private boolean cardViewEquals(CardView oldCard, CardView newCard) {
-        if (!baseCardViewEquals(oldCard, newCard)) {
+        if (!mage.client.util.CardViewEquality.cardViewEquals(oldCard, newCard)) {
             return false;
         }
         if (oldCard.isChoosable() != newCard.isChoosable()

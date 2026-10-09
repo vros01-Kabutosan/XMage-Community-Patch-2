@@ -23,7 +23,7 @@ AQUI = Path(__file__).resolve().parent
 SCRIPT_ORDENAR = AQUI / "ordenar_decks.py"
 
 # Carpeta donde el descargador escribe sus logs
-CARPETA_LOGS = Path(r"J:\MTG\xmage\client\config\deck-downloader")
+CARPETA_LOGS = Path(r"J:\MTG\Instalacion-XMage\xmage\mage-client\config\deck-downloader")
 
 # Si sabes el nombre exacto del log del motor, ponlo aquí,
 # p.ej. LOG_DESCARGADOR = CARPETA_LOGS / "decks.log"

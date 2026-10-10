@@ -412,6 +412,26 @@ public class Spell extends StackObjectImpl implements Card {
             if (isCopy()) {
                 Token token = CopyTokenFunction.createTokenCopy(card, game, this);
                 // The token that a resolving copy of a spell becomes isn’t said to have been “created.” (2020-09-25)
+                // A copy of a Room spell preserves the half chosen when the
+                // original was cast (CR 707.10). A half-cast Room is on the
+                // stack as its half object, with the choice stored on the
+                // parent card. Record it on the token itself beforehand: the
+                // Room unlock runs synchronously on entry (EntersBattlefield
+                // replacement), so the state must be in place before the
+                // token enters. (Card copies share one UUID, so only this
+                // resolution's own card object is reliable here.)
+                RoomCard roomCard = null;
+                if (card instanceof RoomCard) {
+                    roomCard = (RoomCard) card;
+                } else if (card instanceof RoomCardHalf && card.getMainCard() instanceof RoomCard) {
+                    roomCard = (RoomCard) card.getMainCard();
+                }
+                if (roomCard != null) {
+                    SpellAbilityType castHalf = roomCard.getLastCastHalf();
+                    if (castHalf == SpellAbilityType.SPLIT_LEFT || castHalf == SpellAbilityType.SPLIT_RIGHT) {
+                        token.setRoomCastHalf(castHalf);
+                    }
+                }
                 token.putOntoBattlefield(1, game, ability, getControllerId(), false, false, null, null, false);
                 return true;
             } else {

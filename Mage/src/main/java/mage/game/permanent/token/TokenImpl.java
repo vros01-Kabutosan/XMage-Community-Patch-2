@@ -37,6 +37,12 @@ public abstract class TokenImpl extends MageObjectImpl implements Token {
     private Card copySourceCard; // the card the Token is a copy from
     private static final int MAX_TOKENS_PER_GAME = 500;
 
+    // Remembers which half of a Room was cast when this token is the
+    // resolution of a copied Room spell (CR 707.10). Carried onto the token
+    // permanent so its ETB unlock sees it (the unlock runs synchronously on
+    // entry, before any caller could set permanent state afterwards).
+    private SpellAbilityType roomCastHalf = null;
+
     protected Token backFace = null;
     private boolean entersTransformed = false;
 
@@ -58,6 +64,7 @@ public abstract class TokenImpl extends MageObjectImpl implements Token {
         this.description = token.description;
         this.lastAddedTokenIds.addAll(token.lastAddedTokenIds);
         this.copySourceCard = token.copySourceCard; // will never be changed
+        this.roomCastHalf = token.roomCastHalf; // same one-shot state as the source token
         this.backFace = token.backFace != null ? token.backFace.copy() : null;
         this.entersTransformed = token.entersTransformed;
     }
@@ -491,6 +498,16 @@ public abstract class TokenImpl extends MageObjectImpl implements Token {
     @Override
     public Token getBackFace() {
         return backFace;
+    }
+
+    @Override
+    public SpellAbilityType getRoomCastHalf() {
+        return roomCastHalf;
+    }
+
+    @Override
+    public void setRoomCastHalf(SpellAbilityType roomCastHalf) {
+        this.roomCastHalf = roomCastHalf;
     }
 
 

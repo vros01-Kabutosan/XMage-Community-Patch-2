@@ -5,11 +5,13 @@ import java.util.UUID;
 import mage.MageInt;
 import mage.MageObject;
 import mage.abilities.Ability;
+import mage.abilities.common.RoomAbility;
 import mage.abilities.costs.mana.ManaCost;
 import mage.abilities.keyword.ChangelingAbility;
 import mage.cards.Card;
 import mage.cards.RoomCard;
 import mage.constants.EmptyNames;
+import mage.constants.SpellAbilityType;
 import mage.game.Game;
 import mage.game.events.ZoneChangeEvent;
 import mage.game.permanent.token.Token;
@@ -39,6 +41,15 @@ public class PermanentToken extends PermanentImpl {
             this.copyFromToken(this.token, game, false); // needed to have at this time (e.g. for subtypes for entersTheBattlefield replacement effects)
         }
 
+        // A token resolving from a copied Room spell carries the cast half
+        // (CR 707.10). Take it over before entry: the Room unlock runs
+        // synchronously on entry, so the permanent must hold it beforehand.
+        // Tokens from any other source have no half recorded and stay locked.
+        SpellAbilityType roomCastHalf = this.token.getRoomCastHalf();
+        if (roomCastHalf == SpellAbilityType.SPLIT_LEFT || roomCastHalf == SpellAbilityType.SPLIT_RIGHT) {
+            setRoomCastHalf(roomCastHalf);
+        }
+
         // token's ZCC must be synced with original token to keep abilities settings
         // Example: kicker ability and kicked status
         if (game != null) { // game == null in GUI for card viewer's tokens
@@ -63,6 +74,38 @@ public class PermanentToken extends PermanentImpl {
         // Because the P/T objects have there own base value for reset we have to take it from there instead of from the basic token object
         this.power.resetToBaseValue();
         this.toughness.resetToBaseValue();
+        restoreRoomCharacteristics(game);
+    }
+
+    /**
+     * Room unlocks add the unlocked half's abilities to the permanent, but a
+     * token reset re-copies only the token blueprint (which never holds
+     * them), so the abilities would be lost on the next game update while the
+     * unlock designations themselves survive. Re-apply the halves'
+     * characteristics from the copy source, mirroring what copyFromCard does
+     * for real Room cards, so tokens keep their unlocked halves working.
+     */
+    private void restoreRoomCharacteristics(Game game) {
+        if (game == null || this.token == null) {
+            return;
+        }
+        Card source = this.token.getCopySourceCard();
+        RoomCard roomCard = null;
+        if (source instanceof RoomCard) {
+            roomCard = (RoomCard) source;
+        } else if (source != null && source.getMainCard() instanceof RoomCard) {
+            roomCard = (RoomCard) source.getMainCard();
+        }
+        if (roomCard == null) {
+            return;
+        }
+        RoomCard.addRoomCharacteristics(this, roomCard, game);
+        for (Ability ability : getAbilities()) {
+            if (ability instanceof RoomAbility) {
+                ((RoomAbility) ability).applyCharacteristics(game, this);
+                break;
+            }
+        }
     }
 
     @Override

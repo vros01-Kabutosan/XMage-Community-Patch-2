@@ -4,6 +4,7 @@ import mage.MageObject;
 import mage.ObjectColor;
 import mage.abilities.Ability;
 import mage.cards.Card;
+import mage.constants.SpellAbilityType;
 import mage.game.Game;
 
 import java.util.List;
@@ -49,6 +50,14 @@ public interface Token extends MageObject {
     Card getCopySourceCard();
 
     void setCopySourceCard(Card copySourceCard);
+
+    /**
+     * Which half of a Room was cast, when this token is the resolution of a
+     * copied Room spell. Consumed by the token permanent on entry.
+     */
+    SpellAbilityType getRoomCastHalf();
+
+    void setRoomCastHalf(SpellAbilityType roomCastHalf);
 
     Token getBackFace();
 

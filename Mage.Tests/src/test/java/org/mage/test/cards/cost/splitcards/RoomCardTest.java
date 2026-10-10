@@ -1075,4 +1075,153 @@ public class RoomCardTest extends CardTestPlayerBase {
         assertPermanentCount(playerA, sakashimaTheImpostor, 0);
         assertGraveyardCount(playerA, sakashimaTheImpostor, 1);
     }
+
+    // A Room put onto the battlefield without being cast (here: destroyed and
+    // reanimated) must enter fully locked: no door unlocks and no "when you
+    // unlock this door" trigger fires. Guards against stale cast-half state
+    // being reused by a later zone change.
+    @Test
+    public void testReanimateEntersLocked() {
+        skipInitShuffling();
+        // Bottomless Pool {U} When you unlock this door, return up to one target
+        // creature to its owner’s hand.
+        // Disenchant {1}{W} Destroy target artifact or enchantment.
+        // Replenish {3}{W} Return all enchantment cards from your graveyard to
+        // the battlefield.
+        addCard(Zone.HAND, playerA, bottomlessPoolLockerRoom);
+        addCard(Zone.HAND, playerA, "Disenchant");
+        addCard(Zone.HAND, playerA, "Replenish");
+        addCard(Zone.BATTLEFIELD, playerA, "Island", 5);
+        addCard(Zone.BATTLEFIELD, playerA, "Plains", 3);
+
+        // one creature for the cast unlock trigger
+        addCard(Zone.BATTLEFIELD, playerA, "Memnite", 1);
+
+        // cast left half, unlock trigger bounces Memnite
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, bottomlessPool);
+        addTarget(playerA, "Memnite");
+        waitStackResolved(1, PhaseStep.PRECOMBAT_MAIN);
+        // destroy the room
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Disenchant");
+        addTarget(playerA, bottomlessPool);
+        waitStackResolved(1, PhaseStep.PRECOMBAT_MAIN);
+        // reanimate all enchantments
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Replenish");
+        waitStackResolved(1, PhaseStep.PRECOMBAT_MAIN);
+
+        setStopAt(1, PhaseStep.END_TURN);
+        setStrictChooseMode(true);
+        execute();
+
+        // Assertions:
+        // Only the cast unlock bounced: Memnite is in hand exactly once, so no
+        // second unlock trigger fired for the reanimated room.
+        assertHandCount(playerA, "Memnite", 1);
+        // Verify that a fully locked room is on playerA's battlefield.
+        assertPermanentCount(playerA, EmptyNames.FULLY_LOCKED_ROOM.getTestCommand(), 1);
+        // Verify that the locked room is an Enchantment.
+        assertType(EmptyNames.FULLY_LOCKED_ROOM.getTestCommand(), CardType.ENCHANTMENT, true);
+        // Verify that the locked room has the Room subtype.
+        assertSubtype(EmptyNames.FULLY_LOCKED_ROOM.getTestCommand(), SubType.ROOM);
+    }
+
+    // A stack copy of a Room spell cast as the right half must also unlock the
+    // right half (CR 707.10: a spell copy preserves the decisions made on
+    // cast, including the half). Covers the token path for the other half.
+    @Test
+    public void testCopyRightHalfOnStack() {
+        skipInitShuffling();
+        // Bottomless Pool {U} When you unlock this door, return up to one target
+        // creature to its owner’s hand.
+        // Locker Room {4}{U} Whenever one or more creatures you control deal combat
+        // damage to a player, draw a card.
+        // See Double {2}{U}{U} This spell can't be copied. Choose one --
+        // Copy target spell. You may choose new targets for the copy.
+        addCard(Zone.HAND, playerA, bottomlessPoolLockerRoom);
+        addCard(Zone.HAND, playerA, "See Double");
+        addCard(Zone.BATTLEFIELD, playerA, "Island", 9);
+        addCard(Zone.LIBRARY, playerA, "Plains", 2);
+
+        // 1 attacker for a single combat damage event
+        addCard(Zone.BATTLEFIELD, playerA, "Memnite", 1);
+
+        // cast right half
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, lockerRoom);
+
+        // copy spell on the stack
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "See Double");
+        setModeChoice(playerA, "1");
+        addTarget(playerA, lockerRoom);
+
+        // both rooms (original and copy) unlock right: a single combat damage
+        // event triggers each room once
+        attack(1, playerA, "Memnite");
+        // two simultaneous triggers, one per room: pick any order (both draw)
+        setChoice(playerA, "Locker Room");
+        // After combat damage, both rooms trigger (one trigger each).
+        checkStackSize("both rooms must trigger", 1, PhaseStep.COMBAT_DAMAGE, playerA, 2);
+
+        // Stop at the end of the combat phase to check triggers.
+        setStopAt(1, PhaseStep.END_COMBAT);
+        setStrictChooseMode(true);
+        execute();
+
+        // Assertions:
+        // Verify that 2 "Locker Room" are on playerA's battlefield.
+        assertPermanentCount(playerA, lockerRoom, 2);
+
+        setStrictChooseMode(true);
+        execute(); // Resolve both draw triggers.
+
+        // Verify that playerA drew two Plains cards (one per room trigger).
+        assertHandCount(playerA, "Plains", 2);
+    }
+
+    // Two independent copies of the same Room spell must each unlock: every
+    // spell resolution carries its own half choice, even though all card
+    // copies share one UUID. Covers per-spell state independence.
+    @Test
+    public void testDoubleCopyOnStack() {
+        skipInitShuffling();
+        // Bottomless Pool {U} When you unlock this door, return up to one target
+        // creature to its owner’s hand.
+        // Locker Room {4}{U} Whenever one or more creatures you control deal combat
+        // damage to a player, draw a card.
+        // See Double {2}{U}{U} This spell can't be copied. Choose one --
+        // Copy target spell. You may choose new targets for the copy.
+        addCard(Zone.HAND, playerA, bottomlessPoolLockerRoom);
+        addCard(Zone.HAND, playerA, "See Double", 2);
+        addCard(Zone.BATTLEFIELD, playerA, "Island", 9);
+        addCard(Zone.BATTLEFIELD, playerA, "Memnite", 2);
+        addCard(Zone.BATTLEFIELD, playerA, "Ornithopter", 1);
+
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, bottomlessPool);
+
+        // first copy of the spell on the stack
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "See Double");
+        setModeChoice(playerA, "1");
+        addTarget(playerA, bottomlessPool);
+
+        // second copy of the spell on the stack
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "See Double");
+        setModeChoice(playerA, "1");
+        addTarget(playerA, bottomlessPool);
+
+        // resolve all three rooms (original and two copies)
+        addTarget(playerA, "Memnite");
+        addTarget(playerA, "Ornithopter");
+        addTarget(playerA, "Memnite");
+
+        setStopAt(1, PhaseStep.END_TURN);
+        setStrictChooseMode(true);
+        execute();
+
+        // Assertions:
+        // Verify that two "Memnite" have been returned to playerA's hand.
+        assertHandCount(playerA, "Memnite", 2);
+        // Verify that one "Ornithopter" has been returned to playerA's hand.
+        assertHandCount(playerA, "Ornithopter", 1);
+        // Verify that 3 "Bottomless Pool" are on playerA's battlefield.
+        assertPermanentCount(playerA, bottomlessPool, 3);
+    }
 }

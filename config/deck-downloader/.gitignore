@@ -1,0 +1,14 @@
+# Estado y artefactos de ejecucion: nunca se suben
+deck-library-state.json
+scryfall-deck-library-cache.json
+scryfall_mtgo_cache.json
+scryfall_mtgtop8_cache.json
+*.log
+*.lock
+.cancel-update
+# Salida generada por los conectores
+MTGO/
+MTGGoldfish/
+MTGTop8/
+# Biblioteca de mazos jamas en el repositorio
+Descargados/

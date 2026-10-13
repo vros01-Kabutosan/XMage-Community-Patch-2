@@ -15,6 +15,7 @@ busca. Antes de la reparación fallaba, porque el archivo traía la ruta de
 una instalación antigua.
 """
 
+import os
 import re
 import shutil
 import subprocess
@@ -63,6 +64,24 @@ def variante(raiz, motor):
     return destino
 
 
+def entorno_hijo():
+    """Entorno para los vigilantes lanzados en pruebas.
+
+    Fuerza UTF-8 en el hijo (PYTHONUTF8=1 y PYTHONIOENCODING=utf-8) para
+    que su stdout sea UTF-8 real en cualquier locale de Windows. Hace falta
+    fijar las dos: PYTHONIOENCODING tiene prioridad sobre PYTHONUTF8, asi
+    que si el entorno heredado lo trae, PYTHONUTF8 solo no bastaria.
+    Sin esto, en un sistema con ANSI cp1252 la 'ó' de 'Ordenación
+    terminada' sale como byte 0xF3 y el harness, que decodifica UTF-8,
+    la sustituye por U+FFFD: T2 falla aunque el vigilante y el organizador
+    funcionen bien. No toca el producto.
+    """
+    env = dict(os.environ)
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    return env
+
+
 def lanzar(_vig, raiz, motor, descargados):
     shutil.copy2(ORDENAR, descargados / "ordenar_decks.py")
     ejecutable = variante(raiz, motor)
@@ -73,6 +92,7 @@ def lanzar(_vig, raiz, motor, descargados):
         [sys.executable, "-u", str(descargados / "vigilante_decks.py")],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, encoding="utf-8", errors="replace", cwd=str(descargados),
+        env=entorno_hijo(),
     )
     return proc, log
 
@@ -248,7 +268,7 @@ def test_log_inexistente():
         tmp.write_text(texto, encoding="utf-8")
         proc = subprocess.Popen([sys.executable, "-u", str(tmp)], stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True, encoding="utf-8",
-                                errors="replace")
+                                errors="replace", env=entorno_hijo())
         esperar(proc, 6)
         vivo = proc.poll() is None
         proc.terminate()

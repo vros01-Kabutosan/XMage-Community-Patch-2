@@ -97,6 +97,7 @@ import mage.client.components.ext.dlg.DialogManager;
 import mage.client.components.tray.MageTray;
 import mage.client.dialog.CardHintsHelperDialog;
 import mage.client.dialog.CardInfoWindowDialog;
+import mage.client.dialog.GraveyardCardsDialog;
 import mage.client.dialog.MageDialog;
 import mage.client.dialog.PickChoiceDialog;
 import mage.client.dialog.PickMultiNumberDialog;
@@ -185,7 +186,7 @@ extends JPanel {
     private final Set<String> manuallyClosedCardInfoWindows = new HashSet<String>();
     private static final int CARD_INFO_WINDOW_CLOSE_DELAY_MS = 250;
     private final Map<String, CardsView> graveyards = new HashMap<String, CardsView>();
-    private final Map<String, CardInfoWindowDialog> graveyardWindows = new HashMap<String, CardInfoWindowDialog>();
+    private final Map<String, GraveyardCardsDialog> graveyardWindows = new HashMap<String, GraveyardCardsDialog>();
     private final Map<String, String> graveyardWindowFingerprints = new HashMap<String, String>();
     private final Map<String, CardInfoWindowDialog> companion = new HashMap<String, CardInfoWindowDialog>();
     private final Map<String, CardsView> sideboards = new HashMap<String, CardsView>();
@@ -358,6 +359,38 @@ extends JPanel {
         }
     }
 
+    private void xcpStartDebugLayoutDump() {
+        final javax.swing.Timer dumpTimer = new javax.swing.Timer(3000, null);
+        dumpTimer.addActionListener(evt -> {
+            try {
+                StringBuilder sb = new StringBuilder("XCPDUMP ");
+                java.awt.Container desktop = mage.client.MageFrame.getDesktop();
+                sb.append("desktop=").append(desktop.getWidth()).append('x').append(desktop.getHeight());
+                sb.append(" gamePanel=").append(d(this));
+                sb.append(" helper=").append(d(this.pnlHelperHandButtonsStackArea));
+                for (Component c : this.pnlHelperHandButtonsStackArea.getComponents()) {
+                    sb.append(" helperChild[").append(c.getClass().getSimpleName()).append(']').append(d(c));
+                }
+                sb.append(" hand=").append(d(this.handContainer));
+                sb.append(" phaseBar=").append(d(this.phaseSummaryBar));
+                sb.append(" splitBC=").append(d(this.splitBattlefieldAndChats)).append(" div=").append(this.splitBattlefieldAndChats.getDividerLocation());
+                sb.append(" splitBC.left=").append(d(this.splitBattlefieldAndChats.getLeftComponent()));
+                sb.append(" splitBC.right=").append(d(this.splitBattlefieldAndChats.getRightComponent()));
+                logger.info((Object)sb.toString());
+            } catch (Throwable ignored) {
+            }
+        });
+        dumpTimer.setRepeats(true);
+        dumpTimer.start();
+    }
+
+    private static String d(Component c) {
+        if (c == null) {
+            return "null";
+        }
+        return "{vis=" + c.isVisible() + " show=" + c.isShowing() + " b=" + c.getX() + "," + c.getY() + "," + c.getWidth() + "x" + c.getHeight() + " pref=" + c.getPreferredSize().width + "x" + c.getPreferredSize().height + "}";
+    }
+
     private boolean xcpNormalizeBattlefieldViewport(BattlefieldPanel battlefield) {
         JLayeredPane mainPanel = battlefield.getMainPanel();
         Dimension preferred = mainPanel.getPreferredSize();
@@ -398,7 +431,7 @@ extends JPanel {
         pnlCommandsFeedbackAndHand.add((Component)this.feedbackPanel, "North");
         JPanel pnlPhaseAndHand = new JPanel(new BorderLayout());
         pnlPhaseAndHand.setOpaque(false);
-        pnlPhaseAndHand.add((Component)this.phaseSummaryBar, "North");
+        pnlPhaseAndHand.add((Component)this.phaseSummaryBar, "South");
         pnlPhaseAndHand.add((Component)this.handContainer, "Center");
         pnlCommandsFeedbackAndHand.add((Component)pnlPhaseAndHand, "Center");
         JPanel pnlCommandsSkipAndStack = new JPanel(new BorderLayout());
@@ -468,6 +501,7 @@ extends JPanel {
         Map<String, JComponent> myUi = this.getUIComponents(jLayeredBackgroundPane);
         Plugins.instance.updateGamePanel(myUi);
         this.initFloatingStackWindow();
+        this.xcpStartDebugLayoutDump();
         this.addComponentListener(new ComponentAdapter(){
 
             @Override
@@ -600,7 +634,7 @@ extends JPanel {
             cardInfoWindowDialog.cleanUp();
             cardInfoWindowDialog.removeDialog();
         }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+        for (GraveyardCardsDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
             cardInfoWindowDialog.cleanUp();
             cardInfoWindowDialog.removeDialog();
         }
@@ -686,7 +720,7 @@ extends JPanel {
         for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
             cardInfoWindowDialog.changeGUISize();
         }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+        for (GraveyardCardsDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
             cardInfoWindowDialog.changeGUISize();
         }
         for (CardInfoWindowDialog cardInfoWindowDialog : this.sideboardWindows.values()) {
@@ -1265,7 +1299,7 @@ extends JPanel {
                 }
                 this.graveyards.put(player.getName(), player.getGraveyard());
                 if (this.graveyardWindows.containsKey(player.getName())) {
-                    CardInfoWindowDialog graveyardWindow = this.graveyardWindows.get(player.getName());
+                    GraveyardCardsDialog graveyardWindow = this.graveyardWindows.get(player.getName());
                     if (graveyardWindow.isClosed()) {
                         this.graveyardWindows.remove(player.getName());
                         this.graveyardWindowFingerprints.remove(player.getName());
@@ -1999,7 +2033,7 @@ extends JPanel {
         for (CardInfoWindowDialog cardInfoWindowDialog : this.exiles.values()) {
             cardInfoWindowDialog.hideDialog();
         }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+        for (GraveyardCardsDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
             cardInfoWindowDialog.hideDialog();
         }
         for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
@@ -2030,7 +2064,7 @@ extends JPanel {
         for (CardInfoWindowDialog cardInfoWindowDialog : this.lookedAt.values()) {
             cardInfoWindowDialog.show();
         }
-        for (CardInfoWindowDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
+        for (GraveyardCardsDialog cardInfoWindowDialog : this.graveyardWindows.values()) {
             cardInfoWindowDialog.show();
         }
         for (CardInfoWindowDialog cardInfoWindowDialog : this.companion.values()) {
@@ -2046,15 +2080,15 @@ extends JPanel {
 
     public void openGraveyardWindow(String playerName) {
         if (this.graveyardWindows.containsKey(playerName)) {
-            CardInfoWindowDialog cardInfoWindowDialog = this.graveyardWindows.get(playerName);
-            if (cardInfoWindowDialog.isVisible()) {
-                cardInfoWindowDialog.hideDialog();
+            GraveyardCardsDialog graveyardDialog = this.graveyardWindows.get(playerName);
+            if (graveyardDialog.isVisible()) {
+                graveyardDialog.hideDialog();
             } else {
-                cardInfoWindowDialog.show();
+                graveyardDialog.show();
             }
             return;
         }
-        CardInfoWindowDialog newGraveyard = new CardInfoWindowDialog(CardInfoWindowDialog.ShowType.GRAVEYARD, playerName);
+        GraveyardCardsDialog newGraveyard = new GraveyardCardsDialog(playerName);
         this.graveyardWindows.put(playerName, newGraveyard);
         MageFrame.getDesktop().add((Component)newGraveyard, newGraveyard.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         newGraveyard.loadCardsAndShow(this.graveyards.get(playerName), this.bigCard, this.gameId, false);

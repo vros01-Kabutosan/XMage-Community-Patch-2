@@ -1,0 +1,25 @@
+VERIFICACION DE LA ENTREGA - RC1 1.4.61
+========================================
+
+Base:
+  XMage oficial xmage_1.4.61V1
+
+JAR principal del cliente:
+  client/lib/mage-client-1.4.61.jar
+  SHA-256: e856cb426575426410727c23128c42edd4fe98a7bdd63bdd77eb997cafd4857b
+
+JAR principal del servidor:
+  server/lib/mage-server-1.4.61.jar
+  SHA-256: eb269a6ec1477d50759f7439cf018b6b8361e723f6de08c3b9db72ecb0ee065d
+
+Clases RC1 comprobadas en el cliente:
+  mage/client/MageFrame.class
+  mage/client/cards/DragCardGrid.class
+  mage/client/decks/DeckDownloaderPane.class
+
+Prueba de servidor:
+  El servidor 1.4.61 cargo 584 sets, 92030 cartas y llego a:
+  "Started MAGE server - listening on 0.0.0.0:17171"
+
+Esta verificacion corresponde a esta compilacion concreta. Si se copia o
+modifica un JAR, debe recalcularse su SHA-256.

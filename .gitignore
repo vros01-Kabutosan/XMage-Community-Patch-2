@@ -1,0 +1,39 @@
+# --- Instalación real (binaria/pesada, no se versiona) ---
+Instalacion-XMage/
+
+# --- Decks generados (XMage) ---
+*.dck
+**/XMage/*.txt
+
+# --- Logs y gamelogs ---
+*.log
+*.log.*
+gamelogs/
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# --- Builds ---
+target/
+build/
+dist/
+node_modules/
+
+# --- Caches scryfall / deck-downloader ---
+scryfall_*_cache.json
+deck-library-state.json
+
+# --- Temporales / trabajo ---
+.zwork/
+.dsh-tmp/
+.dsh-acl-recovery/
+.dsh-*/
+*.tmp
+
+# --- OS ---
+Thumbs.db
+desktop.ini
+.DS_Store

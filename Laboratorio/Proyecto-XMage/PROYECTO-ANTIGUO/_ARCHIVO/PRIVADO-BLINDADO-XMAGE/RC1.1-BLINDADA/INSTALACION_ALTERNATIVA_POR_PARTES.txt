@@ -1,0 +1,12 @@
+INSTALACION ALTERNATIVA POR PARTES
+==================================
+
+Si el ZIP completo no se puede descargar, usa estos dos paquetes:
+
+1. Extrae XMage-...-CORE.zip en una carpeta nueva.
+2. Extrae XMage-...-LAUNCHER-JAVA17.zip en ESA MISMA carpeta.
+3. Acepta combinar las carpetas y conservar los archivos.
+4. Ejecuta INICIAR_XMAGE_LAUNCHER.bat.
+
+El segundo paquete aporta el lanzador oficial XMageLauncher-0.3.8.jar y la
+JVM portable Java 17. No mezcles esta instalación con otra carpeta XMage.

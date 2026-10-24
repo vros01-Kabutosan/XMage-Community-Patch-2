@@ -1,0 +1,51 @@
+XMage Community Patch - RC1 1.4.61 Estable
+==========================================
+
+Esta es la entrega portable para Windows: cliente y servidor completos,
+compilados sobre la base oficial exacta xmage_1.4.61V1.
+
+INICIO RAPIDO
+-------------
+1. Extrae TODO el ZIP manteniendo esta estructura de carpetas.
+2. Ejecuta INICIAR_XMAGE_LAUNCHER.bat. Es el lanzador XMage 0.3.8 incluido.
+3. El paquete ya incluye una JVM portable Java 17 en java\jre17\; no depende
+   del Java instalado por Forge ni del PATH.
+4. Para jugar en un servidor local, abre primero:
+      INICIAR_RC1_SERVIDOR.bat
+   y despues:
+      INICIAR_RC1_CLIENTE.bat
+   Para conectarte a un servidor remoto, basta con el cliente.
+5. Si una ventana se cierra o algo falla, el log queda en:
+      logs\
+
+MEJORAS RC1 PORTADAS Y VERIFICADAS
+----------------------------------
+- Selector de edicion/impresion de carta con filtro, vista previa y aplicacion
+  a todas las copias de la carta en el editor Free Building.
+- Panel "Descargar decks" integrado en el cliente, con descargador historico
+  y biblioteca local.
+
+CONTENIDO DEL PAQUETE
+---------------------
+- XMageLauncher-0.3.8.jar e installed.properties, compatibles con la
+  estructura del launcher oficial.
+- client\: cliente XMage completo 1.4.61.
+- server\: servidor XMage completo 1.4.61.
+- java\jre17\: JVM portable Windows incluida para ejecutar launcher, cliente
+  y servidor.
+- client\lib\javafx-*-11.0.2-win.jar: dependencias JavaFX para Windows.
+- client\config\deck-downloader\: herramientas del descargador de mazos.
+- logs\: unico destino de logs de los lanzadores.
+
+NO SE HA INCLUIDO
+-----------------
+- D20/dados experimentales.
+- IA de mazos aleatorios.
+- Pila flotante experimental.
+- Codigo de parches .patch sin compilar.
+- Las imagenes de cartas de 15 GB: se descargan/cachean al usarlas.
+- Maven, Git o codigo fuente: este paquete ya esta compilado.
+
+Los lanzadores reservan hasta 4 GB de heap y escriben la salida completa en
+logs. Si Java no esta instalado, el lanzador tambien dejara constancia del
+error en logs antes de pausar la ventana.

@@ -1,0 +1,14 @@
+#---XMage Properties---
+#Tue Aug 18 07:51:14 CEST 2026
+xmage.torrent.downrate=0
+java.version=1.8.0_201
+xmage.server.console=false
+xmage.client.javaopts=-Xms512m -Xmx4g -Djava.net.preferIPv4Stack\=true -XX\:+UseG1GC -XX\:MaxGCPauseMillis\=20 -Dsun.java2d.d3d\=false -Dsun.java2d.noddraw\=true -Dsun.java2d.uiScale\=1.5
+xmage.torrent.uprate=50
+xmage.torrent.use=false
+xmage.home=http\://xmage.today
+xmage.launcher.guisize=20
+xmage.server.javaopts=-Xms512m -Xmx4g -Djava.net.preferIPv4Stack\=true
+xmage.version=1.4.61-dev
+xmage.client.console=false
+xmage.launcher.version=0.3.8

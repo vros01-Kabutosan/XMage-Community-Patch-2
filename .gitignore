@@ -37,3 +37,7 @@ deck-library-state.json
 Thumbs.db
 desktop.ini
 .DS_Store
+# --- Laboratorio: fuente, entorno y archivo pesados (no se versionan) ---
+Laboratorio/XMage-1.4.62V1-src/
+Laboratorio/LAB-UI-1.4.62-V2/
+Laboratorio/_archivo/

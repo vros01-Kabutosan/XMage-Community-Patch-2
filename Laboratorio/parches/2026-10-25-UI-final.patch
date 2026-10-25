@@ -1,0 +1,370 @@
+diff --git a/Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java b/Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java
+index 05c9dd55..209ef899 100644
+--- a/Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java
++++ b/Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java
+@@ -1,12 +1,12 @@
+ package mage.client.dialog;
+ 
+ import mage.client.MageFrame;
++import mage.cards.MageCard;
+ import mage.client.cards.BigCard;
+ import mage.client.cards.CardArea;
+ import mage.client.components.MageDesktopIconifySupport;
+ import mage.client.util.ImageHelper;
+ import mage.client.util.SettingsManager;
+-import mage.client.util.gui.GuiDisplayUtil;
+ import mage.constants.CardType;
+ import mage.util.RandomUtil;
+ import mage.view.CardView;
+@@ -24,12 +24,10 @@ import java.util.UUID;
+  * Game GUI: graveyard window.
+  * <p>
+  * Visual clone of the in-game card chooser / library search window
+- * ({@link ShowCardsDialog}): it uses the same component base
+- * ({@link CardArea} inside a non-modal {@link MageDialog} internal frame),
+- * so it inherits exactly the same grid layout, sorting, scrollbars and
+- * container sizing behavior. The card amount does not change the look:
+- * few cards render as a single row, many cards render as stacked
+- * multi-columns (same as the card chooser window), from 1 to 30+ cards.
++ * ({@link ShowCardsDialog}): same component base ({@link CardArea} inside a
++ * non-modal {@link MageDialog} internal frame) and same sizing formula
++ * (pack + clamp to the desktop size + keepInsideDesktop), so both windows
++ * look and behave identically no matter how many cards they hold.
+  * <p>
+  * Unlike {@link ShowCardsDialog} (one-shot target pickers) this window is
+  * persistent per player: it hides on close (HIDE_ON_CLOSE) and refreshes
+@@ -59,6 +57,12 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
+ 
+     public void cleanUp() {
+         cardArea.cleanUp();
++        for (Component comp : cardArea.getComponents()) {
++            if (comp instanceof MageCard) {
++                ((MageCard) comp).cleanUp();
++                cardArea.remove(comp);
++            }
++        }
+     }
+ 
+     @Override
+@@ -79,13 +83,13 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
+     }
+ 
+     /**
+-     * Loads the current graveyard content and refreshes the window.
+-     * Same card renderer and container sizing as the card chooser /
+-     * library search window (CardArea + pack).
++     * Loads the current graveyard content and refreshes the window with the
++     * exact same sizing formula as the card chooser / library search window.
+      */
+     public void loadCardsAndShow(CardsView showCards, BigCard bigCard, UUID gameId, boolean revertOrder) {
+         // revertOrder is ignored on purpose: the card grid of the search
+         // window always sorts by card name, so the graveyard uses the same order
++        cardArea.clearCardEventListeners();
+         cardArea.loadCards(showCards, bigCard, gameId);
+ 
+         int qty = qtyCardTypes(showCards);
+@@ -95,15 +99,26 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
+         this.setTitelBarToolTip(newTitle);
+ 
+         pack();
++
++        // same clamp as ShowCardsDialog: never bigger than the desktop, never smaller than 480x320
++        Container desktop = getParent() != null ? getParent() : MageFrame.getDesktop();
++        if (desktop != null && desktop.getWidth() > 0 && desktop.getHeight() > 0) {
++            int maxWidth = Math.max(480, desktop.getWidth() - 32);
++            int maxHeight = Math.max(320, desktop.getHeight() - 48);
++            int width = Math.min(maxWidth, Math.max(480, this.getWidth()));
++            int height = Math.min(maxHeight, Math.max(320, this.getHeight()));
++            this.setSize(width, height);
++        }
++
+         this.revalidate();
+         this.repaint();
+ 
+         // window settings (same layer policy as ShowCardsDialog)
+         MageFrame.getDesktop().remove(this);
+         MageFrame.getDesktop().add(this, this.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
++        this.keepInsideDesktop();
+ 
+-        // same as the card chooser window: showAndPositionWindow() makes the
+-        // window visible only on first usage, so a window closed by the user
++        // shows the window only on first usage, so a window closed by the user
+         // stays hidden until it is opened again from the player panel
+         showAndPositionWindow();
+     }
+@@ -120,10 +135,10 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
+                     int xPos = centered.x / 2 + RandomUtil.nextInt(50);
+                     int yPos = centered.y / 2 + RandomUtil.nextInt(50);
+                     GraveyardCardsDialog.this.setLocation(xPos, yPos);
+-                    show();
+                     positioned = true;
++                    show();
+                 }
+-                GuiDisplayUtil.keepComponentInsideFrame(centered.x, centered.y, GraveyardCardsDialog.this);
++                GraveyardCardsDialog.this.keepInsideDesktop();
+             }
+         });
+     }
+@@ -149,6 +164,7 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
+ 
+         setClosable(true);
+         setResizable(true);
++        setMinimumSize(new Dimension(480, 320));
+         getContentPane().setLayout(new java.awt.BorderLayout());
+         getContentPane().add(cardArea, java.awt.BorderLayout.CENTER);
+         pack();
+diff --git a/Mage.Client/src/main/java/mage/client/game/FeedbackPanel.java b/Mage.Client/src/main/java/mage/client/game/FeedbackPanel.java
+index d433c016..0e8cdc45 100644
+--- a/Mage.Client/src/main/java/mage/client/game/FeedbackPanel.java
++++ b/Mage.Client/src/main/java/mage/client/game/FeedbackPanel.java
+@@ -52,6 +52,9 @@ public class FeedbackPanel extends javax.swing.JPanel {
+ 
+     private static final boolean AUTO_CLOSE_END_DIALOG = false;
+     private static final int AUTO_CLOSE_END_DIALOG_TIMEOUT_SECS = 8;
++    // A sane preferred width keeps the sidebar splitter from inheriting an
++    // unbounded preference (Short.MAX_VALUE used to crush the chat column).
++    static final int PREFERRED_WIDTH = 1024;
+     private static final ScheduledExecutorService AUTO_CLOSE_EXECUTOR = Executors.newSingleThreadScheduledExecutor(
+             new XmageThreadFactory(ThreadUtils.THREAD_PREFIX_CLIENT_AUTO_CLOSE_TIMER)
+     );
+@@ -83,12 +86,12 @@ public class FeedbackPanel extends javax.swing.JPanel {
+         int height = helper.getRequiredHeight();
+         Dimension currentPreferredSize = getPreferredSize();
+         if (currentPreferredSize != null
+-                && currentPreferredSize.width == Short.MAX_VALUE
++                && currentPreferredSize.width == PREFERRED_WIDTH
+                 && currentPreferredSize.height == height
+                 && lastRefreshedLayoutHeight == height) {
+             return;
+         }
+-        setPreferredSize(new Dimension(Short.MAX_VALUE, height));
++        setPreferredSize(new Dimension(PREFERRED_WIDTH, height));
+         setMinimumSize(new Dimension(0, height));
+         setMaximumSize(new Dimension(Short.MAX_VALUE, height));
+         lastRefreshedLayoutHeight = height;
+diff --git a/Mage.Client/src/main/java/mage/client/game/GamePanel.java b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+index b9411c99..07caa894 100644
+--- a/Mage.Client/src/main/java/mage/client/game/GamePanel.java
++++ b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+@@ -359,38 +359,6 @@ extends JPanel {
+         }
+     }
+ 
+-    private void xcpStartDebugLayoutDump() {
+-        final javax.swing.Timer dumpTimer = new javax.swing.Timer(3000, null);
+-        dumpTimer.addActionListener(evt -> {
+-            try {
+-                StringBuilder sb = new StringBuilder("XCPDUMP ");
+-                java.awt.Container desktop = mage.client.MageFrame.getDesktop();
+-                sb.append("desktop=").append(desktop.getWidth()).append('x').append(desktop.getHeight());
+-                sb.append(" gamePanel=").append(d(this));
+-                sb.append(" helper=").append(d(this.pnlHelperHandButtonsStackArea));
+-                for (Component c : this.pnlHelperHandButtonsStackArea.getComponents()) {
+-                    sb.append(" helperChild[").append(c.getClass().getSimpleName()).append(']').append(d(c));
+-                }
+-                sb.append(" hand=").append(d(this.handContainer));
+-                sb.append(" phaseBar=").append(d(this.phaseSummaryBar));
+-                sb.append(" splitBC=").append(d(this.splitBattlefieldAndChats)).append(" div=").append(this.splitBattlefieldAndChats.getDividerLocation());
+-                sb.append(" splitBC.left=").append(d(this.splitBattlefieldAndChats.getLeftComponent()));
+-                sb.append(" splitBC.right=").append(d(this.splitBattlefieldAndChats.getRightComponent()));
+-                logger.info((Object)sb.toString());
+-            } catch (Throwable ignored) {
+-            }
+-        });
+-        dumpTimer.setRepeats(true);
+-        dumpTimer.start();
+-    }
+-
+-    private static String d(Component c) {
+-        if (c == null) {
+-            return "null";
+-        }
+-        return "{vis=" + c.isVisible() + " show=" + c.isShowing() + " b=" + c.getX() + "," + c.getY() + "," + c.getWidth() + "x" + c.getHeight() + " pref=" + c.getPreferredSize().width + "x" + c.getPreferredSize().height + "}";
+-    }
+-
+     private boolean xcpNormalizeBattlefieldViewport(BattlefieldPanel battlefield) {
+         JLayeredPane mainPanel = battlefield.getMainPanel();
+         Dimension preferred = mainPanel.getPreferredSize();
+@@ -501,7 +469,6 @@ extends JPanel {
+         Map<String, JComponent> myUi = this.getUIComponents(jLayeredBackgroundPane);
+         Plugins.instance.updateGamePanel(myUi);
+         this.initFloatingStackWindow();
+-        this.xcpStartDebugLayoutDump();
+         this.addComponentListener(new ComponentAdapter(){
+ 
+             @Override
+@@ -752,10 +719,10 @@ extends JPanel {
+                 ? HelperPanel.getRequiredHeightForCurrentSize()
+                 : this.helper.getRequiredHeight();
+         int feedbackPanelHeight = Math.max(upperPanelsHeight, decisionPanelHeight);
+-        this.feedbackPanel.setPreferredSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
++        this.feedbackPanel.setPreferredSize(new Dimension(FeedbackPanel.PREFERRED_WIDTH, feedbackPanelHeight));
+         this.feedbackPanel.setMinimumSize(new Dimension(0, feedbackPanelHeight));
+         this.feedbackPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
+-        this.pnlShortCuts.setPreferredSize(new Dimension(Short.MAX_VALUE, upperPanelsHeight));
++        this.pnlShortCuts.setPreferredSize(new Dimension(FeedbackPanel.PREFERRED_WIDTH, upperPanelsHeight));
+         this.pnlShortCuts.setMaximumSize(new Dimension(Short.MAX_VALUE, upperPanelsHeight));
+         this.stackObjects.setCardDimension(this.getFloatingStackCardDimension());
+         this.stackObjects.changeGUISize();
+@@ -929,31 +896,66 @@ extends JPanel {
+         Rectangle screenRec = MageFrame.getDesktop().getBounds();
+         String screenKey = String.format("%d_x_%d", screenRec.width, screenRec.height);
+         int newLocation = allLocations.getOrDefault(screenKey, -1);
+-        if (newLocation == -1) {
+-            SwingUtilities.invokeLater(() -> {
+-                splitPane.resetToPreferredSizes();
+-                splitPane.setDividerLocation(defaultProportion);
+-            });
+-        } else if (newLocation == -2) {
+-            SwingUtilities.invokeLater(() -> {
+-                splitPane.resetToPreferredSizes();
+-                splitPane.setDividerLocation(defaultProportion);
+-                splitPane.getLeftComponent().setMinimumSize(new Dimension());
+-                splitPane.setDividerLocation(0.0);
+-            });
+-        } else if (newLocation == -3) {
+-            SwingUtilities.invokeLater(() -> {
+-                splitPane.resetToPreferredSizes();
+-                splitPane.setDividerLocation(defaultProportion);
+-                splitPane.getRightComponent().setMinimumSize(new Dimension());
+-                splitPane.setDividerLocation(1.0);
+-            });
+-        } else {
+-            SwingUtilities.invokeLater(() -> {
+-                splitPane.resetToPreferredSizes();
+-                splitPane.setDividerLocation(defaultProportion);
+-                splitPane.setDividerLocation(newLocation);
+-            });
++        this.applySplitterLocationDeferred(splitPane, defaultProportion, newLocation, 0);
++    }
++
++    private void applySplitterLocationDeferred(JSplitPane splitPane, double defaultProportion, int newLocation, int attempt) {
++        SwingUtilities.invokeLater(() -> {
++            if (splitPane.getWidth() <= 0 && attempt < 25) {
++                this.applySplitterLocationDeferred(splitPane, defaultProportion, newLocation, attempt + 1);
++                return;
++            }
++            int effectiveLocation = this.normalizeSplitterLocation(splitPane, defaultProportion, newLocation);
++            this.applySplitterLocation(splitPane, defaultProportion, effectiveLocation);
++            // Child layout can settle after the first pass and re-clamp the divider,
++            // so re-apply once with the final geometry.
++            SwingUtilities.invokeLater(() -> this.applySplitterLocation(splitPane, defaultProportion, effectiveLocation));
++        });
++    }
++
++    private int normalizeSplitterLocation(JSplitPane splitPane, double defaultProportion, int newLocation) {
++        if (newLocation < 0) {
++            return newLocation;
++        }
++        // Older builds could save a divider that leaves one side unusable
++        // (for example the chat column crushed to a few pixels), so fall back
++        // to the default proportion when the saved split is that degenerate.
++        int splitWidth = Math.max(1, splitPane.getWidth());
++        double expectedRight = 1.0 - defaultProportion;
++        double actualRight = (splitWidth - newLocation - splitPane.getDividerSize()) / (double) splitWidth;
++        if (actualRight < expectedRight * 0.35 || actualRight > 1.0 - expectedRight * 0.35) {
++            logger.info((Object)("Ignoring degenerate saved divider " + newLocation + " (" + splitWidth + " px wide, right proportion " + actualRight + ")"));
++            return -1;
++        }
++        return newLocation;
++    }
++
++    private void applySplitterLocation(JSplitPane splitPane, double defaultProportion, int newLocation) {
++        splitPane.resetToPreferredSizes();
++        if (newLocation == -2) {
++            splitPane.getLeftComponent().setMinimumSize(new Dimension());
++            splitPane.setDividerLocation(0.0);
++            return;
++        }
++        if (newLocation == -3) {
++            splitPane.getRightComponent().setMinimumSize(new Dimension());
++            splitPane.setDividerLocation(1.0);
++            return;
++        }
++        int requested = newLocation >= 0
++                ? newLocation
++                : (int) Math.round(splitPane.getWidth() * defaultProportion);
++        // A child with an oversized minimum size used to pin the divider and
++        // leave the chat column crushed, so relax the offending side first.
++        if (requested < splitPane.getMinimumDividerLocation() && splitPane.getLeftComponent() != null) {
++            splitPane.getLeftComponent().setMinimumSize(new Dimension());
++        }
++        if (requested > splitPane.getMaximumDividerLocation() && splitPane.getRightComponent() != null) {
++            splitPane.getRightComponent().setMinimumSize(new Dimension());
++        }
++        splitPane.setDividerLocation(defaultProportion);
++        if (requested != splitPane.getDividerLocation()) {
++            splitPane.setDividerLocation(requested);
+         }
+     }
+ 
+diff --git a/Mage.Client/src/main/java/mage/client/game/HelperPanel.java b/Mage.Client/src/main/java/mage/client/game/HelperPanel.java
+index ca33bcdc..4e26a6ec 100644
+--- a/Mage.Client/src/main/java/mage/client/game/HelperPanel.java
++++ b/Mage.Client/src/main/java/mage/client/game/HelperPanel.java
+@@ -572,8 +572,11 @@ public class HelperPanel extends JPanel {
+ 
+     public int getRequiredHeight() {
+         Insets insets = getInsets();
+-        return Math.max(getDecisionSurfaceHeight(), getStableDecisionSurfaceHeightForCurrentSize())
++        int height = Math.max(getDecisionSurfaceHeight(), getStableDecisionSurfaceHeightForCurrentSize())
+                 + insets.top + insets.bottom;
++        // Never let the feedback row claim more than a third of the screen.
++        int maxHeight = Math.max(120, Toolkit.getDefaultToolkit().getScreenSize().height / 3);
++        return Math.min(height, maxHeight);
+     }
+ 
+     private static int getStableDecisionSurfaceHeightForCurrentSize() {
+diff --git a/Mage.Server/src/main/java/mage/server/MageServerImpl.java b/Mage.Server/src/main/java/mage/server/MageServerImpl.java
+index 85d1526f..ddeca44c 100644
+--- a/Mage.Server/src/main/java/mage/server/MageServerImpl.java
++++ b/Mage.Server/src/main/java/mage/server/MageServerImpl.java
+@@ -48,6 +48,9 @@ import java.util.concurrent.ExecutorService;
+ public class MageServerImpl implements MageServer {
+ 
+     private static final Logger logger = Logger.getLogger(MageServerImpl.class);
++    // Main loads game types synchronously before the server starts accepting logins,
++    // so a still-empty list after that point means the load finished with nothing.
++    private static volatile boolean gameTypesLoadFinished = false;
+     private final ExecutorService callExecutor;
+     private static final SecureRandom RANDOM = new SecureRandom();
+ 
+@@ -972,6 +975,15 @@ public class MageServerImpl implements MageServer {
+      * a esta hora vacio, el cliente lo cachea para siempre y se queda sin tipos de juego ni de jugador,
+      * sin poder crear mesas. Esperamos a que la carga termine.
+      */
++    /**
++     * Called by Main once the game type registration pass has completed, so logins
++     * no longer wait 180 seconds when the list is legitimately empty (for example
++     * a broken plugin configuration).
++     */
++    public static void markGameTypesLoadFinished() {
++        gameTypesLoadFinished = true;
++    }
++
+     private void waitForGameTypesLoaded() {
+         long deadline = System.currentTimeMillis() + 180_000L;
+         while (System.currentTimeMillis() < deadline) {
+@@ -982,6 +994,10 @@ public class MageServerImpl implements MageServer {
+             } catch (Exception ignore) {
+                 return;
+             }
++            if (gameTypesLoadFinished) {
++                logger.warn("No game types were loaded; continuing without waiting");
++                return;
++            }
+             try {
+                 Thread.sleep(500);
+             } catch (InterruptedException e) {
+diff --git a/Mage.Server/src/main/java/mage/server/Main.java b/Mage.Server/src/main/java/mage/server/Main.java
+index e6198216..55c70ad8 100644
+--- a/Mage.Server/src/main/java/mage/server/Main.java
++++ b/Mage.Server/src/main/java/mage/server/Main.java
+@@ -281,6 +281,7 @@ public final class Main {
+         if (gameTypes == 0) {
+             logger.error("ERROR, can't load any game types. Check your config.xml in server's config folder (example: old jar versions after update).");
+         }
++        MageServerImpl.markGameTypesLoadFinished();
+ 
+         Connection connection = new Connection("&maxPoolSize=" + config.getMaxPoolSize());
+         connection.setHost(config.getServerAddress());

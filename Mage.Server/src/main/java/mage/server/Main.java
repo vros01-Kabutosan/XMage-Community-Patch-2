@@ -281,6 +281,7 @@ public final class Main {
         if (gameTypes == 0) {
             logger.error("ERROR, can't load any game types. Check your config.xml in server's config folder (example: old jar versions after update).");
         }
+        MageServerImpl.markGameTypesLoadFinished();
 
         Connection connection = new Connection("&maxPoolSize=" + config.getMaxPoolSize());
         connection.setHost(config.getServerAddress());

@@ -48,6 +48,9 @@ import java.util.concurrent.ExecutorService;
 public class MageServerImpl implements MageServer {
 
     private static final Logger logger = Logger.getLogger(MageServerImpl.class);
+    // Main loads game types synchronously before the server starts accepting logins,
+    // so a still-empty list after that point means the load finished with nothing.
+    private static volatile boolean gameTypesLoadFinished = false;
     private final ExecutorService callExecutor;
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -972,6 +975,15 @@ public class MageServerImpl implements MageServer {
      * a esta hora vacio, el cliente lo cachea para siempre y se queda sin tipos de juego ni de jugador,
      * sin poder crear mesas. Esperamos a que la carga termine.
      */
+    /**
+     * Called by Main once the game type registration pass has completed, so logins
+     * no longer wait 180 seconds when the list is legitimately empty (for example
+     * a broken plugin configuration).
+     */
+    public static void markGameTypesLoadFinished() {
+        gameTypesLoadFinished = true;
+    }
+
     private void waitForGameTypesLoaded() {
         long deadline = System.currentTimeMillis() + 180_000L;
         while (System.currentTimeMillis() < deadline) {
@@ -980,6 +992,10 @@ public class MageServerImpl implements MageServer {
                     return;
                 }
             } catch (Exception ignore) {
+                return;
+            }
+            if (gameTypesLoadFinished) {
+                logger.warn("No game types were loaded; continuing without waiting");
                 return;
             }
             try {

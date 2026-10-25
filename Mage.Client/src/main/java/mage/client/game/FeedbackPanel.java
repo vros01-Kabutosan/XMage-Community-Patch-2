@@ -52,6 +52,9 @@ public class FeedbackPanel extends javax.swing.JPanel {
 
     private static final boolean AUTO_CLOSE_END_DIALOG = false;
     private static final int AUTO_CLOSE_END_DIALOG_TIMEOUT_SECS = 8;
+    // A sane preferred width keeps the sidebar splitter from inheriting an
+    // unbounded preference (Short.MAX_VALUE used to crush the chat column).
+    static final int PREFERRED_WIDTH = 1024;
     private static final ScheduledExecutorService AUTO_CLOSE_EXECUTOR = Executors.newSingleThreadScheduledExecutor(
             new XmageThreadFactory(ThreadUtils.THREAD_PREFIX_CLIENT_AUTO_CLOSE_TIMER)
     );
@@ -83,12 +86,12 @@ public class FeedbackPanel extends javax.swing.JPanel {
         int height = helper.getRequiredHeight();
         Dimension currentPreferredSize = getPreferredSize();
         if (currentPreferredSize != null
-                && currentPreferredSize.width == Short.MAX_VALUE
+                && currentPreferredSize.width == PREFERRED_WIDTH
                 && currentPreferredSize.height == height
                 && lastRefreshedLayoutHeight == height) {
             return;
         }
-        setPreferredSize(new Dimension(Short.MAX_VALUE, height));
+        setPreferredSize(new Dimension(PREFERRED_WIDTH, height));
         setMinimumSize(new Dimension(0, height));
         setMaximumSize(new Dimension(Short.MAX_VALUE, height));
         lastRefreshedLayoutHeight = height;

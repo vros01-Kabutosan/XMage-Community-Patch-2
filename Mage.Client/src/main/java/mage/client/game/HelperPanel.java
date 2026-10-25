@@ -572,8 +572,11 @@ public class HelperPanel extends JPanel {
 
     public int getRequiredHeight() {
         Insets insets = getInsets();
-        return Math.max(getDecisionSurfaceHeight(), getStableDecisionSurfaceHeightForCurrentSize())
+        int height = Math.max(getDecisionSurfaceHeight(), getStableDecisionSurfaceHeightForCurrentSize())
                 + insets.top + insets.bottom;
+        // Never let the feedback row claim more than a third of the screen.
+        int maxHeight = Math.max(120, Toolkit.getDefaultToolkit().getScreenSize().height / 3);
+        return Math.min(height, maxHeight);
     }
 
     private static int getStableDecisionSurfaceHeightForCurrentSize() {

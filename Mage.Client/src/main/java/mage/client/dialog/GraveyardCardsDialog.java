@@ -1,12 +1,12 @@
 package mage.client.dialog;
 
 import mage.client.MageFrame;
+import mage.cards.MageCard;
 import mage.client.cards.BigCard;
 import mage.client.cards.CardArea;
 import mage.client.components.MageDesktopIconifySupport;
 import mage.client.util.ImageHelper;
 import mage.client.util.SettingsManager;
-import mage.client.util.gui.GuiDisplayUtil;
 import mage.constants.CardType;
 import mage.util.RandomUtil;
 import mage.view.CardView;
@@ -24,12 +24,10 @@ import java.util.UUID;
  * Game GUI: graveyard window.
  * <p>
  * Visual clone of the in-game card chooser / library search window
- * ({@link ShowCardsDialog}): it uses the same component base
- * ({@link CardArea} inside a non-modal {@link MageDialog} internal frame),
- * so it inherits exactly the same grid layout, sorting, scrollbars and
- * container sizing behavior. The card amount does not change the look:
- * few cards render as a single row, many cards render as stacked
- * multi-columns (same as the card chooser window), from 1 to 30+ cards.
+ * ({@link ShowCardsDialog}): same component base ({@link CardArea} inside a
+ * non-modal {@link MageDialog} internal frame) and same sizing formula
+ * (pack + clamp to the desktop size + keepInsideDesktop), so both windows
+ * look and behave identically no matter how many cards they hold.
  * <p>
  * Unlike {@link ShowCardsDialog} (one-shot target pickers) this window is
  * persistent per player: it hides on close (HIDE_ON_CLOSE) and refreshes
@@ -59,6 +57,12 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
 
     public void cleanUp() {
         cardArea.cleanUp();
+        for (Component comp : cardArea.getComponents()) {
+            if (comp instanceof MageCard) {
+                ((MageCard) comp).cleanUp();
+                cardArea.remove(comp);
+            }
+        }
     }
 
     @Override
@@ -79,13 +83,13 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
     }
 
     /**
-     * Loads the current graveyard content and refreshes the window.
-     * Same card renderer and container sizing as the card chooser /
-     * library search window (CardArea + pack).
+     * Loads the current graveyard content and refreshes the window with the
+     * exact same sizing formula as the card chooser / library search window.
      */
     public void loadCardsAndShow(CardsView showCards, BigCard bigCard, UUID gameId, boolean revertOrder) {
         // revertOrder is ignored on purpose: the card grid of the search
         // window always sorts by card name, so the graveyard uses the same order
+        cardArea.clearCardEventListeners();
         cardArea.loadCards(showCards, bigCard, gameId);
 
         int qty = qtyCardTypes(showCards);
@@ -95,15 +99,26 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
         this.setTitelBarToolTip(newTitle);
 
         pack();
+
+        // same clamp as ShowCardsDialog: never bigger than the desktop, never smaller than 480x320
+        Container desktop = getParent() != null ? getParent() : MageFrame.getDesktop();
+        if (desktop != null && desktop.getWidth() > 0 && desktop.getHeight() > 0) {
+            int maxWidth = Math.max(480, desktop.getWidth() - 32);
+            int maxHeight = Math.max(320, desktop.getHeight() - 48);
+            int width = Math.min(maxWidth, Math.max(480, this.getWidth()));
+            int height = Math.min(maxHeight, Math.max(320, this.getHeight()));
+            this.setSize(width, height);
+        }
+
         this.revalidate();
         this.repaint();
 
         // window settings (same layer policy as ShowCardsDialog)
         MageFrame.getDesktop().remove(this);
         MageFrame.getDesktop().add(this, this.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+        this.keepInsideDesktop();
 
-        // same as the card chooser window: showAndPositionWindow() makes the
-        // window visible only on first usage, so a window closed by the user
+        // shows the window only on first usage, so a window closed by the user
         // stays hidden until it is opened again from the player panel
         showAndPositionWindow();
     }
@@ -120,10 +135,10 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
                     int xPos = centered.x / 2 + RandomUtil.nextInt(50);
                     int yPos = centered.y / 2 + RandomUtil.nextInt(50);
                     GraveyardCardsDialog.this.setLocation(xPos, yPos);
-                    show();
                     positioned = true;
+                    show();
                 }
-                GuiDisplayUtil.keepComponentInsideFrame(centered.x, centered.y, GraveyardCardsDialog.this);
+                GraveyardCardsDialog.this.keepInsideDesktop();
             }
         });
     }
@@ -149,6 +164,7 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
 
         setClosable(true);
         setResizable(true);
+        setMinimumSize(new Dimension(480, 320));
         getContentPane().setLayout(new java.awt.BorderLayout());
         getContentPane().add(cardArea, java.awt.BorderLayout.CENTER);
         pack();

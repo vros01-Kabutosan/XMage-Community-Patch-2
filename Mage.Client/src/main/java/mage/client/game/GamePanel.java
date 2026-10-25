@@ -359,38 +359,6 @@ extends JPanel {
         }
     }
 
-    private void xcpStartDebugLayoutDump() {
-        final javax.swing.Timer dumpTimer = new javax.swing.Timer(3000, null);
-        dumpTimer.addActionListener(evt -> {
-            try {
-                StringBuilder sb = new StringBuilder("XCPDUMP ");
-                java.awt.Container desktop = mage.client.MageFrame.getDesktop();
-                sb.append("desktop=").append(desktop.getWidth()).append('x').append(desktop.getHeight());
-                sb.append(" gamePanel=").append(d(this));
-                sb.append(" helper=").append(d(this.pnlHelperHandButtonsStackArea));
-                for (Component c : this.pnlHelperHandButtonsStackArea.getComponents()) {
-                    sb.append(" helperChild[").append(c.getClass().getSimpleName()).append(']').append(d(c));
-                }
-                sb.append(" hand=").append(d(this.handContainer));
-                sb.append(" phaseBar=").append(d(this.phaseSummaryBar));
-                sb.append(" splitBC=").append(d(this.splitBattlefieldAndChats)).append(" div=").append(this.splitBattlefieldAndChats.getDividerLocation());
-                sb.append(" splitBC.left=").append(d(this.splitBattlefieldAndChats.getLeftComponent()));
-                sb.append(" splitBC.right=").append(d(this.splitBattlefieldAndChats.getRightComponent()));
-                logger.info((Object)sb.toString());
-            } catch (Throwable ignored) {
-            }
-        });
-        dumpTimer.setRepeats(true);
-        dumpTimer.start();
-    }
-
-    private static String d(Component c) {
-        if (c == null) {
-            return "null";
-        }
-        return "{vis=" + c.isVisible() + " show=" + c.isShowing() + " b=" + c.getX() + "," + c.getY() + "," + c.getWidth() + "x" + c.getHeight() + " pref=" + c.getPreferredSize().width + "x" + c.getPreferredSize().height + "}";
-    }
-
     private boolean xcpNormalizeBattlefieldViewport(BattlefieldPanel battlefield) {
         JLayeredPane mainPanel = battlefield.getMainPanel();
         Dimension preferred = mainPanel.getPreferredSize();
@@ -501,7 +469,6 @@ extends JPanel {
         Map<String, JComponent> myUi = this.getUIComponents(jLayeredBackgroundPane);
         Plugins.instance.updateGamePanel(myUi);
         this.initFloatingStackWindow();
-        this.xcpStartDebugLayoutDump();
         this.addComponentListener(new ComponentAdapter(){
 
             @Override
@@ -752,10 +719,10 @@ extends JPanel {
                 ? HelperPanel.getRequiredHeightForCurrentSize()
                 : this.helper.getRequiredHeight();
         int feedbackPanelHeight = Math.max(upperPanelsHeight, decisionPanelHeight);
-        this.feedbackPanel.setPreferredSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
+        this.feedbackPanel.setPreferredSize(new Dimension(FeedbackPanel.PREFERRED_WIDTH, feedbackPanelHeight));
         this.feedbackPanel.setMinimumSize(new Dimension(0, feedbackPanelHeight));
         this.feedbackPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, feedbackPanelHeight));
-        this.pnlShortCuts.setPreferredSize(new Dimension(Short.MAX_VALUE, upperPanelsHeight));
+        this.pnlShortCuts.setPreferredSize(new Dimension(FeedbackPanel.PREFERRED_WIDTH, upperPanelsHeight));
         this.pnlShortCuts.setMaximumSize(new Dimension(Short.MAX_VALUE, upperPanelsHeight));
         this.stackObjects.setCardDimension(this.getFloatingStackCardDimension());
         this.stackObjects.changeGUISize();
@@ -929,31 +896,66 @@ extends JPanel {
         Rectangle screenRec = MageFrame.getDesktop().getBounds();
         String screenKey = String.format("%d_x_%d", screenRec.width, screenRec.height);
         int newLocation = allLocations.getOrDefault(screenKey, -1);
-        if (newLocation == -1) {
-            SwingUtilities.invokeLater(() -> {
-                splitPane.resetToPreferredSizes();
-                splitPane.setDividerLocation(defaultProportion);
-            });
-        } else if (newLocation == -2) {
-            SwingUtilities.invokeLater(() -> {
-                splitPane.resetToPreferredSizes();
-                splitPane.setDividerLocation(defaultProportion);
-                splitPane.getLeftComponent().setMinimumSize(new Dimension());
-                splitPane.setDividerLocation(0.0);
-            });
-        } else if (newLocation == -3) {
-            SwingUtilities.invokeLater(() -> {
-                splitPane.resetToPreferredSizes();
-                splitPane.setDividerLocation(defaultProportion);
-                splitPane.getRightComponent().setMinimumSize(new Dimension());
-                splitPane.setDividerLocation(1.0);
-            });
-        } else {
-            SwingUtilities.invokeLater(() -> {
-                splitPane.resetToPreferredSizes();
-                splitPane.setDividerLocation(defaultProportion);
-                splitPane.setDividerLocation(newLocation);
-            });
+        this.applySplitterLocationDeferred(splitPane, defaultProportion, newLocation, 0);
+    }
+
+    private void applySplitterLocationDeferred(JSplitPane splitPane, double defaultProportion, int newLocation, int attempt) {
+        SwingUtilities.invokeLater(() -> {
+            if (splitPane.getWidth() <= 0 && attempt < 25) {
+                this.applySplitterLocationDeferred(splitPane, defaultProportion, newLocation, attempt + 1);
+                return;
+            }
+            int effectiveLocation = this.normalizeSplitterLocation(splitPane, defaultProportion, newLocation);
+            this.applySplitterLocation(splitPane, defaultProportion, effectiveLocation);
+            // Child layout can settle after the first pass and re-clamp the divider,
+            // so re-apply once with the final geometry.
+            SwingUtilities.invokeLater(() -> this.applySplitterLocation(splitPane, defaultProportion, effectiveLocation));
+        });
+    }
+
+    private int normalizeSplitterLocation(JSplitPane splitPane, double defaultProportion, int newLocation) {
+        if (newLocation < 0) {
+            return newLocation;
+        }
+        // Older builds could save a divider that leaves one side unusable
+        // (for example the chat column crushed to a few pixels), so fall back
+        // to the default proportion when the saved split is that degenerate.
+        int splitWidth = Math.max(1, splitPane.getWidth());
+        double expectedRight = 1.0 - defaultProportion;
+        double actualRight = (splitWidth - newLocation - splitPane.getDividerSize()) / (double) splitWidth;
+        if (actualRight < expectedRight * 0.35 || actualRight > 1.0 - expectedRight * 0.35) {
+            logger.info((Object)("Ignoring degenerate saved divider " + newLocation + " (" + splitWidth + " px wide, right proportion " + actualRight + ")"));
+            return -1;
+        }
+        return newLocation;
+    }
+
+    private void applySplitterLocation(JSplitPane splitPane, double defaultProportion, int newLocation) {
+        splitPane.resetToPreferredSizes();
+        if (newLocation == -2) {
+            splitPane.getLeftComponent().setMinimumSize(new Dimension());
+            splitPane.setDividerLocation(0.0);
+            return;
+        }
+        if (newLocation == -3) {
+            splitPane.getRightComponent().setMinimumSize(new Dimension());
+            splitPane.setDividerLocation(1.0);
+            return;
+        }
+        int requested = newLocation >= 0
+                ? newLocation
+                : (int) Math.round(splitPane.getWidth() * defaultProportion);
+        // A child with an oversized minimum size used to pin the divider and
+        // leave the chat column crushed, so relax the offending side first.
+        if (requested < splitPane.getMinimumDividerLocation() && splitPane.getLeftComponent() != null) {
+            splitPane.getLeftComponent().setMinimumSize(new Dimension());
+        }
+        if (requested > splitPane.getMaximumDividerLocation() && splitPane.getRightComponent() != null) {
+            splitPane.getRightComponent().setMinimumSize(new Dimension());
+        }
+        splitPane.setDividerLocation(defaultProportion);
+        if (requested != splitPane.getDividerLocation()) {
+            splitPane.setDividerLocation(requested);
         }
     }
 

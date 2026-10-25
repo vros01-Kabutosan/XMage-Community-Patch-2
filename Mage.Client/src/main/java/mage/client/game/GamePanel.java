@@ -404,7 +404,8 @@ extends JPanel {
         pnlCommandsFeedbackAndHand.add((Component)pnlPhaseAndHand, "Center");
         JPanel pnlCommandsSkipAndStack = new JPanel(new BorderLayout());
         pnlCommandsSkipAndStack.setOpaque(false);
-        // PHASE-FUSION v1: margen inferior = fila de atajos + fila separada con Concede centrado.
+        // PHASE-FUSION v1.4: los atajos de fase vuelven a la fila inferior, junto a
+        // Concede, como en el cliente original. La barra de fases sigue bajo la mano.
         JPanel pnlPhaseFusionBottom = new JPanel(new GridBagLayout());
         pnlPhaseFusionBottom.setOpaque(false);
         GridBagConstraints gbcPhaseFusionShortCuts = new GridBagConstraints();
@@ -413,20 +414,6 @@ extends JPanel {
         gbcPhaseFusionShortCuts.fill = GridBagConstraints.HORIZONTAL;
         gbcPhaseFusionShortCuts.weightx = 1.0;
         pnlPhaseFusionBottom.add((Component)this.pnlShortCuts, gbcPhaseFusionShortCuts);
-        JPanel pnlConcedeCenter = new JPanel(new GridBagLayout());
-        pnlConcedeCenter.setOpaque(false);
-        GridBagConstraints gbcPhaseFusionConcedeRow = new GridBagConstraints();
-        gbcPhaseFusionConcedeRow.gridx = 0;
-        gbcPhaseFusionConcedeRow.gridy = 1;
-        gbcPhaseFusionConcedeRow.fill = GridBagConstraints.HORIZONTAL;
-        gbcPhaseFusionConcedeRow.weightx = 1.0;
-        pnlPhaseFusionBottom.add((Component)pnlConcedeCenter, gbcPhaseFusionConcedeRow);
-        GridBagConstraints gbcPhaseFusionConcede = new GridBagConstraints();
-        gbcPhaseFusionConcede.gridx = 0;
-        gbcPhaseFusionConcede.gridy = 0;
-        gbcPhaseFusionConcede.weightx = 1.0;
-        gbcPhaseFusionConcede.anchor = GridBagConstraints.CENTER;
-        pnlConcedeCenter.add((Component)this.btnConcede, gbcPhaseFusionConcede);
         pnlCommandsSkipAndStack.add((Component)pnlPhaseFusionBottom, "South");
         pnlCommandsFeedbackAndHand.setMinimumSize(new Dimension(0, 0));
         pnlCommandsSkipAndStack.setMinimumSize(new Dimension(0, 0));
@@ -449,13 +436,12 @@ extends JPanel {
         this.pnlShortCuts.add(this.btnCancelSkip);
         this.pnlShortCuts.add(this.txtHoldPriority);
         this.pnlShortCuts.add(this.btnSwitchHands);
-        // PHASE-FUSION v1: btnConcede fue reubicado a pnlConcedeCenter (fila centrada del margen inferior).
+        // PHASE-FUSION v1.4: Concede vuelve a la fila de atajos, al lado de los botones F.
+        this.pnlShortCuts.add(this.btnConcede);
         this.pnlShortCuts.add(this.btnStopWatching);
-        // PHASE-FUSION v1: los botones "F" de salto de fase quedan ocultos (su
-        // funcionalidad se migra a la barra de fases). No se eliminan: los
-        // listeners, KeyStrokes y estados siguen vivos para que los atajos de
-        // teclado nativos (MageFrame) continuen operando sin regresiones.
-        this.applyPhaseFusionHiddenShortcuts();
+        // PHASE-FUSION v1.4: los botones "F" de salto de fase vuelven a mostrarse en la
+        // fila inferior. Sus listeners y KeyStrokes nativos siguen intactos.
+        this.applyPhaseFusionShortcutVisibility();
         this.pickNumber = new PickNumberDialog();
         MageFrame.getDesktop().add((Component)this.pickNumber, this.pickNumber.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
         this.pickMultiNumber = new PickMultiNumberDialog();
@@ -1019,9 +1005,9 @@ extends JPanel {
         this.btnSkipStack.setVisible(true);
         this.btnSkipToYourTurn.setVisible(true);
         this.btnSkipToEndStepBeforeYourTurn.setVisible(true);
-        // PHASE-FUSION v1: mantener los botones "F" ocultos tras el re-encendido
+        // PHASE-FUSION v1.4: mantener los botones "F" visibles tras el re-encendido
         // de visibilidad al iniciar el juego.
-        this.applyPhaseFusionHiddenShortcuts();
+        this.applyPhaseFusionShortcutVisibility();
         this.pnlReplay.setVisible(false);
         this.gameChatPanel.clear();
         SessionHandler.getGameChatId(gameId).ifPresent(uuid -> this.gameChatPanel.connect((UUID)uuid));
@@ -3285,15 +3271,15 @@ extends JPanel {
         this.phaseSummaryBar.setOpaque(false);
         this.phaseSummaryBar.setBackground(new Color(24, 27, 34));
         this.phaseSummaryBar.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
-        this.phaseSummaryBar.setPreferredSize(new Dimension(0, 56));
-        this.phaseSummaryBar.setMinimumSize(new Dimension(0, 56));
-        this.phaseSummaryBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+        this.phaseSummaryBar.setPreferredSize(new Dimension(0, 44));
+        this.phaseSummaryBar.setMinimumSize(new Dimension(0, 44));
+        this.phaseSummaryBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         this.phaseSummaryBar.setVisible(false);
         String[] summaryPhases = new String[]{"Untap", "Upkeep", "Draw", "Main1", "Combat_Start", "Combat_Attack", "Combat_Block", "Combat_Damage", "Combat_End", "Main2", "Cleanup", "Next_Turn"};
         for (String phaseName : summaryPhases) {
-            // PHASE-FUSION v1.3: la celda dibuja el nombre de la fase y, debajo y en
-            // chiquitito, la tecla que salta a esa fase (F4 / F5 / F7 por defecto).
-            JLabel cell = new PhaseSummaryCell(phaseName, PHASE_FUSION_SKIP_KEYS.get(phaseName));
+            // PHASE-FUSION v1.4: la celda muestra solo el nombre de la fase; las
+            // teclas F vuelven a la fila de atajos junto a Concede.
+            JLabel cell = new PhaseSummaryCell(phaseName, null);
             cell.setFont(cell.getFont().deriveFont(Font.BOLD, 16.0f));
             cell.setForeground(new Color(190, 198, 210));
             cell.setBackground(new Color(0, 0, 0, 0));
@@ -3636,16 +3622,16 @@ extends JPanel {
         }
     }
 
-    private void applyPhaseFusionHiddenShortcuts() {
-        this.btnSkipToNextTurn.setVisible(false);
-        this.btnSkipToEndTurn.setVisible(false);
-        this.btnSkipToNextMain.setVisible(false);
-        this.btnSkipToYourTurn.setVisible(false);
-        this.btnSkipStack.setVisible(false);
-        this.btnSkipToEndStepBeforeYourTurn.setVisible(false);
-        // PHASE-FUSION v1.1: Cancel Skip queda oculto de la barra
-        // inferior; la funcion sigue disponible por teclado (F3 /
-        // controlCancelSkip) y desde el menu de fases.
+    private void applyPhaseFusionShortcutVisibility() {
+        // PHASE-FUSION v1.4: los atajos de fase vuelven junto a Concede.
+        this.btnSkipToNextTurn.setVisible(true);
+        this.btnSkipToEndTurn.setVisible(true);
+        this.btnSkipToNextMain.setVisible(true);
+        this.btnSkipToYourTurn.setVisible(true);
+        this.btnSkipStack.setVisible(true);
+        this.btnSkipToEndStepBeforeYourTurn.setVisible(true);
+        // Cancel Skip sigue disponible por teclado (F3 / controlCancelSkip)
+        // y desde el menu de fases, sin ocupar la fila inferior.
         this.btnCancelSkip.setVisible(false);
     }
 

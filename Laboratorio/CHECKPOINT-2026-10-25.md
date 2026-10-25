@@ -102,3 +102,40 @@ Pendiente:
 - Validar cementerio con cartas reales (mazo de prueba con descartes).
 - Arranque de confirmación desde el lanzador oficial (los jars desplegados son byte a byte
   los mismos que pasaron el smoke).
+
+## 8. v1.4 — teclas F de vuelta junto a CONCEDE (2026-10-25 13:40)
+
+Petición de Kabutosan: sacar las teclas "F" de la barra de fases y devolverlas al lado de
+CONCEDE; la barra de fases se queda debajo de la mano porque le gusta cómo queda.
+
+Cambios (solo `GamePanel.java`, aditivos sobre los mods existentes):
+
+- Eliminada la fila centrada de CONCEDE (`pnlConcedeCenter`); CONCEDE vuelve a
+  `pnlShortCuts`, junto a los seis botones F.
+- `applyPhaseFusionHiddenShortcuts()` → `applyPhaseFusionShortcutVisibility()`: muestra
+  TO NEXT TURN / TO END STEP / TO MAIN STEP / TO YOUR TURN / SKIP STACK / TO PRIOR END.
+  Cancel Skip sigue oculto; disponible por F3 y por el menú de fases.
+- Barra de fases: 56 → 44 px y celdas solo con el nombre (`PhaseSummaryCell(phaseName, null)`).
+
+Evidencia del smoke en laboratorio (servidor 17191, cliente con prefs aisladas):
+
+- `capturas/86-v14-en-juego.png`: layout nuevo durante el mulligan.
+- `capturas/87-v14-keep.png`: turno del oponente con la fila F junto a CONCEDE.
+- `capturas/88-v14-f5.png`: clic real en TO END STEP F5 → Upkeep a Precombat Main;
+  el botón quedó con foco. Atajos clicables confirmados.
+
+Despliegue (autorizado por Kabutosan; solo se cerró el cliente oficial, PID 16936):
+
+- `J:\MTG\Instalacion-XMage\xmage\mage-client\lib\mage-client-1.4.62.jar`
+  SHA256 `9230b8ca1fb4017c411413c62381b8e4e9882f095538bf3dcbebb6edf49dfacc`
+  (verificado: el jar contiene `applyPhaseFusionShortcutVisibility`).
+- Backup de la build anterior: `xmage/backup-jars-1.4.62-v14-20261025/cliente/`
+  (hash `d5382792...a6fc7a`).
+- Servidor 17171 y su BD intactos; `mage-server/lib` sin tocar.
+- Parche regenerado: `parches/2026-10-25-UI-final.patch` (backup `.bak-v13`).
+
+Pendiente tras v1.4:
+
+- Reabrir el cliente oficial (yo no lo relancé) y confirmar el layout en la instalación.
+- Autorización para la clave basura del registro.
+- Cementerio con cartas reales (mazo con descartes/mill).

@@ -26,6 +26,9 @@ Fuente: `XMage-1.4.62V1-src`. Parche: `parches/2026-10-25-UI-final.patch`.
    - `restoreSplitter()` espera a que el splitter tenga ancho real antes de restaurar.
    - `normalizeSplitterLocation()` descarta divisores guardados degenerados (autocuración).
    - La barra de fases queda debajo de la mano (hand height correcto).
+   - v1.4: la barra de fases muestra solo nombres (44 px) y los atajos F4/F5/F7/F9/F10/F11
+     vuelven a la fila inferior, junto a CONCEDE (`applyPhaseFusionShortcutVisibility`).
+     Cancel Skip sigue solo por teclado (F3) y menú de fases.
 3. `Mage.Client/src/main/java/mage/client/game/HelperPanel.java`
    - `getRequiredHeight()` limitado a 1/3 de la pantalla (mínimo 120 px).
 4. `Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java`
@@ -75,12 +78,28 @@ Evidencia en `LAB-UI-1.4.62-V2/capturas/`:
 - `83-keep.png`: turno 1, mano visible, prompt de Upkeep con Done.
 - `84-cementerio.png`: ventana `Kabutosan's graveyard (0) - 0 cards` abierta en partida,
   mismo marco/tamaño/fórmula que la ventana de búsqueda de biblioteca.
+- v1.4 (2026-10-25 tarde): `86-v14-en-juego.png` (barra de fases sin teclas debajo de la
+  mano), `87-v14-keep.png` (fila F junto a CONCEDE) y `88-v14-f5.png` (clic real en
+  TO END STEP F5: pasó de Upkeep a Precombat Main y el botón quedó con foco).
 
 Limitación conocida del smoke: el mazo de prueba (`cliente/sample-decks/Descargados/Modern/Smoke Modern.dck`,
 60 Mountains) no mete cartas al cementerio, así que la ventana se validó vacía; el
 renderizado con cartas es el mismo `CardArea.loadCards()` que usa `ShowCardsDialog`.
 
-## Despliegue en la instalación oficial (hecho)
+## Despliegue en la instalación oficial
+
+### v1.4 (2026-10-25, cliente)
+
+- Cliente: `xmage/mage-client/lib/mage-client-1.4.62.jar`
+  - SHA256 `9230b8ca1fb4017c411413c62381b8e4e9882f095538bf3dcbebb6edf49dfacc`
+  - Verificado: el jar desplegado contiene `applyPhaseFusionShortcutVisibility`.
+- Backup previo intacto: `xmage/backup-jars-1.4.62-v14-20261025/cliente/`
+  (SHA256 `d5382792…a6fc7a`, la build anterior).
+- `xmage/mage-server/lib/mage-client-1.4.62.jar` se deja como estaba (no lo usa el
+  servidor y estaba bloqueado por el proceso del servidor). No afecta al cliente.
+- El servidor oficial (17171 / su BD) no se reinició ni se modificó.
+
+### Despliegue anterior (2026-10-25, mañana)
 
 - Cliente: `xmage/mage-client/lib/mage-client-1.4.62.jar`
   - SHA256 `d538279279a526c919fa3300379ccf04b6b1b653b725b29b3c903c60e5a6fc7a`
@@ -97,4 +116,5 @@ renderizado con cartas es el mismo `CardArea.loadCards()` que usa `ShowCardsDial
 2. Validar la ventana de cementerio con cartas reales (hace falta un mazo de prueba con
    descartes/mill; el clon ya está verificado por código y en vivo con la ventana abierta).
 3. Primer arranque del cliente/servidor desde el lanzador oficial para confirmar que la
-   instalación desplegada arranca con las prefs reales.
+   instalación desplegada arranca con las prefs reales (el cliente oficial se cerró para
+   poder copiar la v1.4; el servidor 17171 sigue en marcha).

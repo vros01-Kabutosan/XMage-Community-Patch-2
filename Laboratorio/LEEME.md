@@ -1,5 +1,9 @@
 # Laboratorio XMage — UI 1.4.62 (estado final 2026-10-25)
 
+> **Norma permanente para cualquier worker/IA:** todo cambio se prueba primero en este
+> laboratorio (puerto 17191) y solo se despliega en `J:\MTG\Instalacion-XMage` cuando el
+> smoke pasa. Reglas completas en `J:\MTG\AGENTS.md`. No hace falta repetirlas en cada prompt.
+
 Este directorio contiene TODO lo necesario para reproducir, probar y desplegar el fork
 modificado de XMage 1.4.62V1 de Kabutosan. La instalación oficial vive aparte, en
 `J:\MTG\Instalacion-XMage`.
@@ -29,6 +33,11 @@ Fuente: `XMage-1.4.62V1-src`. Parche: `parches/2026-10-25-UI-final.patch`.
    - v1.4: la barra de fases muestra solo nombres (44 px) y los atajos F4/F5/F7/F9/F10/F11
      vuelven a la fila inferior, junto a CONCEDE (`applyPhaseFusionShortcutVisibility`).
      Cancel Skip sigue solo por teclado (F3) y menú de fases.
+   - v1.5: texto de fase centrado con `FontMetrics` y recortado a su celda (antes
+     `drawString` arrancaba en el centro e invadía la celda vecina, p. ej. Combat Damage).
+     El resaltado ya no es un borde de celda completa: es una píldora ajustada al texto,
+     amarilla para la fase activa y verde para el objetivo del skip, borde de 1 px y
+     relleno tenue (`PhaseSummaryCell.setHighlightColor`).
 3. `Mage.Client/src/main/java/mage/client/game/HelperPanel.java`
    - `getRequiredHeight()` limitado a 1/3 de la pantalla (mínimo 120 px).
 4. `Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java`
@@ -81,12 +90,24 @@ Evidencia en `LAB-UI-1.4.62-V2/capturas/`:
 - v1.4 (2026-10-25 tarde): `86-v14-en-juego.png` (barra de fases sin teclas debajo de la
   mano), `87-v14-keep.png` (fila F junto a CONCEDE) y `88-v14-f5.png` (clic real en
   TO END STEP F5: pasó de Upkeep a Precombat Main y el botón quedó con foco).
+- v1.5 (2026-10-25 tarde): `89-v15-arranque.png` (partida reconectada con la barra nueva)
+  y `90-v15-fases.png` (zoom: píldoras ajustadas al texto; Main1 amarilla, Combat End y
+  Cleanup verdes; Combat Damage ya no se solapa con la celda siguiente).
 
 Limitación conocida del smoke: el mazo de prueba (`cliente/sample-decks/Descargados/Modern/Smoke Modern.dck`,
 60 Mountains) no mete cartas al cementerio, así que la ventana se validó vacía; el
 renderizado con cartas es el mismo `CardArea.loadCards()` que usa `ShowCardsDialog`.
 
 ## Despliegue en la instalación oficial
+
+### v1.5 (2026-10-25, cliente)
+
+- Cliente: `xmage/mage-client/lib/mage-client-1.4.62.jar`
+  - SHA256 `f25c7bd1b2941e84319963f9e42eb3e20177e0e3ccc6ac2b662e5fc844834c80`
+  - Verificado: el jar desplegado contiene `setHighlightColor`.
+- Backup previo: `xmage/backup-jars-1.4.62-v15-20261025/cliente/`
+  (SHA256 `9230b8ca…f49dfacc`, build v1.4).
+- El servidor oficial (17171 / su BD) no se reinició ni se modificó.
 
 ### v1.4 (2026-10-25, cliente)
 

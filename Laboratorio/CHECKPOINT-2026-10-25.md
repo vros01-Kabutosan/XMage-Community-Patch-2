@@ -139,3 +139,41 @@ Pendiente tras v1.4:
 - Reabrir el cliente oficial (yo no lo relancé) y confirmar el layout en la instalación.
 - Autorización para la clave basura del registro.
 - Cementerio con cartas reales (mazo con descartes/mill).
+
+## 9. v1.5 — resaltado de fase sin solapes (2026-10-25 16:30)
+
+Petición de Kabutosan: las fases se solapaban con las ventanas de selección; quería una
+ventana amarilla y verde ajustada a la letra de la fase, con bordes redondeados
+minimalistas. Norma nueva: el protocolo laboratorio → instalación queda escrito para
+siempre en `J:\MTG\AGENTS.md` (y en LEEME) para cualquier worker/IA.
+
+Diagnóstico:
+
+- `PhaseSummaryCell.paintComponent()` dibujaba con `drawString(name, getWidth()/2, y)`,
+  es decir el texto empezaba en el centro de la celda y se extendía a la derecha sin
+  recorte; "Combat Damage" invadía la celda siguiente y chocaba con su caja.
+- El resaltado era un `LineBorder` alrededor de TODA la celda (GridLayout), mucho más
+  ancho que el texto; de ahí el aspecto de ventanas solapadas.
+
+Cambios (solo `GamePanel.java`):
+
+- Texto centrado de verdad con `FontMetrics.stringWidth` y recorte `clipRect` a la celda;
+  si un nombre no cabe, la fuente baja en pasos de 0,5 pt hasta 12 pt.
+- Resaltado nuevo: píldora `RoundRectangle2D` ajustada al texto, borde 1 px con
+  antialiasing y relleno tenue. Amarillo `#FFD640` para la fase activa, verde `#5AE65A`
+  para el objetivo del skip. Se elimina el `LineBorder` de celda completa.
+- `updatePhaseSummary()` usa `PhaseSummaryCell.setHighlightColor()`.
+
+Validación en laboratorio:
+
+- `capturas/89-v15-arranque.png`: partida reconectada con la barra nueva.
+- `capturas/90-v15-fases.png`: zoom con Main1 en píldora amarilla, Combat End y Cleanup
+  en verde, y todas las fases centradas sin solapes (Combat Damage completo).
+
+Despliegue:
+
+- `mage-client-1.4.62.jar` SHA256 `f25c7bd1b2941e84319963f9e42eb3e20177e0e3ccc6ac2b662e5fc844834c80`
+  (verificado `setHighlightColor` en el jar).
+- Backup: `xmage/backup-jars-1.4.62-v15-20261025/cliente/` (v1.4, `9230b8ca…`).
+- Servidor 17171 y su BD intactos; cliente oficial cerrado porque estaba desconectado
+  en el diálogo de reconexión (sin partida en curso).

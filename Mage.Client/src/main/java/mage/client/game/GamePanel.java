@@ -6,6 +6,7 @@ package mage.client.game;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.awt.AWTEvent;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -14,6 +15,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
@@ -210,7 +212,7 @@ extends JPanel {
     private final Map<String, Card> loadedCards = new HashMap<String, Card>();
     private static final String XCP_UI_RESIZE_V1_3 = "XCP_UI_RESIZE_V1_3";
     private final Map<String, HoverButton> phaseButtons = new LinkedHashMap<String, HoverButton>();
-    private final Map<String, JLabel> phaseSummaryCells = new LinkedHashMap<String, JLabel>();
+    private final Map<String, PhaseSummaryCell> phaseSummaryCells = new LinkedHashMap<String, PhaseSummaryCell>();
     // PHASE-FUSION v1.2: ultima fase activa renderizada. Se
     // usa para re-computar las letras verdes de la fase
     // seleccionada cuando cambia el estado de skip sin
@@ -1980,22 +1982,22 @@ extends JPanel {
             skipTargets.add("Cleanup");
         }
         String summaryPhase = currentPhaseName;
-        for (Map.Entry<String, JLabel> entry : this.phaseSummaryCells.entrySet()) {
+        for (Map.Entry<String, PhaseSummaryCell> entry : this.phaseSummaryCells.entrySet()) {
             boolean active = entry.getKey().equals(summaryPhase);
             boolean skipTarget = !active && skipTargets.contains(entry.getKey());
-            JLabel cell = entry.getValue();
-            cell.setBackground(active ? new Color(55, 95, 125) : new Color(38, 43, 52));
+            PhaseSummaryCell cell = entry.getValue();
             boolean combat = entry.getKey().startsWith("Combat_");
             if (active) {
+                // PHASE-FUSION v1.5: ventana de seleccion amarilla ajustada a la letra.
                 cell.setForeground(Color.YELLOW);
-                cell.setBorder(BorderFactory.createLineBorder(combat ? new Color(255, 105, 105) : Color.YELLOW, 1, true));
+                cell.setHighlightColor(new Color(255, 214, 64));
             } else if (skipTarget) {
-                // Fase seleccionada (objetivo del skip): letras en verde.
+                // Fase seleccionada (objetivo del skip): ventana y letras en verde.
                 cell.setForeground(new Color(90, 230, 90));
-                cell.setBorder(BorderFactory.createLineBorder(new Color(90, 230, 90), 1, true));
+                cell.setHighlightColor(new Color(90, 230, 90));
             } else {
                 cell.setForeground(combat ? new Color(255, 105, 105) : new Color(190, 198, 210));
-                cell.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+                cell.setHighlightColor(null);
             }
         }
         this.updatePhaseSummaryBounds();
@@ -3279,7 +3281,7 @@ extends JPanel {
         for (String phaseName : summaryPhases) {
             // PHASE-FUSION v1.4: la celda muestra solo el nombre de la fase; las
             // teclas F vuelven a la fila de atajos junto a Concede.
-            JLabel cell = new PhaseSummaryCell(phaseName, null);
+            PhaseSummaryCell cell = new PhaseSummaryCell(phaseName, null);
             cell.setFont(cell.getFont().deriveFont(Font.BOLD, 16.0f));
             cell.setForeground(new Color(190, 198, 210));
             cell.setBackground(new Color(0, 0, 0, 0));
@@ -3543,8 +3545,11 @@ extends JPanel {
         private static final float NAME_SIZE = 16.0f;
         private static final float KEY_SIZE = 9.5f;
         private static final Color KEY_COLOR = new Color(122, 132, 148);
+        private static final int HIGHLIGHT_PAD_X = 9;
+        private static final int HIGHLIGHT_PAD_Y = 2;
 
         private final String skipKey;
+        private Color highlightColor;
 
         PhaseSummaryCell(String phaseName, String skipKey) {
             super(phaseName.replace("_", " "), JLabel.CENTER);
@@ -3554,6 +3559,11 @@ extends JPanel {
 
         String getSkipKey() {
             return this.skipKey;
+        }
+
+        /** Color de la ventana de seleccion (amarillo = fase activa, verde = objetivo del skip). */
+        void setHighlightColor(Color color) {
+            this.highlightColor = color;
         }
 
         /** Tecla visible en la celda, ya resuelta segun las preferencias del usuario. */
@@ -3575,20 +3585,63 @@ extends JPanel {
             Graphics2D g = (Graphics2D) graphics.create();
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
                     RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
+            // PHASE-FUSION v1.5: recorte a la celda; antes las fases largas
+            // (p.ej. Combat Damage) invadian la celda vecina y se solapaban
+            // con su ventana de seleccion.
+            g.clipRect(0, 0, getWidth(), getHeight());
 
-            Insets insets = getInsets();
-            int y = insets.top + getFontMetrics(getFont()).getAscent();
-            g.setColor(getForeground());
-            g.setFont(getFont());
-            g.drawString(name, getWidth() / 2, y);
+            // PHASE-FUSION v1.5: centrado real con FontMetrics (drawString en
+            // getWidth()/2 dibujaba el texto a partir del centro, no centrado).
+            Font nameFont = getFont();
+            FontMetrics nameFm = getFontMetrics(nameFont);
+            int maxTextWidth = Math.max(40, getWidth() - HIGHLIGHT_PAD_X * 2);
+            float fontSize = nameFont.getSize2D();
+            while (fontSize > 12.0f && nameFm.stringWidth(name) > maxTextWidth) {
+                fontSize -= 0.5f;
+                nameFont = nameFont.deriveFont(fontSize);
+                nameFm = getFontMetrics(nameFont);
+            }
 
             String key = getKeyText();
+            Font keyFont = nameFont.deriveFont(Font.PLAIN, KEY_SIZE);
+            FontMetrics keyFm = getFontMetrics(keyFont);
+            int nameHeight = nameFm.getAscent() + nameFm.getDescent();
+            int keyHeight = key.isEmpty() ? 0 : 2 + keyFm.getAscent() + keyFm.getDescent();
+            int blockTop = (getHeight() - (nameHeight + keyHeight)) / 2;
+            int nameY = blockTop + nameFm.getAscent();
+            int textWidth = nameFm.stringWidth(name);
+            int nameX = (getWidth() - textWidth) / 2;
+
+            if (this.highlightColor != null) {
+                // PHASE-FUSION v1.5: ventana de seleccion ajustada al texto de la
+                // fase, con esquinas muy redondeadas, borde de 1 px y relleno tenue.
+                int pillHeight = nameHeight + HIGHLIGHT_PAD_Y * 2;
+                RoundRectangle2D pill = new RoundRectangle2D.Float(
+                        nameX - HIGHLIGHT_PAD_X,
+                        nameY - nameFm.getAscent() - HIGHLIGHT_PAD_Y,
+                        textWidth + HIGHLIGHT_PAD_X * 2,
+                        pillHeight,
+                        pillHeight,
+                        pillHeight);
+                g.setColor(new Color(this.highlightColor.getRed(), this.highlightColor.getGreen(),
+                        this.highlightColor.getBlue(), 28));
+                g.fill(pill);
+                g.setStroke(new BasicStroke(1.0f));
+                g.setColor(this.highlightColor);
+                g.draw(pill);
+            }
+
+            g.setColor(getForeground());
+            g.setFont(nameFont);
+            g.drawString(name, nameX, nameY);
+
             if (!key.isEmpty()) {
-                Font keyFont = getFont().deriveFont(Font.PLAIN, KEY_SIZE);
                 g.setFont(keyFont);
-                y += 2 + getFontMetrics(keyFont).getAscent();
                 g.setColor(KEY_COLOR);
-                g.drawString(key, getWidth() / 2, y);
+                g.drawString(key, (getWidth() - keyFm.stringWidth(key)) / 2,
+                        nameY + nameFm.getDescent() + 2 + keyFm.getAscent());
             }
             g.dispose();
         }

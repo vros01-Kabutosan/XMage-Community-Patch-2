@@ -3,7 +3,7 @@
 Autorizada por Kabutosan (confirmación explícita para borrar solo duplicados y
 regenerables). No se tocó la instalación oficial salvo lectura/verificación.
 
-## Borrado (~780 MB)
+## Borrado (~1,05 GB)
 
 | Ruta | Tamaño | Motivo | Dónde sigue disponible |
 |---|---:|---|---|
@@ -11,7 +11,7 @@ regenerables). No se tocó la instalación oficial salvo lectura/verificación.
 | `LAB-UI-FASES-CEMENTERIO/servidor/lib` | 96 MB | Dependencias estándar + jars 1.4.61 duplicados | Mismo backup 1.4.61 |
 | `LAB-UI-FASES-CEMENTERIO/cliente/db` | 154 MB | `cards.h2.mv.db` regenerable | Se reconstruye al primer arranque desde `Mage.Sets` |
 | `LAB-UI-FASES-CEMENTERIO/servidor/db` | 294 MB | `cards.h2.mv.db` + stats de pruebas regenerables | Se reconstruye al primer arranque desde `Mage.Sets` |
-| `XMage-1.4.62V1-src/{Mage,Mage.Client,Mage.Common,Mage.Server,Mage.Server.Console}/target` | 84 MB | Artefactos Maven regenerables | `mvn -pl Mage.Client,Mage.Server package`; jars ya copiados a `lib/` |
+| `XMage-1.4.62V1-src/{Mage,Mage.Client,Mage.Common,Mage.Server,Mage.Server.Console,Mage.Sets,Mage.Tests,Mage.Verify}/target` | 359 MB | Artefactos Maven regenerables | `mvn -pl Mage.Client,Mage.Server package`; jars ya copiados a `lib/` |
 | `_archivo/20261025/untitled-project` | 62 KB | Repositorio git vacío, sin objetos ni commits | No aplica |
 
 Conservado del laboratorio archivado: `capturas/` (2 imágenes), `cliente-lab.log`,
@@ -21,7 +21,7 @@ Conservado del laboratorio archivado: `capturas/` (2 imágenes), `cliente-lab.lo
 ## Conservado
 
 - `LAB-UI-1.4.62-V2/` — 782 MB, con 127 capturas de evidencia.
-- `XMage-1.4.62V1-src/` — 845 MB, fuente + historia git de la rama de trabajo.
+- `XMage-1.4.62V1-src/` — 569 MB, fuente + historia git de la rama de trabajo.
 - `Proyecto-XMage/` — 2.5 GB, archivo histórico 1.4.61; no se usa para probar.
 - `parches/` — 100 KB, parche consolidado + backups `.bak-v13`/`.bak-v14`.
 - `_archivo/20261025/lab-logs` y `logs` — evidencia de builds y pruebas anteriores.

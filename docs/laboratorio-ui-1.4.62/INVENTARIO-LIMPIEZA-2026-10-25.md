@@ -3,7 +3,7 @@
 Autorizada por Kabutosan (confirmación explícita para borrar solo duplicados y
 regenerables). No se tocó la instalación oficial salvo lectura/verificación.
 
-## Borrado (~1,05 GB)
+## Borrado (~4,03 GB)
 
 | Ruta | Tamaño | Motivo | Dónde sigue disponible |
 |---|---:|---|---|
@@ -13,6 +13,10 @@ regenerables). No se tocó la instalación oficial salvo lectura/verificación.
 | `LAB-UI-FASES-CEMENTERIO/servidor/db` | 294 MB | `cards.h2.mv.db` + stats de pruebas regenerables | Se reconstruye al primer arranque desde `Mage.Sets` |
 | `XMage-1.4.62V1-src/{Mage,Mage.Client,Mage.Common,Mage.Server,Mage.Server.Console,Mage.Sets,Mage.Tests,Mage.Verify}/target` | 359 MB | Artefactos Maven regenerables | `mvn -pl Mage.Client,Mage.Server package`; jars ya copiados a `lib/` |
 | `_archivo/20261025/untitled-project` | 62 KB | Repositorio git vacío, sin objetos ni commits | No aplica |
+| `Instalacion-XMage/xmage/mage-client/plugins/images/downloading/scryfall_bulk_cards.jsonl` | 2,98 GB | Caché descomprimida de Scryfall; las imágenes ya están descargadas | `scryfall_bulk_cards.jsonl.gz` (401 MB) verificado con `gzip -t`; se regenera descomprimiéndolo |
+
+La caché de Scryfall se limpió en una segunda fase, con autorización aparte de
+Kabutosan. Se conservó el `.gz` comprimido y verificado.
 
 Conservado del laboratorio archivado: `capturas/` (2 imágenes), `cliente-lab.log`,
 `servidor-lab.log`, `cliente/config`, `servidor/config`, readmes y assets menores
@@ -25,6 +29,8 @@ Conservado del laboratorio archivado: `capturas/` (2 imágenes), `cliente-lab.lo
 - `Proyecto-XMage/` — 2.5 GB, archivo histórico 1.4.61; no se usa para probar.
 - `parches/` — 100 KB, parche consolidado + backups `.bak-v13`/`.bak-v14`.
 - `_archivo/20261025/lab-logs` y `logs` — evidencia de builds y pruebas anteriores.
+- `scryfall_bulk_cards.jsonl.gz` (401 MB) — caché comprimida de Scryfall verificada;
+  permite reconstruir el `.jsonl` sin descargarlo de nuevo.
 - Backups de instalación: 5 carpetas (`backup-jars-1.4.61`, `1.4.62`, `final`, `v14`,
   `v15` + `backup-prefs-4k`), 461 MB; ninguno se borró.
 

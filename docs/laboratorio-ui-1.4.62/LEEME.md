@@ -16,7 +16,7 @@ modificado de XMage 1.4.62V1 de Kabutosan. La instalación oficial vive aparte, 
 | `LAB-UI-1.4.62-V2/` | Laboratorio ejecutable aislado: `cliente/` + `servidor/` (puerto 17191), scripts, logs y `capturas/` con la evidencia de los smokes. |
 | `parches/` | Parches consolidados de los mods (aplicables sobre la fuente oficial 1.4.62V1). |
 | `Proyecto-XMage/` | Archivo histórico 1.4.61 (legado, solo consulta). No se usa para probar. |
-| `_archivo/20261025/` | Material antiguo retirado del flujo activo (logs viejos, labs anteriores, restos de recuperación). Nada se ha borrado. |
+| `_archivo/20261025/` | Material antiguo retirado del flujo activo (logs viejos, labs anteriores, restos de recuperación) y limpieza autorizada del 2026-10-25. Detalle exacto en `_archivo/20261025/INVENTARIO-LIMPIEZA-2026-10-25.md`. |
 
 ## Mods activos (6 archivos, todos aditivos)
 
@@ -129,6 +129,23 @@ renderizado con cartas es el mismo `CardArea.loadCards()` que usa `ShowCardsDial
 - Backups previos (sin borrar nada):
   `xmage/backup-jars-1.4.62-final-20261025/cliente/` y `.../servidor/`.
 - No se tocaron `config/`, `db/`, `installed.properties`, `java/` ni el lanzador.
+
+## Limpieza y orden (2026-10-25, autorizada)
+
+Se liberaron ~780 MB borrando solo duplicados y artefactos regenerables; no se borró
+ninguna captura, log de evidencia, configuración ni backup:
+
+- Laboratorio archivado 1.4.61 (`_archivo/20261025/LAB-UI-FASES-CEMENTERIO`): se
+  retiraron `cliente/lib`, `servidor/lib` (jars 1.4.61 ya preservados en
+  `Instalacion-XMage/xmage/backup-jars-1.4.61-ui-20261024`) y las bases
+  `cards.h2.mv.db` de cliente/servidor (regenerables desde `Mage.Sets`).
+- `XMage-1.4.62V1-src/*/target`: artefactos Maven regenerables (84 MB).
+- `_archivo/20261025/untitled-project`: repositorio git vacío.
+
+También se movieron al archivo `proyecto Xmage/` (herramientas MandarinJuice y backup
+de Pragmata, ajenos a XMage) y `v36-recuperacion/` (informes/herramientas V3.6).
+`Proyecto-XMage/` se conserva como archivo histórico. El servidor oficial 17171 y su
+base de datos no se tocaron.
 
 ## Pendientes
 

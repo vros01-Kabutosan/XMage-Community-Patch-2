@@ -177,3 +177,34 @@ Despliegue:
 - Backup: `xmage/backup-jars-1.4.62-v15-20261025/cliente/` (v1.4, `9230b8ca…`).
 - Servidor 17171 y su BD intactos; cliente oficial cerrado porque estaba desconectado
   en el diálogo de reconexión (sin partida en curso).
+
+## 10. Limpieza y sincronización con GitHub (2026-10-25 17:45)
+
+Petición de Kabutosan: sincronizar con GitHub, ordenar y limpiar lo antiguo que no
+sirva, sin borrar nada importante. El borrado permanente se confirmó explícitamente.
+
+Limpieza (detalle en `_archivo/20261025/INVENTARIO-LIMPIEZA-2026-10-25.md`):
+
+- Laboratorio archivado 1.4.61: se borraron `cliente/lib` y `servidor/lib` (248 MB;
+  jars 1.4.61 preservados en `backup-jars-1.4.61-ui-20261024`) y las bases
+  `cards.h2.mv.db` de cliente y servidor (448 MB, regenerables desde `Mage.Sets`).
+  Se conservaron capturas (2), logs, configuración, readmes y assets menores: 15 MB.
+- `XMage-1.4.62V1-src/*/target`: 84 MB de artefactos Maven regenerables.
+- `_archivo/20261025/untitled-project`: repositorio git vacío (62 KB).
+- Total liberado: ~780 MB.
+- Movidos al archivo, sin borrar: `proyecto Xmage` (MandarinJuice/Pragmata) y
+  `v36-recuperacion` (informes V3.6).
+- Sin cambios en `Proyecto-XMage` (2.5 GB, histórico), `parches/` ni en los 5 backups
+  de la instalación (461 MB). Servidor 17171 y su BD intactos.
+
+Verificación posterior: el jar desplegado sigue con SHA256 `f25c7bd1…834c80`; el
+laboratorio actual conserva sus 127 capturas y sus jars en `lib/`.
+
+GitHub:
+
+- `AGENTS.md` y `docs/laboratorio-ui-1.4.62/` (LEEME, CHECKPOINT, parche y guía)
+  publicados en la rama `upgrade/official-1.4.62V1`, commit `87c7f2b7`.
+- El push directo a `main` quedó bloqueado por la política de seguridad; no se hizo
+  force-push y `main` remoto permanece igual.
+- La historia local de `J:\MTG` (~6.2 GB, no relacionada con `origin/main`) no se
+  publica ni se reescribe.

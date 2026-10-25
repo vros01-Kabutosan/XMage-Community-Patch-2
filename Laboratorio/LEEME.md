@@ -132,14 +132,17 @@ renderizado con cartas es el mismo `CardArea.loadCards()` que usa `ShowCardsDial
 
 ## Limpieza y orden (2026-10-25, autorizada)
 
-Se liberaron ~1,05 GB borrando solo duplicados y artefactos regenerables; no se borró
-ninguna captura, log de evidencia, configuración ni backup:
+Se liberaron ~4,03 GB borrando solo duplicados, cachés y artefactos regenerables; no se
+borró ninguna captura, log de evidencia, configuración ni backup:
 
 - Laboratorio archivado 1.4.61 (`_archivo/20261025/LAB-UI-FASES-CEMENTERIO`): se
   retiraron `cliente/lib`, `servidor/lib` (jars 1.4.61 ya preservados en
   `Instalacion-XMage/xmage/backup-jars-1.4.61-ui-20261024`) y las bases
   `cards.h2.mv.db` de cliente/servidor (regenerables desde `Mage.Sets`).
 - `XMage-1.4.62V1-src/*/target`: artefactos Maven regenerables (359 MB, ocho módulos).
+- `Instalacion-XMage/.../plugins/images/downloading/scryfall_bulk_cards.jsonl`: caché
+  descomprimida de Scryfall (2,98 GB); se conserva el `.gz` verificado (401 MB), del que
+  se puede reconstruir sin volver a descargarlo.
 - `_archivo/20261025/untitled-project`: repositorio git vacío.
 
 También se movieron al archivo `proyecto Xmage/` (herramientas MandarinJuice y backup

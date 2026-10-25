@@ -192,7 +192,10 @@ Limpieza (detalle en `_archivo/20261025/INVENTARIO-LIMPIEZA-2026-10-25.md`):
 - `XMage-1.4.62V1-src/*/target`: 359 MB de artefactos Maven regenerables (ocho módulos;
   la primera medición solo había alcanzado cinco).
 - `_archivo/20261025/untitled-project`: repositorio git vacío (62 KB).
-- Total liberado: ~1,05 GB.
+- `Instalacion-XMage/xmage/mage-client/plugins/images/downloading/scryfall_bulk_cards.jsonl`:
+  caché descomprimida de Scryfall (2,98 GB), borrada con autorización aparte. Se conserva
+  `scryfall_bulk_cards.jsonl.gz` (401 MB) verificado con `gzip -t`.
+- Total liberado: ~4,03 GB.
 - Movidos al archivo, sin borrar: `proyecto Xmage` (MandarinJuice/Pragmata) y
   `v36-recuperacion` (informes V3.6).
 - Sin cambios en `Proyecto-XMage` (2.5 GB, histórico), `parches/` ni en los 5 backups

@@ -39,3 +39,4 @@ Archivo modificado: [`Mage.Client/src/main/java/mage/client/cards/DragCardGrid.j
   - Cliente de laboratorio ejecutado y verificado con base de datos completa de 589 sets y 93.992 cartas.
   - Parada limpia con `./parar-lab.sh`.
 - Parche generado en `Laboratorio/parches/2026-10-30-selector-edicion-v16.patch`.
+

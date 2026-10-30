@@ -48,6 +48,17 @@ Fuente: `XMage-1.4.62V1-src`. Parche: `parches/2026-10-25-UI-final.patch`.
    - `markGameTypesLoadFinished()`: corta la espera de 180 s cuando no hay plugins de game types.
 6. `Mage.Server/src/main/java/mage/server/Main.java`
    - Llama a `markGameTypesLoadFinished()` tras cargar los game types.
+7. `Mage.Client/src/main/java/mage/client/cards/DragCardGrid.java`
+   - v1.6 (2026-10-30): Selector de edición (`chooseEdition`) enriquecido:
+     - Iconos oficiales de expansión coloreados por rareza (`ManaSymbols.getSetSymbolImage`).
+     - Año de lanzamiento en cada edición (`ExpansionSet.getReleaseYear()`).
+     - Desplegable con 4 órdenes (Más reciente primero, Más clásica primero, Código A-Z, Nombre A-Z).
+     - Búsqueda en tiempo real por código, nombre, año o rareza.
+     - Carga de previsualizaciones asíncrona (`SwingWorker`) sin bloqueo de Swing EDT.
+     - Soporte para cartas de doble cara (DFCs / MDFCs) con botón y tecla espacio para alternar caras.
+     - Confirmación ágil mediante doble clic y tecla ENTER, cierre con ESC.
+     - Alcance configurable: todas las copias vs solo carta seleccionada, con opción de aplicar al banquillo.
+     - Ordenación numérica optimizada con `CardInfo.getCardNumberAsInt()` y protección contra nulos.
 
 ## Compilar
 
@@ -99,6 +110,15 @@ Limitación conocida del smoke: el mazo de prueba (`cliente/sample-decks/Descarg
 renderizado con cartas es el mismo `CardArea.loadCards()` que usa `ShowCardsDialog`.
 
 ## Despliegue en la instalación oficial
+
+### v1.6 (2026-10-30, cliente)
+
+- Cliente: `xmage/mage-client/lib/mage-client-1.4.62.jar`
+  - SHA256 `a1c057a8517eb1ff4169c7f0e1646614685a29c6949130b09f1f6ba4035d2251`
+  - Verificado: el jar desplegado contiene el selector de edición v1.6 con iconos, ordenación y carga asíncrona.
+- Backup previo: `xmage/backup-jars-1.4.62-v16-20261030/cliente/`
+  (SHA256 `f25c7bd1b2941e84319963f9e42eb3e20177e0e3ccc6ac2b662e5fc844834c80`, build v1.5).
+- El servidor oficial (17171 / su BD) no se reinició ni se modificó.
 
 ### v1.5 (2026-10-25, cliente)
 

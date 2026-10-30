@@ -46,6 +46,20 @@ CONCEDE; la barra de fases se queda debajo de la mano (le parece bien ahí).
 - Desplegado en la instalación el 2026-10-25 (jar `9230b8ca…dfacc`); el cliente oficial
   se cerró para desbloquear el archivo y no se tocó el servidor.
 
+### v1.6 — selector de edición enriquecido (2026-10-30)
+
+Mejora integral del diálogo "Elegir edición..." en `DragCardGrid.java`:
+- Iconos oficiales de set coloreados por rareza (`ManaSymbols.getSetSymbolImage`) con caché de memoria.
+- Año de lanzamiento en cada edición (`ExpansionSet.getReleaseYear()`) y rareza con color semántico.
+- Desplegable de 4 órdenes (Más reciente primero, Más clásica primero, Código A-Z, Nombre A-Z).
+- Búsqueda en tiempo real por código, nombre, año o rareza.
+- Carga asíncrona de imágenes (`SwingWorker`) sin bloquear el hilo EDT.
+- Soporte para cartas de doble cara (DFCs / MDFCs) con botón y barra espaciadora para voltear.
+- Confirmación ágil por doble clic y tecla ENTER, cierre con ESC.
+- Alcance configurable (todas las copias vs solo carta seleccionada, con opción de aplicar al banquillo).
+- Ordenación numérica optimizada con `CardInfo.getCardNumberAsInt()` y protección contra nulos.
+- Desplegado: jar `a1c057a8…d2251`, backup `backup-jars-1.4.62-v16-20261030/`.
+
 ### v1.5 — resaltado de fase ajustado al texto (2026-10-25 tarde)
 
 Kabutosan reportó que las fases se solapaban con las ventanas de selección y pidió una
@@ -64,6 +78,10 @@ ventana amarilla/verde ajustada a la letra, con bordes redondeados minimalistas.
 
 ## Despliegue en la instalación
 
+- v1.6 cliente: `J:\MTG\Instalacion-XMage\xmage\mage-client\lib\mage-client-1.4.62.jar`
+  SHA256 `a1c057a8517eb1ff4169c7f0e1646614685a29c6949130b09f1f6ba4035d2251`
+  (contiene el selector de edición v1.6 enriquecido; backup en
+  `xmage/backup-jars-1.4.62-v16-20261030/cliente/`).
 - v1.5 cliente: `J:\MTG\Instalacion-XMage\xmage\mage-client\lib\mage-client-1.4.62.jar`
   SHA256 `f25c7bd1b2941e84319963f9e42eb3e20177e0e3ccc6ac2b662e5fc844834c80`
   (contiene `setHighlightColor`; backup en

@@ -8,6 +8,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Image;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -23,6 +25,7 @@ import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -42,6 +45,9 @@ import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
@@ -57,7 +63,12 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
+import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingWorker;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
@@ -85,6 +96,7 @@ import mage.client.cards.ManaBarChart;
 import mage.client.cards.ManaPieChart;
 import mage.client.cards.SelectionBox;
 import mage.client.constants.Constants;
+import mage.client.deckeditor.DeckArea;
 import mage.client.dialog.PreferencesDialog;
 import mage.client.plugins.impl.Plugins;
 import mage.client.util.Event;
@@ -112,6 +124,7 @@ import org.apache.log4j.Logger;
 import org.mage.card.arcane.CardRenderer;
 import org.mage.card.arcane.ManaSymbols;
 import org.mage.plugins.card.images.ImageCache;
+import org.mage.plugins.card.images.ImageCacheData;
 
 public class DragCardGrid
 extends JPanel
@@ -1642,125 +1655,433 @@ CardEventProducer {
         }
         CardCriteria criteria = new CardCriteria();
         criteria.name(clickedCard.getName());
-        ArrayList<CardInfo> printings = new ArrayList<CardInfo>(CardRepository.instance.findCards(criteria));
-        printings.sort(Comparator.comparing(CardInfo::getSetCode, Comparator.nullsLast(String::compareToIgnoreCase)).thenComparingInt(this::xcpPrintingSelectorNumberSort).thenComparing(CardInfo::getCardNumber, Comparator.nullsLast(String::compareToIgnoreCase)));
+        ArrayList<CardInfo> printings = new ArrayList<>(CardRepository.instance.findCards(criteria));
         if (printings.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No se encontraron ediciones para " + clickedCard.getName());
             return;
         }
-        DefaultListModel model = new DefaultListModel();
-        printings.forEach(model::addElement);
-        JList<Object> list = new JList<Object>(model);
-        list.setSelectionMode(0);
-        list.setVisibleRowCount(Math.min(12, printings.size()));
-        list.setFixedCellHeight(42);
-        list.setCellRenderer(new DefaultListCellRenderer(){
 
+        // Cache de iconos de expansión por set y rareza
+        Map<String, ImageIcon> iconCache = new HashMap<>();
+
+        // Detectar si estamos en un DeckArea para conocer el mazo principal / banquillo
+        DeckArea deckArea = null;
+        Container parentContainer = this.getParent();
+        while (parentContainer != null) {
+            if (parentContainer instanceof DeckArea) {
+                deckArea = (DeckArea) parentContainer;
+                break;
+            }
+            parentContainer = parentContainer.getParent();
+        }
+        final DragCardGrid otherGrid = (deckArea != null)
+                ? (this == deckArea.getDeckList() ? deckArea.getSideboardList() : deckArea.getDeckList())
+                : null;
+
+        long thisCount = this.allCards.stream().filter(c -> Objects.equals(c.getName(), clickedCard.getName())).count();
+        long otherCount = (otherGrid != null)
+                ? otherGrid.allCards.stream().filter(c -> Objects.equals(c.getName(), clickedCard.getName())).count()
+                : 0;
+
+        // Modelo de la lista
+        DefaultListModel<CardInfo> model = new DefaultListModel<>();
+        JList<CardInfo> list = new JList<>(model);
+        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        list.setVisibleRowCount(Math.min(12, printings.size()));
+        list.setFixedCellHeight(46);
+        list.setCellRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> listComponent, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                JLabel label = (JLabel)super.getListCellRendererComponent(listComponent, value, index, isSelected, cellHasFocus);
-                CardInfo info = (CardInfo)value;
-                ExpansionSet expansion = Sets.findSet(info.getSetCode());
-                String setName = expansion == null ? "" : expansion.getName();
-                label.setText("<html><b>" + info.getSetCode() + "</b>  #" + info.getCardNumber() + (setName.isEmpty() ? "" : " \u00b7 " + setName) + "<br>" + (Object)((Object)info.getRarity()) + "</html>");
-                label.setIcon(null);
+                JLabel label = (JLabel) super.getListCellRendererComponent(listComponent, value, index, isSelected, cellHasFocus);
+                if (value instanceof CardInfo) {
+                    CardInfo info = (CardInfo) value;
+                    ExpansionSet expansion = Sets.findSet(info.getSetCode());
+                    String setName = (expansion == null) ? "" : expansion.getName();
+                    String yearStr = (expansion == null || expansion.getReleaseDate() == null) ? "" : " (" + expansion.getReleaseYear() + ")";
+
+                    String rarityColor;
+                    if (info.getRarity() != null) {
+                        switch (info.getRarity()) {
+                            case MYTHIC:
+                                rarityColor = "#E65100";
+                                break;
+                            case RARE:
+                                rarityColor = "#C59B27";
+                                break;
+                            case UNCOMMON:
+                                rarityColor = "#3F51B5";
+                                break;
+                            case SPECIAL:
+                            case BONUS:
+                                rarityColor = "#8E24AA";
+                                break;
+                            default:
+                                rarityColor = "#757575";
+                                break;
+                        }
+                    } else {
+                        rarityColor = "#757575";
+                    }
+
+                    label.setText("<html><b>" + info.getSetCode() + "</b> #" + info.getCardNumber() + yearStr
+                            + (setName.isEmpty() ? "" : " &middot; " + setName)
+                            + "<br><font color='" + rarityColor + "'><b>" + info.getRarity() + "</b></font></html>");
+
+                    String iconKey = info.getSetCode() + "_" + info.getRarity();
+                    ImageIcon setIcon = iconCache.computeIfAbsent(iconKey, k -> {
+                        Image raw = ManaSymbols.getSetSymbolImage(info.getSetCode(), info.getRarity());
+                        if (raw != null) {
+                            return new ImageIcon(raw.getScaledInstance(20, 20, Image.SCALE_SMOOTH));
+                        }
+                        return null;
+                    });
+                    label.setIcon(setIcon);
+                }
                 return label;
             }
         });
+
+        // Buscador y ordenación
         JTextField editionSearch = new JTextField();
-        editionSearch.setToolTipText("Busca por c\u00f3digo o nombre de edici\u00f3n, por ejemplo LOR o Lorwyn");
-        final Runnable filterPrintings = () -> {
-            String query = editionSearch.getText().trim().toLowerCase(Locale.ROOT);
-            model.clear();
-            for (CardInfo info : printings) {
-                String setName;
-                ExpansionSet expansion = Sets.findSet(info.getSetCode());
-                String string = setName = expansion == null ? "" : expansion.getName();
-                if (!query.isEmpty() && !String.valueOf(info.getSetCode()).toLowerCase(Locale.ROOT).contains(query) && !setName.toLowerCase(Locale.ROOT).contains(query)) continue;
-                model.addElement(info);
+        editionSearch.setToolTipText("Busca por código, nombre, año o rareza (ej. LOR, Lorwyn, 2024, Rare)");
+
+        String[] sortOptions = new String[] {
+                "Más reciente primero (Fecha \u2193)",
+                "Más clásica primero (Fecha \u2191)",
+                "Código de edición (A-Z)",
+                "Nombre de edición (A-Z)"
+        };
+        JComboBox<String> sortCombo = new JComboBox<>(sortOptions);
+        sortCombo.setSelectedIndex(0);
+
+        // Previsualización y control de doble cara
+        JLabel previewLabel = new JLabel("Selecciona una edición", SwingConstants.CENTER);
+        previewLabel.setPreferredSize(new Dimension(230, 330));
+        JButton btnFlip = new JButton("Ver reverso");
+        btnFlip.setVisible(false);
+
+        final boolean[] showBackFace = new boolean[] { false };
+        final SwingWorker<?, ?>[] activeWorker = new SwingWorker<?, ?>[1];
+
+        final Runnable loadPreview = () -> {
+            if (activeWorker[0] != null && !activeWorker[0].isDone()) {
+                activeWorker[0].cancel(true);
             }
+            CardInfo info = list.getSelectedValue();
+            if (info == null) {
+                previewLabel.setIcon(null);
+                previewLabel.setText("Selecciona una edición");
+                btnFlip.setVisible(false);
+                return;
+            }
+
+            boolean isDfc = info.isDoubleFaced();
+            btnFlip.setVisible(isDfc);
+            btnFlip.setText(showBackFace[0] ? "Ver anverso" : "Ver reverso");
+
+            previewLabel.setIcon(null);
+            previewLabel.setText("Cargando imagen...");
+
+            final boolean back = showBackFace[0];
+            SwingWorker<BufferedImage, Void> worker = new SwingWorker<BufferedImage, Void>() {
+                @Override
+                protected BufferedImage doInBackground() {
+                    if (isCancelled()) {
+                        return null;
+                    }
+                    try {
+                        Card card = info.createMockCard();
+                        CardView preview = new CardView(card);
+                        if (back && preview.getSecondCardFace() != null) {
+                            preview = preview.getSecondCardFace();
+                        }
+                        ImageCacheData data = ImageCache.getCardImage(preview, 220, 310);
+                        return (data != null) ? data.getImage() : null;
+                    } catch (Exception ex) {
+                        return null;
+                    }
+                }
+
+                @Override
+                protected void done() {
+                    if (isCancelled()) {
+                        return;
+                    }
+                    try {
+                        BufferedImage img = get();
+                        if (img != null) {
+                            previewLabel.setIcon(new ImageIcon(img));
+                            previewLabel.setText("");
+                        } else {
+                            previewLabel.setIcon(null);
+                            previewLabel.setText("Imagen no descargada");
+                        }
+                    } catch (Exception ex) {
+                        previewLabel.setIcon(null);
+                        previewLabel.setText("No se pudo cargar la imagen");
+                    }
+                }
+            };
+            activeWorker[0] = worker;
+            worker.execute();
+        };
+
+        btnFlip.addActionListener(e -> {
+            showBackFace[0] = !showBackFace[0];
+            loadPreview.run();
+        });
+
+        // Filtrado y ordenación unificados
+        final Runnable updateList = () -> {
+            String query = editionSearch.getText().trim().toLowerCase(Locale.ROOT);
+            CardInfo previouslySelected = list.getSelectedValue();
+
+            List<CardInfo> filtered = new ArrayList<>();
+            for (CardInfo info : printings) {
+                ExpansionSet expansion = Sets.findSet(info.getSetCode());
+                String setName = (expansion == null) ? "" : expansion.getName().toLowerCase(Locale.ROOT);
+                String setCode = String.valueOf(info.getSetCode()).toLowerCase(Locale.ROOT);
+                String year = (expansion == null || expansion.getReleaseDate() == null) ? "" : String.valueOf(expansion.getReleaseYear());
+                String num = String.valueOf(info.getCardNumber()).toLowerCase(Locale.ROOT);
+                String rarity = (info.getRarity() == null) ? "" : info.getRarity().toString().toLowerCase(Locale.ROOT);
+
+                if (!query.isEmpty()
+                        && !setCode.contains(query)
+                        && !setName.contains(query)
+                        && !year.contains(query)
+                        && !num.equals(query)
+                        && !rarity.contains(query)) {
+                    continue;
+                }
+                filtered.add(info);
+            }
+
+            Comparator<CardInfo> comp;
+            switch (sortCombo.getSelectedIndex()) {
+                case 1: // Más clásica primero
+                    comp = Comparator.comparing((CardInfo info) -> {
+                        ExpansionSet set = Sets.findSet(info.getSetCode());
+                        return (set != null) ? set.getReleaseDate() : null;
+                    }, Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparingInt(this::xcpPrintingSelectorFastNumberSort)
+                    .thenComparing(CardInfo::getCardNumber, Comparator.nullsLast(String::compareToIgnoreCase));
+                    break;
+                case 2: // Código de edición A-Z
+                    comp = Comparator.comparing(CardInfo::getSetCode, Comparator.nullsLast(String::compareToIgnoreCase))
+                    .thenComparingInt(this::xcpPrintingSelectorFastNumberSort)
+                    .thenComparing(CardInfo::getCardNumber, Comparator.nullsLast(String::compareToIgnoreCase));
+                    break;
+                case 3: // Nombre de edición A-Z
+                    comp = Comparator.comparing((CardInfo info) -> {
+                        ExpansionSet set = Sets.findSet(info.getSetCode());
+                        return (set != null) ? set.getName() : "";
+                    }, Comparator.nullsLast(String::compareToIgnoreCase))
+                    .thenComparingInt(this::xcpPrintingSelectorFastNumberSort)
+                    .thenComparing(CardInfo::getCardNumber, Comparator.nullsLast(String::compareToIgnoreCase));
+                    break;
+                case 0: // Más reciente primero
+                default:
+                    comp = Comparator.comparing((CardInfo info) -> {
+                        ExpansionSet set = Sets.findSet(info.getSetCode());
+                        return (set != null) ? set.getReleaseDate() : null;
+                    }, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparingInt(this::xcpPrintingSelectorFastNumberSort)
+                    .thenComparing(CardInfo::getCardNumber, Comparator.nullsLast(String::compareToIgnoreCase));
+                    break;
+            }
+            filtered.sort(comp);
+
+            model.clear();
+            int newIndex = -1;
+            for (int i = 0; i < filtered.size(); i++) {
+                CardInfo item = filtered.get(i);
+                model.addElement(item);
+                if (previouslySelected != null && Objects.equals(item.getSetCode(), previouslySelected.getSetCode())
+                        && Objects.equals(item.getCardNumber(), previouslySelected.getCardNumber())) {
+                    newIndex = i;
+                } else if (newIndex == -1 && Objects.equals(item.getSetCode(), clickedCard.getExpansionSetCode())
+                        && Objects.equals(item.getCardNumber(), clickedCard.getCardNumber())) {
+                    newIndex = i;
+                }
+            }
+
             if (!model.isEmpty()) {
-                list.setSelectedIndex(0);
-                list.ensureIndexIsVisible(0);
+                int toSelect = (newIndex >= 0) ? newIndex : 0;
+                list.setSelectedIndex(toSelect);
+                list.ensureIndexIsVisible(toSelect);
+            } else {
+                loadPreview.run();
             }
         };
-        editionSearch.getDocument().addDocumentListener(new DocumentListener(){
 
+        editionSearch.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void insertUpdate(DocumentEvent e) {
-                filterPrintings.run();
-            }
-
+            public void insertUpdate(DocumentEvent e) { updateList.run(); }
             @Override
-            public void removeUpdate(DocumentEvent e) {
-                filterPrintings.run();
-            }
-
+            public void removeUpdate(DocumentEvent e) { updateList.run(); }
             @Override
-            public void changedUpdate(DocumentEvent e) {
-                filterPrintings.run();
-            }
+            public void changedUpdate(DocumentEvent e) { updateList.run(); }
         });
-        JLabel previewLabel = new JLabel("Selecciona una edici\u00f3n", 0);
-        previewLabel.setPreferredSize(new Dimension(230, 330));
+
+        sortCombo.addActionListener(e -> updateList.run());
+
         list.addListSelectionListener(event -> {
             if (event.getValueIsAdjusting()) {
                 return;
             }
-            CardInfo info = (CardInfo)list.getSelectedValue();
-            if (info == null) {
-                previewLabel.setIcon(null);
-                return;
-            }
-            try {
-                CardView preview = new CardView(info.createMockCard());
-                BufferedImage image = ImageCache.getCardImage(preview, 220, 310).getImage();
-                previewLabel.setText(image == null ? "Imagen no descargada" : "");
-                previewLabel.setIcon(image == null ? null : new ImageIcon(image));
-            }
-            catch (Exception ex) {
-                previewLabel.setText("No se pudo cargar la imagen");
-                previewLabel.setIcon(null);
+            showBackFace[0] = false;
+            loadPreview.run();
+        });
+
+        // Inicializar listado con orden por defecto
+        updateList.run();
+
+        // Opciones de alcance de reemplazo
+        JPanel scopePanel = new JPanel(new GridLayout(0, 1, 0, 2));
+        scopePanel.setBorder(BorderFactory.createTitledBorder("Alcance de la sustitución"));
+        JRadioButton rbAll = new JRadioButton("Todas las copias en " + this.role.getName() + " (" + thisCount + ")", true);
+        JRadioButton rbSingle = new JRadioButton("Solo la carta seleccionada", false);
+        ButtonGroup scopeGroup = new ButtonGroup();
+        scopeGroup.add(rbAll);
+        scopeGroup.add(rbSingle);
+        scopePanel.add(rbAll);
+        scopePanel.add(rbSingle);
+
+        final JCheckBox chkIncludeOther = (otherCount > 0 && otherGrid != null)
+                ? new JCheckBox("Aplicar también a " + otherGrid.role.getName() + " (" + otherCount + ")", false)
+                : null;
+        if (chkIncludeOther != null) {
+            scopePanel.add(chkIncludeOther);
+        }
+
+        JScrollPane scroll = new JScrollPane(list);
+        scroll.setPreferredSize(new Dimension(320, 480));
+
+        JPanel filtersTopPanel = new JPanel(new GridLayout(2, 1, 0, 4));
+        JPanel searchLine = new JPanel(new BorderLayout(6, 0));
+        searchLine.add(new JLabel("Buscar:"), BorderLayout.WEST);
+        searchLine.add(editionSearch, BorderLayout.CENTER);
+
+        JPanel sortLine = new JPanel(new BorderLayout(6, 0));
+        sortLine.add(new JLabel("Orden:"), BorderLayout.WEST);
+        sortLine.add(sortCombo, BorderLayout.CENTER);
+
+        filtersTopPanel.add(searchLine);
+        filtersTopPanel.add(sortLine);
+
+        JPanel listPanel = new JPanel(new BorderLayout(0, 6));
+        listPanel.add(filtersTopPanel, BorderLayout.NORTH);
+        listPanel.add(scroll, BorderLayout.CENTER);
+        listPanel.add(scopePanel, BorderLayout.SOUTH);
+
+        JPanel previewPanel = new JPanel(new BorderLayout(0, 6));
+        previewPanel.add(previewLabel, BorderLayout.CENTER);
+        JPanel flipButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        flipButtonPanel.add(btnFlip);
+        previewPanel.add(flipButtonPanel, BorderLayout.SOUTH);
+
+        JPanel selectorPanel = new JPanel(new BorderLayout(12, 0));
+        selectorPanel.add(listPanel, BorderLayout.CENTER);
+        selectorPanel.add(previewPanel, BorderLayout.EAST);
+
+        JOptionPane optionPane = new JOptionPane(selectorPanel, JOptionPane.PLAIN_MESSAGE, JOptionPane.OK_CANCEL_OPTION);
+        JDialog dialog = optionPane.createDialog(this, "Elegir edición - " + clickedCard.getName());
+        dialog.setResizable(true);
+
+        KeyStroke escapeStroke = KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0);
+        dialog.getRootPane().registerKeyboardAction(ev -> dialog.dispose(), escapeStroke, JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+        // Doble clic y Enter para confirmar al instante
+        list.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e) && list.getSelectedValue() != null) {
+                    optionPane.setValue(JOptionPane.OK_OPTION);
+                    dialog.dispose();
+                }
             }
         });
-        int currentIndex = 0;
-        for (int i = 0; i < printings.size(); ++i) {
-            CardInfo info = (CardInfo)printings.get(i);
-            if (!Objects.equals(info.getSetCode(), clickedCard.getExpansionSetCode()) || !Objects.equals(info.getCardNumber(), clickedCard.getCardNumber())) continue;
-            currentIndex = i;
-            break;
-        }
-        list.setSelectedIndex(currentIndex);
-        list.ensureIndexIsVisible(currentIndex);
-        JScrollPane scroll = new JScrollPane(list);
-        scroll.setPreferredSize(new Dimension(260, 500));
-        JPanel listPanel = new JPanel(new BorderLayout(0, 6));
-        JPanel searchPanel = new JPanel(new BorderLayout(6, 0));
-        searchPanel.add((Component)new JLabel("Buscar edici\u00f3n:"), "West");
-        searchPanel.add((Component)editionSearch, "Center");
-        listPanel.add((Component)searchPanel, "North");
-        listPanel.add((Component)scroll, "Center");
-        JPanel selectorPanel = new JPanel(new BorderLayout(10, 0));
-        selectorPanel.add((Component)listPanel, "Center");
-        selectorPanel.add((Component)previewLabel, "East");
-        int answer = JOptionPane.showConfirmDialog(this, selectorPanel, "Elegir edici\u00f3n - " + clickedCard.getName(), 2, -1);
-        CardInfo selected = (CardInfo)list.getSelectedValue();
-        if (answer != 0 || selected == null) {
+
+        list.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER && list.getSelectedValue() != null) {
+                    optionPane.setValue(JOptionPane.OK_OPTION);
+                    dialog.dispose();
+                } else if (e.getKeyCode() == KeyEvent.VK_SPACE && btnFlip.isVisible()) {
+                    btnFlip.doClick();
+                }
+            }
+        });
+
+        dialog.setVisible(true);
+
+        Object selectedOption = optionPane.getValue();
+        CardInfo selected = list.getSelectedValue();
+        if (!Integer.valueOf(JOptionPane.OK_OPTION).equals(selectedOption) || selected == null) {
             return;
         }
-        List<CardView> cardsToReplace = this.allCards.stream().filter(card -> Objects.equals(card.getName(), clickedCard.getName())).collect(Collectors.toCollection(ArrayList::new));
-        ArrayList<CardView> cardsToRemove = new ArrayList<CardView>();
-        for (CardView currentCard : cardsToReplace) {
-            Card replacement;
-            CardView replacementView;
-            if (currentCard.isSameCardVersion(replacementView = new CardView(replacement = selected.createMockCard()))) continue;
-            this.addCardView(replacementView, replacement, currentCard);
-            cardsToRemove.add(currentCard);
+
+        // Aplicar reemplazo
+        boolean replaceOnlySingle = rbSingle.isSelected();
+        boolean applyToOther = (chkIncludeOther != null && chkIncludeOther.isSelected() && otherGrid != null);
+
+        if (replaceOnlySingle) {
+            Card replacement = selected.createMockCard();
+            CardView replacementView = new CardView(replacement);
+            if (!clickedCard.isSameCardVersion(replacementView)) {
+                this.addCardView(replacementView, replacement, clickedCard);
+                this.removeCards(Collections.singletonList(clickedCard));
+            }
+        } else {
+            List<CardView> toReplace = this.allCards.stream()
+                    .filter(c -> Objects.equals(c.getName(), clickedCard.getName()))
+                    .collect(Collectors.toCollection(ArrayList::new));
+            List<CardView> toRemove = new ArrayList<>();
+            for (CardView card : toReplace) {
+                Card replacement = selected.createMockCard();
+                CardView replacementView = new CardView(replacement);
+                if (!card.isSameCardVersion(replacementView)) {
+                    this.addCardView(replacementView, replacement, card);
+                    toRemove.add(card);
+                }
+            }
+            this.removeCards(toRemove);
         }
-        this.removeCards(cardsToRemove);
+
+        if (applyToOther) {
+            List<CardView> otherReplace = otherGrid.allCards.stream()
+                    .filter(c -> Objects.equals(c.getName(), clickedCard.getName()))
+                    .collect(Collectors.toCollection(ArrayList::new));
+            List<CardView> otherRemove = new ArrayList<>();
+            for (CardView card : otherReplace) {
+                Card replacement = selected.createMockCard();
+                CardView replacementView = new CardView(replacement);
+                if (!card.isSameCardVersion(replacementView)) {
+                    otherGrid.addCardView(replacementView, replacement, card);
+                    otherRemove.add(card);
+                }
+            }
+            otherGrid.removeCards(otherRemove);
+        }
     }
 
+    private int xcpPrintingSelectorFastNumberSort(CardInfo info) {
+        if (info == null) {
+            return Integer.MAX_VALUE;
+        }
+        int num = info.getCardNumberAsInt();
+        if (num > 0) {
+            return num;
+        }
+        return xcpPrintingSelectorNumberSort(info);
+    }
+
+
     private int xcpPrintingSelectorNumberSort(CardInfo info) {
+        if (info == null) {
+            return Integer.MAX_VALUE;
+        }
         String number = info.getCardNumber();
         if (number == null) {
             return Integer.MAX_VALUE;

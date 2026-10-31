@@ -11,9 +11,6 @@ import mage.cards.RateCard;
 import mage.cards.decks.Deck;
 import mage.cards.decks.DeckValidator;
 import mage.cards.decks.DeckValidatorFactory;
-import mage.cards.repository.CardCriteria;
-import mage.cards.repository.CardInfo;
-import mage.cards.repository.CardRepository;
 import mage.choices.Choice;
 import mage.constants.*;
 import mage.filter.common.FilterLandCard;
@@ -27,11 +24,11 @@ import mage.players.Player;
 import mage.players.PlayerImpl;
 import mage.players.net.UserData;
 import mage.players.net.UserGroup;
-import mage.player.ai.score.ArtificialScoringSystem;
 import mage.target.Target;
 import mage.target.TargetAmount;
 import mage.target.TargetCard;
 import mage.util.*;
+import mage.utils.LimitedDeckBuilder;
 import org.apache.log4j.Logger;
 
 import java.io.Serializable;
@@ -68,11 +65,6 @@ public class ComputerPlayer extends PlayerImpl {
     // TODO: add server config to control max AI threads (with CPU cores by default)
     // TODO: rework AI implementation to use multiple sims calculation instead one by one
     final static int COMPUTER_MAX_THREADS_FOR_SIMULATIONS = 5;//DebugUtil.AI_ENABLE_DEBUG_MODE ? 1 : 5;
-
-
-    // remember picked cards for better draft choices
-    private final transient List<PickedCard> pickedCards = new ArrayList<>();
-    private final transient List<ColoredManaSymbol> chosenColors = new ArrayList<>();
 
     // keep current paying cost info for choose dialogs
     // mana abilities must ask payment too, so keep full chain
@@ -127,18 +119,6 @@ public class ComputerPlayer extends PlayerImpl {
         return makeChoice(outcome, target, source, game, null);
     }
 
-    private boolean isAvoidableSelfDamageTarget(MageItem item, PossibleTargetsSelector selector, Outcome outcome) {
-        if (outcome != Outcome.Damage || !(item instanceof Player) || !item.getId().equals(getId())) {
-            return false;
-        }
-        for (MageItem candidate : selector.getAny()) {
-            if (!candidate.getId().equals(getId())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     /**
      * Default choice logic for any choose dialogs due effect's outcome and possible target priority
      */
@@ -180,9 +160,6 @@ public class ComputerPlayer extends PlayerImpl {
 
         // good targets -- choose as much as possible
         for (MageItem item : possibleTargetsSelector.getGoodTargets()) {
-            if (isAvoidableSelfDamageTarget(item, possibleTargetsSelector, outcome)) {
-                continue;
-            }
             targetAdder.accept(item);
             if (target.isChoiceCompleted(abilityControllerId, source, game, fromCards)) {
                 return true;
@@ -190,9 +167,6 @@ public class ComputerPlayer extends PlayerImpl {
         }
         // bad targets -- choose as low as possible
         for (MageItem item : possibleTargetsSelector.getBadTargets()) {
-            if (isAvoidableSelfDamageTarget(item, possibleTargetsSelector, outcome)) {
-                continue;
-            }
             if (target.isChosen(game)) {
                 break;
             }
@@ -285,7 +259,7 @@ public class ComputerPlayer extends PlayerImpl {
                 if (target.getAmountRemaining() <= 0) {
                     break;
                 }
-                if (target.contains(item.getId()) || !(item instanceof Player) || item.getId().equals(getId())) {
+                if (target.contains(item.getId()) || !(item instanceof Player)) {
                     continue;
                 }
                 int leftLife = PossibleTargetsComparator.getLifeForDamage(item, game);
@@ -319,7 +293,7 @@ public class ComputerPlayer extends PlayerImpl {
                 if (target.getAmountRemaining() <= 0) {
                     break;
                 }
-                if (target.contains(item.getId()) || (item instanceof Player && item.getId().equals(getId()))) {
+                if (target.contains(item.getId())) {
                     continue;
                 }
                 target.addTarget(item.getId(), target.getAmountRemaining(), source, game);
@@ -624,30 +598,22 @@ public class ComputerPlayer extends PlayerImpl {
 
         // pay special mana like convoke cost (tap for pay)
         // GUI: user see "special" button while pay spell's cost
-        List<SpecialAction> specialActions = new ArrayList<>(
-                game.getState().getSpecialActions().getControlledBy(this.getId(), true).values());
-        specialActions.sort(Comparator.comparing(
-                action -> action.getId() == null ? "" : action.getId().toString()));
-
-        for (SpecialAction specialAction : specialActions) {
-            ManaOptions specialMana;
-            try {
-                specialMana = specialAction.getManaOptions(ability, game, unpaid);
-            } catch (RuntimeException ex) {
-                continue;
-            }
-            if (specialMana == null) {
-                continue;
-            }
+        // TODO: AI can't prioritize special mana types to pay, e.g. it will use first available
+        SpecialAction specialAction = game.getState().getSpecialActions().getControlledBy(this.getId(), true).values()
+                .stream()
+                .findFirst()
+                .orElse(null);
+        ManaOptions specialMana = specialAction == null ? null : specialAction.getManaOptions(ability, game, unpaid);
+        if (specialMana != null) {
             for (Mana netMana : specialMana) {
                 if (cost.testPay(netMana) || hasApprovingObject) {
-                    if (netMana instanceof ConditionalMana
-                            && !((ConditionalMana) netMana).apply(ability, game, getId(), cost)) {
+                    if (netMana instanceof ConditionalMana && !((ConditionalMana) netMana).apply(ability, game, getId(), cost)) {
                         continue;
                     }
                     if (activateAbility(specialAction, game)) {
                         return true;
                     }
+                    // only one time try to pay to skip infinite AI loop
                     break;
                 }
             }
@@ -723,16 +689,7 @@ public class ComputerPlayer extends PlayerImpl {
                         a2Max = netMana.count();
                     }
                 }
-                int result = CardUtil.overflowDec(a2Max, a1Max);
-                if (result != 0) {
-                    return result;
-                }
-                UUID id1 = a1.getId();
-                UUID id2 = a2.getId();
-                if (id1 == null || id2 == null) {
-                    return id1 == id2 ? 0 : (id1 == null ? 1 : -1);
-                }
-                return id1.toString().compareTo(id2.toString());
+                return CardUtil.overflowDec(a2Max, a1Max);
             });
         }
         return manaAbilities;
@@ -783,9 +740,7 @@ public class ComputerPlayer extends PlayerImpl {
 
     private List<MageObject> sortByValue(Map<MageObject, Integer> map) {
         List<Entry<MageObject, Integer>> list = new LinkedList<>(map.entrySet());
-        Collections.sort(list, Comparator.comparing(Entry<MageObject, Integer>::getValue)
-                .thenComparing(entry -> entry.getKey().getName())
-                .thenComparing(entry -> entry.getKey().getId()));
+        Collections.sort(list, Comparator.comparing(Entry::getValue));
         List<MageObject> result = new ArrayList<>();
         for (Entry<MageObject, Integer> entry : list) {
             result.add(entry.getKey());
@@ -864,13 +819,9 @@ public class ComputerPlayer extends PlayerImpl {
             }
         }
 
-        // Use a stable fallback for generic choices; avoid simulation-dependent randomness.
-        if (!choice.isChosen() && !choice.getChoices().isEmpty()) {
-            List<String> choices = new ArrayList<>(choice.getChoices());
-            String preferred = outcome != null && outcome.isGood()
-                    ? choices.stream().filter(value -> "yes".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value)).findFirst().orElse(null)
-                    : choices.stream().filter(value -> "no".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)).findFirst().orElse(null);
-            choice.setChoice(preferred != null ? preferred : choices.stream().sorted().findFirst().orElse(choices.get(0)));
+        // choose by random
+        if (!choice.isChosen()) {
+            choice.setRandomChoice();
         }
 
         return true;
@@ -944,31 +895,8 @@ public class ComputerPlayer extends PlayerImpl {
 
     @Override
     public boolean choosePile(Outcome outcome, String message, List<? extends Card> pile1, List<? extends Card> pile2, Game game) {
-        int pile1Score = scorePile(pile1, game);
-        int pile2Score = scorePile(pile2, game);
-
-        // For beneficial effects keep the stronger pile; for harmful effects
-        // prefer the weaker one. Equal piles keep the historical left choice.
-        if (outcome != null && outcome.isGood()) {
-            return pile1Score >= pile2Score;
-        }
-        if (outcome != null && !outcome.isGood()) {
-            return pile1Score <= pile2Score;
-        }
-        return true;
-    }
-
-    private int scorePile(List<? extends Card> pile, Game game) {
-        if (pile == null || pile.isEmpty() || game == null) {
-            return 0;
-        }
-        int score = 0;
-        for (Card card : pile) {
-            if (card != null) {
-                score += ArtificialScoringSystem.getCardDefinitionScore(game, card);
-            }
-        }
-        return score;
+        //TODO: improve this
+        return true; // select left pile all the time
     }
 
     @Override
@@ -1018,34 +946,11 @@ public class ComputerPlayer extends PlayerImpl {
 
     @Override
     public TriggeredAbility chooseTriggeredAbility(List<TriggeredAbility> abilities, Game game) {
-        if (abilities == null || abilities.isEmpty()) {
-            return null;
+        //TODO: improve this
+        if (!abilities.isEmpty()) {
+            return abilities.get(0); // select first trigger all the time
         }
-
-        TriggeredAbility best = abilities.get(0);
-        int bestScore = triggeredAbilityScore(best, game);
-        for (int i = 1; i < abilities.size(); i++) {
-            TriggeredAbility candidate = abilities.get(i);
-            int candidateScore = triggeredAbilityScore(candidate, game);
-            if (candidateScore > bestScore) {
-                best = candidate;
-                bestScore = candidateScore;
-            }
-        }
-        return best;
-    }
-
-    private int triggeredAbilityScore(TriggeredAbility ability, Game game) {
-        if (ability == null || ability.getEffects() == null) {
-            return 0;
-        }
-        try {
-            int outcome = ability.getEffects().getOutcomeScore(ability);
-            return Math.max(-6, Math.min(6, outcome));
-        } catch (RuntimeException ex) {
-            // Trigger ordering must never prevent the game from resolving.
-            return 0;
-        }
+        return null;
     }
 
     @Override
@@ -1086,29 +991,6 @@ public class ComputerPlayer extends PlayerImpl {
         match.submitDeck(playerId, deck); // do not change a deck
     }
 
-    private static void addBasicLands(Deck deck, String landName, int number) {
-        Set<String> landSets = TournamentUtil.getLandSetCodeForDeckSets(deck.getExpansionSetCodes());
-
-        CardCriteria criteria = new CardCriteria();
-        if (!landSets.isEmpty()) {
-            criteria.setCodes(landSets.toArray(new String[0]));
-        }
-        criteria.rarities(Rarity.LAND).name(landName);
-        List<CardInfo> cards = CardRepository.instance.findCards(criteria);
-
-        if (cards.isEmpty()) {
-            criteria = new CardCriteria();
-            criteria.rarities(Rarity.LAND).name(landName);
-            criteria.setCodes("M15");
-            cards = CardRepository.instance.findCards(criteria);
-        }
-
-        for (int i = 0; i < number; i++) {
-            Card land = cards.get(RandomUtil.nextInt(cards.size())).createCard();
-            deck.getCards().add(land);
-        }
-    }
-
     public static Deck buildDeck(int deckMinSize, List<Card> cardPool, final List<ColoredManaSymbol> colors) {
         return buildDeck(deckMinSize, cardPool, colors, false);
     }
@@ -1133,98 +1015,13 @@ public class ComputerPlayer extends PlayerImpl {
             }
             return deck;
         } else {
-            addBasicLands(deck, "Forest", DECK_SIZE);
+            LimitedDeckBuilder.addBasicLands(deck, "Forest", DECK_SIZE);
             return deck;
         }
     }
 
     public static Deck buildDeckWithNormalCards(int deckMinSize, List<Card> cardPool, final List<ColoredManaSymbol> colors) {
-        // top 23 cards plus basic lands until 40 deck size
-        Deck deck = new Deck();
-        final int DECK_SIZE = deckMinSize != 0 ? deckMinSize : 40;
-        final int DECK_CARDS_COUNT = Math.floorDiv(deckMinSize * 23, 40); // 23 from 40
-        final int DECK_LANDS_COUNT = DECK_SIZE - DECK_CARDS_COUNT;
-
-        // sort card pool by top score
-        List<Card> sortedCards = new ArrayList<>(cardPool);
-        Collections.sort(sortedCards, (o1, o2) -> {
-            Integer score1 = RateCard.rateCard(o1, colors);
-            Integer score2 = RateCard.rateCard(o2, colors);
-            int scoreOrder = score2.compareTo(score1);
-            if (scoreOrder != 0) {
-                return scoreOrder;
-            }
-            int nameOrder = o1.getName().compareTo(o2.getName());
-            return nameOrder != 0 ? nameOrder : o1.getId().compareTo(o2.getId());
-        });
-
-        // get top cards
-        int cardNum = 0;
-        while (deck.getMaindeckCards().size() < DECK_CARDS_COUNT && sortedCards.size() > cardNum) {
-            Card card = sortedCards.get(cardNum);
-            if (!card.isBasic()) {
-                deck.getCards().add(card);
-                deck.getSideboard().remove(card);
-            }
-            cardNum++;
-        }
-
-        // add basic lands by color percent
-        // TODO:  compensate for non basic lands
-        Mana mana = new Mana();
-        for (Card card : deck.getCards()) {
-            mana.add(card.getManaCost().getMana());
-        }
-        double total = mana.getBlack() + mana.getBlue() + mana.getGreen() + mana.getRed() + mana.getWhite();
-
-        // most frequent land is forest by default
-        int mostLand = 0;
-        String mostLandName = "Forest";
-        if (mana.getGreen() > 0) {
-            int number = (int) Math.round(mana.getGreen() / total * DECK_LANDS_COUNT);
-            addBasicLands(deck, "Forest", number);
-            mostLand = number;
-        }
-
-        if (mana.getBlack() > 0) {
-            int number = (int) Math.round(mana.getBlack() / total * DECK_LANDS_COUNT);
-            addBasicLands(deck, "Swamp", number);
-            if (number > mostLand) {
-                mostLand = number;
-                mostLandName = "Swamp";
-            }
-        }
-
-        if (mana.getBlue() > 0) {
-            int number = (int) Math.round(mana.getBlue() / total * DECK_LANDS_COUNT);
-            addBasicLands(deck, "Island", number);
-            if (number > mostLand) {
-                mostLand = number;
-                mostLandName = "Island";
-            }
-        }
-
-        if (mana.getWhite() > 0) {
-            int number = (int) Math.round(mana.getWhite() / total * DECK_LANDS_COUNT);
-            addBasicLands(deck, "Plains", number);
-            if (number > mostLand) {
-                mostLand = number;
-                mostLandName = "Plains";
-            }
-        }
-
-        if (mana.getRed() > 0) {
-            int number = (int) Math.round(mana.getRed() / total * DECK_LANDS_COUNT);
-            addBasicLands(deck, "Mountain", number);
-            if (number > mostLand) {
-                mostLandName = "Plains";
-            }
-        }
-
-        // adds remaining lands (most popular name)
-        addBasicLands(deck, mostLandName, DECK_SIZE - deck.getMaindeckCards().size());
-
-        return deck;
+        return LimitedDeckBuilder.buildDeck(deckMinSize, cardPool, colors);
     }
 
     @Override
@@ -1233,16 +1030,8 @@ public class ComputerPlayer extends PlayerImpl {
         int deckMinSize = deckValidator != null ? deckValidator.getDeckMinSize() : 0;
 
         if (deck != null && deck.getMaindeckCards().size() < deckMinSize && !deck.getSideboard().isEmpty()) {
-            if (chosenColors.isEmpty()) {
-                for (Card card : deck.getSideboard()) {
-                    rememberPick(card, RateCard.rateCard(card, Collections.emptyList()));
-                }
-                List<ColoredManaSymbol> deckColors = chooseDeckColorsIfPossible();
-                if (deckColors != null) {
-                    chosenColors.addAll(deckColors);
-                }
-            }
-            deck = buildDeck(deckMinSize, new ArrayList<>(deck.getSideboard()), chosenColors);
+            List<Card> pool = new ArrayList<>(deck.getSideboard());
+            deck = buildDeck(deckMinSize, pool, RateCard.chooseDeckColors(pool));
         }
         tournament.submitDeck(playerId, deck);
     }
@@ -1278,8 +1067,11 @@ public class ComputerPlayer extends PlayerImpl {
             throw new IllegalArgumentException("No cards to pick from.");
         }
         try {
+            // colors by own picks, it can be changed during the draft
+            List<ColoredManaSymbol> chosenColors = deck == null
+                    ? Collections.emptyList()
+                    : RateCard.chooseDeckColors(new ArrayList<>(deck.getSideboard()));
             Card bestCard = makePickCard(cards, chosenColors);
-            int maxScore = RateCard.rateCard(bestCard, chosenColors);
             int pickedCardRate = RateCard.getBaseCardScore(bestCard);
 
             if (pickedCardRate <= 30) {
@@ -1291,98 +1083,13 @@ public class ComputerPlayer extends PlayerImpl {
                 // take it!
                 if (counterPickScore >= 80) {
                     bestCard = counterPick;
-                    maxScore = RateCard.rateCard(bestCard, chosenColors);
                 }
             }
 
-            String colors = "not chosen yet";
-            // remember card if colors are not chosen yet
-            if (chosenColors.isEmpty()) {
-                rememberPick(bestCard, maxScore);
-                List<ColoredManaSymbol> chosen = chooseDeckColorsIfPossible();
-                if (chosen != null) {
-                    chosenColors.addAll(chosen);
-                }
-            }
-            if (!chosenColors.isEmpty()) {
-                colors = "";
-                for (ColoredManaSymbol symbol : chosenColors) {
-                    colors += symbol.toString();
-                }
-            }
             draft.addPick(playerId, bestCard.getId(), null);
         } catch (Exception e) {
             logger.error("Error during AI pick card for draft playerId = " + getId(), e);
             draft.addPick(playerId, cards.get(0).getId(), null);
-        }
-    }
-
-    /**
-     * Remember picked card with its score.
-     */
-    protected void rememberPick(Card card, int score) {
-        pickedCards.add(new PickedCard(card, score));
-    }
-
-    /**
-     * Choose 2 deck colors for draft: 1. there should be at least 3 cards in
-     * card pool 2. at least 2 cards should have different colors 3. get card
-     * colors as chosen starting from most rated card
-     */
-    protected List<ColoredManaSymbol> chooseDeckColorsIfPossible() {
-        if (pickedCards.size() > 2) {
-            // sort by score and color mana symbol count in descending order
-            pickedCards.sort((o1, o2) -> {
-                if (o1.score.equals(o2.score)) {
-                    Integer i1 = RateCard.getColorManaCount(o1.card);
-                    Integer i2 = RateCard.getColorManaCount(o2.card);
-                    return i2.compareTo(i1);
-                }
-                return o2.score.compareTo(o1.score);
-            });
-            Set<String> chosenSymbols = new HashSet<>();
-            for (PickedCard picked : pickedCards) {
-                int differentColorsInCost = RateCard.getDifferentColorManaCount(picked.card);
-                // choose only color card, but only if they are not too gold
-                if (differentColorsInCost > 0 && differentColorsInCost < 3) {
-                    // if some colors were already chosen, total amount shouldn't be more than 3
-                    if (chosenSymbols.size() + differentColorsInCost < 4) {
-                        for (String symbol : picked.card.getManaCostSymbols()) {
-                            symbol = symbol.replace("{", "").replace("}", "");
-                            if (RateCard.isColoredMana(symbol)) {
-                                chosenSymbols.add(symbol);
-                            }
-                        }
-                    }
-                }
-                // only two or three color decks are allowed
-                if (chosenSymbols.size() > 1 && chosenSymbols.size() < 4) {
-                    List<ColoredManaSymbol> colorsChosen = new ArrayList<>();
-                    for (String symbol : chosenSymbols) {
-                        ColoredManaSymbol manaSymbol = ColoredManaSymbol.lookup(symbol.charAt(0));
-                        if (manaSymbol != null) {
-                            colorsChosen.add(manaSymbol);
-                        }
-                    }
-                    if (colorsChosen.size() > 1) {
-                        // no need to remember picks anymore
-                        pickedCards.clear();
-                        return colorsChosen;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    private static class PickedCard {
-
-        public Card card;
-        public Integer score;
-
-        public PickedCard(Card card, int score) {
-            this.card = card;
-            this.score = score;
         }
     }
 
@@ -1420,9 +1127,6 @@ public class ComputerPlayer extends PlayerImpl {
         Map<UUID, SpellAbility> usable = PlayerImpl.getCastableSpellAbilities(game, this.getId(), card, game.getState().getZone(card.getId()), noMana);
         return usable.values().stream()
                 .filter(a -> a.getTargets().canChoose(getId(), a, game))
-                .sorted(Comparator
-                        .comparingInt((SpellAbility a) -> a.getEffects().getOutcomeScore(a)).reversed()
-                        .thenComparing(a -> a.getId().toString()))
                 .findFirst()
                 .orElse(null);
     }

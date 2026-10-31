@@ -266,7 +266,7 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
             Entry<UUID, MageCard> entry = iterator.next();
             PermanentView currentPermanent = battlefield.get(entry.getKey());
             if (currentPermanent == null || !currentPermanent.isPhasedIn()) {
-                removePermanent(entry.getKey(), 1);
+                removePermanent(entry.getKey());
                 iterator.remove();
                 changed = true;
             }
@@ -342,9 +342,10 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
 
         permanents.put(permanent.getId(), perm);
 
+        perm.setAlpha(0f); // fade in animation starts from the invisible card
         this.jPanel.add(perm, (Integer) 10);
         moveToFront(jPanel);
-        Plugins.instance.onAddCard(perm, 1);
+        Plugins.instance.onAddCard(perm); // fade in animation sets the final alpha itself
 
         if (permanent.isArtifact()) {
             addedArtifact = true;
@@ -355,7 +356,7 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
         }
     }
 
-    private void removePermanent(UUID permanentId, final int count) {
+    private void removePermanent(UUID permanentId) {
         for (Component comp : this.jPanel.getComponents()) {
             if (comp instanceof MageCard) {
                 MageCard mageCard = (MageCard) comp;
@@ -363,19 +364,14 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
                     MagePermanent magePermanent = (MagePermanent) mageCard.getMainPanel();
                     if (magePermanent.getOriginal().getId().equals(permanentId)) {
                         MageCard cardToRemove = mageCard;
-                        Thread t = new Thread(() -> {
-                            Plugins.instance.onRemoveCard(cardToRemove, count);
-                            SwingUtilities.invokeLater(() -> {
-                                if (cardToRemove.getParent() == this.jPanel) {
-                                    cardToRemove.setVisible(false);
-                                    this.jPanel.remove(cardToRemove);
-                                    this.jPanel.revalidate();
-                                    this.jPanel.repaint();
-                                }
-                            });
-                        }, "BattlefieldCardRemoval");
-                        t.setDaemon(true);
-                        t.start();
+                        Plugins.instance.onRemoveCard(cardToRemove).thenRunAsync(() -> {
+                            if (cardToRemove.getParent() == this.jPanel) {
+                                cardToRemove.setVisible(false);
+                                this.jPanel.remove(cardToRemove);
+                                this.jPanel.revalidate();
+                                this.jPanel.repaint();
+                            }
+                        }, SwingUtilities::invokeLater);
                     }
                     if (magePermanent.getOriginal().isCreature()) {
                         removedCreature = true;

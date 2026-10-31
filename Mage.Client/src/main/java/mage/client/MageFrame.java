@@ -156,6 +156,11 @@ import org.mage.plugins.card.utils.impl.ImageManagerImpl;
 public class MageFrame
 extends JFrame
 implements MageClient {
+
+    static {
+        // must be first java code
+        JavaUtil.applyDefaultClientSettings();
+    }
     private static final String TITLE_NAME = "XMage";
     private static final Logger LOGGER = Logger.getLogger(MageFrame.class);
     private static final String LITE_MODE_ARG = "-lite";
@@ -1450,7 +1455,6 @@ implements MageClient {
     }
 
     public static void main(String[] args) {
-        JavaUtil.applyDefaultClientSettings();
         LOGGER.info((Object)("Starting MAGE CLIENT version: " + VERSION));
         LOGGER.info((Object)("Java version: " + System.getProperty("java.version")));
         DebugUtil.printLogsInfo(LOGGER);
@@ -1740,6 +1744,7 @@ implements MageClient {
     }
 
     public void refreshGUIAndCards() {
+        ThreadUtils.ensureRunInGUISwingThread();
         ImageCaches.clearAll();
         this.setGUISize();
         this.setGUISizeTooltipContainer();

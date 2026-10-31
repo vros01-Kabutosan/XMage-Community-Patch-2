@@ -1,6 +1,7 @@
 package org.mage.plugins.card;
 
 import mage.cards.MageCard;
+import mage.cards.MageCardSpace;
 import mage.cards.MagePermanent;
 import mage.cards.action.ActionCallback;
 import mage.client.util.*;
@@ -336,12 +337,19 @@ public class CardPluginImpl implements CardPlugin {
             cardWidth -= CARD_WIDTH_AUTO_FIT_INCREMENT;
         }
 
+        // calculate dynamic gutters so card layers with rotation/icons outerSpace are never placed at negative coordinates
+        MageCardSpace animationSpace = (cardWidth > 0 && cardHeight > 0)
+                ? MageLayer.getAnimationOuterSpace(cardWidth, cardHeight)
+                : MageCardSpace.empty;
+        int effectiveGutterY = Math.max(GUTTER_Y, animationSpace.getTop() + 6);
+        int effectiveGutterX = Math.max(GUTTER_X, animationSpace.getLeft() + 6);
+
         // Get size of all the rows.
-        int x, y = GUTTER_Y;
+        int x, y = effectiveGutterY;
         int maxRowWidth = 0;
         for (Row row : rows) {
             int rowBottom = 0;
-            x = GUTTER_X;
+            x = effectiveGutterX;
             for (int stackIndex = 0, stackCount = row.size(); stackIndex < stackCount; stackIndex++) {
                 Stack stack = row.get(stackIndex);
                 rowBottom = Math.max(rowBottom, y + stack.getHeight());
@@ -352,15 +360,15 @@ public class CardPluginImpl implements CardPlugin {
         }
 
         // Position all card panels
-        y = GUTTER_Y;
+        y = effectiveGutterY;
         for (Row row : rows) {
             int rowBottom = 0;
-            x = GUTTER_X;
+            x = effectiveGutterX;
             for (int stackIndex = 0, stackCount = row.size(); stackIndex < stackCount; stackIndex++) {
                 Stack stack = row.get(stackIndex);
                 // Align others to the right.
                 if (othersOnTheRight && RowType.other.isType(stack.get(0))) {
-                    x = playAreaWidth - GUTTER_X + extraCardSpacingX;
+                    x = playAreaWidth - effectiveGutterX + extraCardSpacingX;
                     for (int i = stackIndex, n = row.size(); i < n; i++) {
                         x -= row.get(i).getWidth();
                     }
@@ -470,7 +478,11 @@ public class CardPluginImpl implements CardPlugin {
         for (Row row : rows) {
             height += row.getHeight();
         }
-        return height - cardSpacingY + GUTTER_Y * 2;
+        int effectiveGutterY = GUTTER_Y;
+        if (cardWidth > 0 && cardHeight > 0) {
+            effectiveGutterY = Math.max(GUTTER_Y, MageLayer.getAnimationOuterSpace(cardWidth, cardHeight).getTop() + 6);
+        }
+        return height - cardSpacingY + effectiveGutterY * 2;
     }
 
     private AttachmentLayoutInfos calculateNeededNumberOfVerticalColumns(int currentCol, Map<UUID, MageCard> cards,

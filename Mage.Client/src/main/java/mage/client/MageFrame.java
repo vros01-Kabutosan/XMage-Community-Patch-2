@@ -236,7 +236,12 @@ implements MageClient {
 
     public static Preferences getPreferences() {
         if (PREFS == null) {
-            PREFS = Preferences.userNodeForPackage(MageFrame.class);
+            String customNode = System.getProperty("xmage.prefs.node");
+            if (customNode != null && !customNode.trim().isEmpty()) {
+                PREFS = Preferences.userRoot().node(customNode.trim());
+            } else {
+                PREFS = Preferences.userNodeForPackage(MageFrame.class);
+            }
         }
         return PREFS;
     }

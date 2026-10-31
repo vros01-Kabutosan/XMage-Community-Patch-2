@@ -67,7 +67,7 @@ implements ActionCallback {
     private static final Logger logger = Logger.getLogger(MageActionCallback.class);
     public static final int HAND_CARDS_BETWEEN_GAP_X = 5;
     public static final int STACK_CARDS_BETWEEN_GAP_X = 5;
-    public static final MageCardSpace HAND_CARDS_MARGINS = new MageCardSpace(10, 10, 5, 5);
+    public static final MageCardSpace HAND_CARDS_MARGINS = new MageCardSpace(10, 10, 5, 10);
     public static final MageCardSpace STACK_CARDS_MARGINS = new MageCardSpace(10, 10, 5, 5);
     public static final int HAND_CARDS_COMPARE_GAP_X = 30;
     public static final int HAND_CARDS_MIN_DISTANCE_TO_START_DRAGGING = 20;

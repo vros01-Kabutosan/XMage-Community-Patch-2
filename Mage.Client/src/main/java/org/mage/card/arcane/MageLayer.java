@@ -262,7 +262,7 @@ public class MageLayer extends MageCard {
      * Old version used x2 of width/height on each side (x5 component size, slow repaints), see AnimationTest for
      * the geometry checks
      */
-    static MageCardSpace getAnimationOuterSpace(int width, int height) {
+    public static MageCardSpace getAnimationOuterSpace(int width, int height) {
         double originX = width / 2d;
         double originY = height - originX;
         // the farthest point of the card from the rotation center (top corners) + icons padding

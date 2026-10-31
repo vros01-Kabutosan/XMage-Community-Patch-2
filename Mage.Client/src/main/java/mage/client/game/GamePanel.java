@@ -402,6 +402,7 @@ extends JPanel {
         JPanel pnlPhaseAndHand = new JPanel(new BorderLayout());
         pnlPhaseAndHand.setOpaque(false);
         pnlPhaseAndHand.add((Component)this.phaseSummaryBar, "South");
+        this.handContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
         pnlPhaseAndHand.add((Component)this.handContainer, "Center");
         pnlCommandsFeedbackAndHand.add((Component)pnlPhaseAndHand, "Center");
         JPanel pnlCommandsSkipAndStack = new JPanel(new BorderLayout());
@@ -910,8 +911,16 @@ extends JPanel {
         // to the default proportion when the saved split is that degenerate.
         int splitWidth = Math.max(1, splitPane.getWidth());
         double expectedRight = 1.0 - defaultProportion;
-        double actualRight = (splitWidth - newLocation - splitPane.getDividerSize()) / (double) splitWidth;
-        if (actualRight < expectedRight * 0.35 || actualRight > 1.0 - expectedRight * 0.35) {
+        int rightPixels = splitWidth - newLocation - splitPane.getDividerSize();
+        double actualRight = rightPixels / (double) splitWidth;
+
+        if (splitPane == this.splitBattlefieldAndChats) {
+            int minChatWidth = Math.min(380, (int) Math.round(splitWidth * 0.15));
+            if (rightPixels < minChatWidth || actualRight < expectedRight * 0.55 || actualRight > 1.0 - expectedRight * 0.35) {
+                logger.info((Object)("Ignoring degenerate saved divider for battlefield/chats " + newLocation + " (" + splitWidth + " px wide, right " + rightPixels + " px, proportion " + actualRight + ")"));
+                return -1;
+            }
+        } else if (actualRight < expectedRight * 0.35 || actualRight > 1.0 - expectedRight * 0.35) {
             logger.info((Object)("Ignoring degenerate saved divider " + newLocation + " (" + splitWidth + " px wide, right proportion " + actualRight + ")"));
             return -1;
         }
@@ -938,7 +947,7 @@ extends JPanel {
         if (requested < splitPane.getMinimumDividerLocation() && splitPane.getLeftComponent() != null) {
             splitPane.getLeftComponent().setMinimumSize(new Dimension());
         }
-        if (requested > splitPane.getMaximumDividerLocation() && splitPane.getRightComponent() != null) {
+        if (splitPane != this.splitBattlefieldAndChats && requested > splitPane.getMaximumDividerLocation() && splitPane.getRightComponent() != null) {
             splitPane.getRightComponent().setMinimumSize(new Dimension());
         }
         splitPane.setDividerLocation(defaultProportion);
@@ -1171,9 +1180,8 @@ extends JPanel {
         for (PlayAreaPanel p : this.players.values()) {
             p.getPlayerPanel().sizePlayerPanel(false);
         }
-        int sharedBattlefieldMinHeight = Math.max(topPanel.getPreferredSize().height, bottomPanel.getPreferredSize().height);
-        topPanel.setMinimumSize(new Dimension(0, sharedBattlefieldMinHeight));
-        bottomPanel.setMinimumSize(new Dimension(0, sharedBattlefieldMinHeight));
+        topPanel.setMinimumSize(new Dimension(0, 0));
+        bottomPanel.setMinimumSize(new Dimension(0, 0));
         GridBagConstraints panelC = new GridBagConstraints();
         panelC.fill = 1;
         panelC.weightx = 0.5;
@@ -2919,6 +2927,7 @@ extends JPanel {
         this.splitGameAndBigCard.setResizeWeight(1.0);
         this.splitGameAndBigCard.setOneTouchExpandable(true);
         this.splitChatAndLogs = new JSplitPane();
+        this.splitChatAndLogs.setMinimumSize(new Dimension(320, 0));
         this.splitChatAndLogs.setOrientation(0);
         this.splitChatAndLogs.setResizeWeight(0.0);
         this.splitChatAndLogs.setTopComponent(this.userChatPanel);

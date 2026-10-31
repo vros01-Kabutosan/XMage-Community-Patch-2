@@ -79,7 +79,40 @@ extends MagePane {
     }
 
     private String pythonCommand() {
-        return System.getProperty("os.name", "").toLowerCase().contains("win") ? "py" : "python3";
+        if (!System.getProperty("os.name", "").toLowerCase().contains("win")) {
+            return "python3";
+        }
+        Path engine = this.engineDirectory();
+        if (engine != null) {
+            Path localPy = engine.resolve("py.exe");
+            if (Files.isRegularFile(localPy, new LinkOption[0])) {
+                return localPy.toString();
+            }
+            Path localPython = engine.resolve("python.exe");
+            if (Files.isRegularFile(localPython, new LinkOption[0])) {
+                return localPython.toString();
+            }
+        }
+        String localAppData = System.getenv("LOCALAPPDATA");
+        String[] candidates = new String[] {
+            "py",
+            "python",
+            localAppData != null ? localAppData + "\\Programs\\Python\\Launcher\\py.exe" : null,
+            localAppData != null ? localAppData + "\\Programs\\Python\\Python312\\python.exe" : null,
+            localAppData != null ? localAppData + "\\Programs\\Python\\Python313\\python.exe" : null,
+            localAppData != null ? localAppData + "\\Programs\\Python\\Python314\\python.exe" : null
+        };
+        for (String candidate : candidates) {
+            if (candidate == null) continue;
+            try {
+                Process p = new ProcessBuilder(candidate, "--version").start();
+                if (p.waitFor() == 0) {
+                    return candidate;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return "py";
     }
 
     private void startUpdate(ActionEvent event) {

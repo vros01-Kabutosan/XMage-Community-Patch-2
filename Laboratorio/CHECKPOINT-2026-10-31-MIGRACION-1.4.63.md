@@ -117,4 +117,21 @@ Todos los mods existentes se trasladaron y verificaron sin pérdida ni alteraci�
   - Generación de 75 archivos `.dck` para Forge y 75 archivos `.txt` para XMage.
   - Ejecución verificada e integrada con `deck_library_updater.py --source MTGGoldfish` (0 errores, resolución Scryfall por lotes, incorporación a `sample-decks/Descargados`).
 
+---
+
+## 9. Sincronización y Puesta en Marcha del Servidor Oficial (1.4.63-V1)
+
+- **Causa del aviso de versión en cliente:** El cliente 1.4.63-V1 intentaba conectar al servidor oficial en el puerto 17171, que seguía corriendo en memoria el proceso antiguo 1.4.62 (PID 35328), generando `MageVersionException: Wrong client version`.
+- **Acciones ejecutadas con autorización:**
+  1. Cierre ordenado del proceso servidor 1.4.62 (PID 35328).
+  2. Eliminación de `.jar` residuales 1.4.62 en `mage-server/lib/` y `mage-server/plugins/` (respaldados previamente en `backup-jars-1.4.62-pre-1.4.63-20261031`).
+  3. Creación del script de arranque actualizado `startServer-1.4.63.bat`.
+  4. Puesta en marcha del servidor oficial con JRE 1.8.0_201 en el puerto 17171.
+  5. Carga e indexación completa verificada en `mageserver.log`:
+     - `Starting MAGE SERVER version: 1.4.63-V1 (build: 2026-10-31 13:52)`
+     - 591 sets y 94.787 cartas indexadas en BD H2.
+     - 17 game types, 21 torneos, 23 cubos y 52 mazos cargados.
+     - Servidor escuchando y listo en `0.0.0.0:17171/?serializationtype=java&maxPoolSize=300`.
+
+
 

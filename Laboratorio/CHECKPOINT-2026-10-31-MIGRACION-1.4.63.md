@@ -135,3 +135,21 @@ Todos los mods existentes se trasladaron y verificaron sin pérdida ni alteraci�
 
 
 
+
+---
+
+## 10. Dashboard Minimalista y Moderno de Descarga de Decks (V18)
+
+- **Objetivo:** Transformar la ventana monocromática de `DeckDownloaderPane.java` (que anteriormente mostraba únicamente una caja de texto blanco de consola) en un **Dashboard visual moderno, ergonómico y minimalista**.
+- **Cambios implementados en `DeckDownloaderPane.java`:**
+  1. **Cabecera estilizada:** Tarjeta redondeada con paleta oscura contemporánea (`#16181E` / `#1E212A`), título destacado, badge de estado dinámico y barra de acciones unificada (selectores y botones con feedback visual).
+  2. **Tarjetas de fuentes (Source Cards):** 3 tarjetas independientes para **MTGO**, **MTGGoldfish** y **MTGTop8** con estado individual, badge en tiempo real y contadores visuales coloreados (`+Nuevos`, `=Repetidos`, `!Errores`).
+  3. **Barras de progreso por formato:** Indicadores dedicados para **Standard**, **Pioneer** y **Modern** (`JProgressBar` estilizadas y fluidas) con conteo de mazos (e.g. `18/25`), estado del mazo activo y barra de progreso general.
+  4. **Parser de eventos en tiempo real:** Captura reactiva de eventos emitidos por `deck_library_updater.py` mediante expresiones regulares para actualizar el estado visual sin intervención humana ni retrasos en la UI.
+  5. **Consola técnica plegable (Drawer):** Terminal oscura embebida tipo IDE (`Consolas` 12pt, fondo carbón `#0F1116`), con botón de alternancia (`Ocultar / Mostrar consola`), botón de copia directa al portapapeles y limpieza.
+- **Protocolo de verificación:**
+  - Pruebas unitarias automatizadas añadidas: `DeckDownloaderPaneTest.java` (inicialización, threading Swing y parsing de eventos). Resultado: **2/2 tests OK, Build Success**.
+  - Montaje y prueba en laboratorio aislado `LAB-UI-1.4.62-V2` en puerto 17191.
+  - Generación de parche: `Laboratorio/parches/2026-10-31-deck-downloader-dashboard-v18.patch`.
+  - Respaldo de seguridad previo en `Instalacion-XMage\xmage\backup-jars-1.4.63-dashboard-20261031\`.
+  - Despliegue de `mage-client-1.4.63.jar` en la instalación oficial.

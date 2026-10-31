@@ -60,3 +60,4 @@ Archivo modificado: [`Mage.Client/src/main/java/mage/client/cards/DragCardGrid.j
   - Despliegue de `mage-client-1.4.62.jar` (SHA256: `0d59d9d99832c455c1b29b4271fea39d297768c0cd7a29e7e2448372708fe7ec`).
   - Servidor oficial y su base de datos intactos (puerto 17171 no tocado).
 - **Parche generado**: `Laboratorio/parches/2026-10-31-deck-editor-v17.patch`.
+

@@ -1,20 +1,20 @@
-# Laboratorio XMage — UI 1.4.62 (estado final 2026-10-25)
+# Laboratorio XMage — UI 1.4.63 (actualizado 2026-10-31)
 
 > **Norma permanente para cualquier worker/IA:** todo cambio se prueba primero en este
 > laboratorio (puerto 17191) y solo se despliega en `J:\MTG\Instalacion-XMage` cuando el
 > smoke pasa. Reglas completas en `J:\MTG\AGENTS.md`. No hace falta repetirlas en cada prompt.
 
 Este directorio contiene TODO lo necesario para reproducir, probar y desplegar el fork
-modificado de XMage 1.4.62V1 de Kabutosan. La instalación oficial vive aparte, en
+modificado de XMage 1.4.63V1 de Kabutosan. La instalación oficial vive aparte, en
 `J:\MTG\Instalacion-XMage`.
 
 ## Estructura
 
 | Ruta | Qué es |
 |---|---|
-| `XMage-1.4.62V1-src/` | Fuente completa del fork (git, rama `upgrade/official-1.4.62V1`). Aquí se compila. |
+| `XMage-1.4.62V1-src/` | Fuente completa del fork (git, rama `upgrade/official-1.4.63V1`). Aquí se compila. |
 | `LAB-UI-1.4.62-V2/` | Laboratorio ejecutable aislado: `cliente/` + `servidor/` (puerto 17191), scripts, logs y `capturas/` con la evidencia de los smokes. |
-| `parches/` | Parches consolidados de los mods (aplicables sobre la fuente oficial 1.4.62V1). |
+| `parches/` | Parches consolidados de los mods (`2026-10-31-migracion-1.4.63V1.patch`, aplicable sobre la fuente oficial). |
 | `Proyecto-XMage/` | Archivo histórico 1.4.61 (legado, solo consulta). No se usa para probar. |
 | `_archivo/20261025/` | Material antiguo retirado del flujo activo (logs viejos, labs anteriores, restos de recuperación) y limpieza autorizada del 2026-10-25. Detalle exacto en `_archivo/20261025/INVENTARIO-LIMPIEZA-2026-10-25.md`. |
 

@@ -10,6 +10,8 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Image;
+import java.awt.Insets;
+import java.awt.MouseInfo;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -231,6 +233,7 @@ CardEventProducer {
     final JLabel landCountLabel;
     final JLabel creatureCountLabel;
     final JScrollPane cardScroll;
+    private JPanel quickLandsPanel;
     JLayeredPane cardContent;
     final JLabel insertArrow;
     final SelectionBox selectionPanel;
@@ -490,11 +493,17 @@ CardEventProducer {
             this.landCountLabel.setVisible(false);
             this.cardSizeSliderLabel.setVisible(false);
             this.mouseDoubleClickMode.setVisible(false);
+            if (this.quickLandsPanel != null) {
+                this.quickLandsPanel.setVisible(false);
+            }
         } else {
             this.creatureCountLabel.setVisible(true);
             this.landCountLabel.setVisible(true);
             this.cardSizeSliderLabel.setVisible(true);
             this.mouseDoubleClickMode.setVisible(true);
+            if (this.quickLandsPanel != null) {
+                this.quickLandsPanel.setVisible(true);
+            }
         }
         this.updateCounts();
     }
@@ -618,6 +627,48 @@ CardEventProducer {
                 if (e.getKeyCode() == 18) {
                     DragCardGrid.this.updateMouseDoubleClicksInfo(e.isAltDown());
                 }
+                if (e.getID() != KeyEvent.KEY_PRESSED) {
+                    return false;
+                }
+                Component focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                if (focusOwner instanceof javax.swing.text.JTextComponent) {
+                    return false;
+                }
+                if (!DragCardGrid.this.isShowing() || !DragCardGrid.this.isFocusOrMouseOver()) {
+                    return false;
+                }
+                int keyCode = e.getKeyCode();
+                if (keyCode == KeyEvent.VK_PLUS || keyCode == KeyEvent.VK_ADD || keyCode == KeyEvent.VK_EQUALS) {
+                    DragCardGrid.this.duplicateSelection();
+                    return true;
+                }
+                if (keyCode == KeyEvent.VK_MINUS || keyCode == KeyEvent.VK_SUBTRACT) {
+                    DragCardGrid.this.removeOneCopyFromSelection();
+                    return true;
+                }
+                if (keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_BACK_SPACE) {
+                    DragCardGrid.this.removeSelectedCards();
+                    return true;
+                }
+                if (keyCode == KeyEvent.VK_E && !e.isControlDown() && !e.isAltDown()) {
+                    List<CardView> selected = new ArrayList<>(DragCardGrid.this.dragCardList());
+                    if (!selected.isEmpty()) {
+                        DragCardGrid.this.chooseEdition(selected.get(0));
+                        return true;
+                    }
+                }
+                if (keyCode == KeyEvent.VK_S && !e.isControlDown() && !e.isAltDown()) {
+                    DragCardGrid.this.moveSelectedCardsToOtherZone();
+                    return true;
+                }
+                if (keyCode == KeyEvent.VK_ESCAPE) {
+                    DragCardGrid.this.deselectAll();
+                    return true;
+                }
+                if (keyCode == KeyEvent.VK_A && e.isControlDown()) {
+                    DragCardGrid.this.selectAll();
+                    return true;
+                }
                 return false;
             }
         });
@@ -657,13 +708,22 @@ CardEventProducer {
         this.cardScroll.setBorder(BorderFactory.createLineBorder(Color.gray, 1));
         this.cardScroll.getVerticalScrollBar().setUnitIncrement(CardRenderer.getCardTopHeight(this.getCardWidth()));
         this.add((Component)this.cardScroll, "Center");
-        this.sortButton = new JButton("Sort");
+        this.sortButton = new JButton("Ordenar");
+        this.sortButton.setToolTipText("Criterios de ordenaci\u00f3n (Coste, Color, Tipo, Rareza, etc.)");
         this.filterButton = new JButton("Filter");
-        this.visibilityButton = new JButton("V");
-        this.selectByButton = new JButton("Select By");
-        this.analyseButton = new JButton("M");
-        this.blingButton = new JButton("B");
-        this.oldVersionButton = new JButton("O");
+        this.visibilityButton = new JButton("Visibilidad");
+        this.visibilityButton.setToolTipText("Opciones de visibilidad: ocultar seleccionadas o mostrar todas");
+        this.selectByButton = new JButton("Filtrar...");
+        this.selectByButton.setToolTipText("Seleccionar cartas por tipo (Criaturas, Instant\u00e1neos, etc.)");
+        this.analyseButton = new JButton("Stats / Man\u00e1");
+        this.analyseButton.setToolTipText("Estad\u00edsticas del mazo: distribuci\u00f3n de colores, costes y fuentes de man\u00e1");
+        this.blingButton = new JButton("Bling");
+        this.oldVersionButton = new JButton("Oldest");
+        this.oldVersionButton.setToolTipText("Cambiar cartas a su versi\u00f3n m\u00e1s antigua no promocional");
+        this.quickLandsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        this.quickLandsPanel.setOpaque(false);
+        this.quickLandsPanel.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
+        this.createQuickLandButtons();
         this.mouseDoubleClickMode = new JLabel(DOUBLE_CLICK_MODE_INFO);
         this.mouseDoubleClickMode.setToolTipText("<html>Mouse modes for double clicks:<br> * &lt;Double Click&gt;: <b>DELETE</b> card from mainboard/sideboard (it works as <b>MOVE</b> in games);<br> * &lt;ALT + Double Click&gt;: <b>MOVE</b> card between mainboard/sideboard (default for games);<br> * Deck editor: use &lt;ALT + Double Click&gt; on cards list to add card to the sideboard instead mainboard.");
         this.updateMouseDoubleClicksInfo(false);
@@ -680,6 +740,7 @@ CardEventProducer {
         toolbarInner.add(this.deckNameAndCountLabel);
         toolbarInner.add(this.landCountLabel);
         toolbarInner.add(this.creatureCountLabel);
+        toolbarInner.add(this.quickLandsPanel);
         toolbarInner.add(this.sortButton);
         toolbarInner.add(this.filterButton);
         toolbarInner.add(this.selectByButton);
@@ -909,6 +970,213 @@ CardEventProducer {
                 }
             }
         });
+    }
+
+    public void selectAll() {
+        for (List<List<CardView>> gridRow : this.cardGrid) {
+            for (List<CardView> stack : gridRow) {
+                for (CardView card : stack) {
+                    if (card.isSelected()) continue;
+                    card.setSelected(true);
+                    MageCard view = this.cardViews.get(card.getId());
+                    if (view != null) {
+                        view.update(card);
+                    }
+                }
+            }
+        }
+        this.notifyCardsSelected();
+    }
+
+    public void removeOneCopyFromSelection() {
+        List<CardView> selected = new ArrayList<>(this.dragCardList());
+        if (selected.isEmpty()) {
+            return;
+        }
+        Set<String> processedNames = new HashSet<>();
+        List<CardView> toRemove = new ArrayList<>();
+        for (CardView c : selected) {
+            if (processedNames.add(c.getName())) {
+                toRemove.add(c);
+            }
+        }
+        this.removeCards(toRemove);
+    }
+
+    public void duplicateCard(CardView card) {
+        if (card == null || (this.mode != Constants.DeckEditorMode.FREE_BUILDING && this.mode != Constants.DeckEditorMode.LIMITED_BUILDING)) {
+            return;
+        }
+        for (DragCardGridListener l : this.listeners) {
+            l.duplicateCards(Collections.singletonList(card));
+        }
+    }
+
+    public void removeCard(CardView card) {
+        if (card == null) {
+            return;
+        }
+        this.removeCards(Collections.singletonList(card));
+    }
+
+    public void moveSelectedCardsToOtherZone() {
+        if (this.mode != Constants.DeckEditorMode.FREE_BUILDING && this.mode != Constants.DeckEditorMode.LIMITED_BUILDING) {
+            return;
+        }
+        DeckArea deckArea = findParentDeckArea();
+        if (deckArea == null) {
+            return;
+        }
+        DragCardGrid otherGrid = (this == deckArea.getDeckList()) ? deckArea.getSideboardList() : deckArea.getDeckList();
+        if (otherGrid == null) {
+            return;
+        }
+        List<CardView> selected = new ArrayList<>(this.dragCardList());
+        if (selected.isEmpty()) {
+            return;
+        }
+        for (CardView card : selected) {
+            Card newCard = CardRepository.instance.findCard(card.getExpansionSetCode(), card.getCardNumber()).createMockCard();
+            CardView newView = new CardView(newCard);
+            otherGrid.addCardView(newView, newCard, null);
+        }
+        this.removeCards(selected);
+    }
+
+    private DeckArea findParentDeckArea() {
+        Container parentContainer = this.getParent();
+
+        while (parentContainer != null) {
+            if (parentContainer instanceof DeckArea) {
+                return (DeckArea) parentContainer;
+            }
+            parentContainer = parentContainer.getParent();
+        }
+        return null;
+    }
+
+    private boolean isFocusOrMouseOver() {
+        Component focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        if (focusOwner != null && SwingUtilities.isDescendingFrom(focusOwner, this)) {
+            return true;
+        }
+        try {
+            if (java.awt.GraphicsEnvironment.isHeadless()) {
+                return false;
+            }
+            java.awt.Point mousePos = MouseInfo.getPointerInfo().getLocation();
+            SwingUtilities.convertPointFromScreen(mousePos, this);
+            return this.contains(mousePos);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static final String[][] QUICK_LANDS = {
+        {"W", "Plains", "Llanura"},
+        {"U", "Island", "Isla"},
+        {"B", "Swamp", "Pantano"},
+        {"R", "Mountain", "Monta\u00f1a"},
+        {"G", "Forest", "Bosque"},
+        {"C", "Wastes", "Yermos"}
+    };
+
+    private void createQuickLandButtons() {
+        for (String[] landInfo : QUICK_LANDS) {
+            final String symbol = landInfo[0];
+            final String landName = landInfo[1];
+            final String landSpanish = landInfo[2];
+            JButton btn = new JButton();
+            btn.setPreferredSize(new Dimension(28, 24));
+            btn.setMargin(new Insets(1, 1, 1, 1));
+            btn.setFocusable(false);
+            BufferedImage img = ManaSymbols.getSizedManaSymbol(symbol, 16);
+            if (img != null) {
+                btn.setIcon(new ImageIcon(img));
+            } else {
+                btn.setText(symbol);
+            }
+            btn.setToolTipText("<html><b>" + landSpanish + " (" + landName + ")</b><br>"
+                    + "\u2022 Clic izquierdo: <b>+1</b> tierra<br>"
+                    + "\u2022 Clic derecho: <b>-1</b> tierra<br>"
+                    + "\u2022 Rueda de rat\u00f3n: ajustar copias</html>");
+            btn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (SwingUtilities.isLeftMouseButton(e)) {
+                        addQuickBasicLand(landName);
+                    } else if (SwingUtilities.isRightMouseButton(e)) {
+                        removeQuickBasicLand(landName);
+                    }
+                }
+            });
+            btn.addMouseWheelListener(e -> {
+                int rot = e.getWheelRotation();
+                if (rot < 0) {
+                    addQuickBasicLand(landName);
+                } else if (rot > 0) {
+                    removeQuickBasicLand(landName);
+                }
+            });
+            this.quickLandsPanel.add(btn);
+        }
+    }
+
+    public void addQuickBasicLand(String landName) {
+        if (this.mode != Constants.DeckEditorMode.FREE_BUILDING && this.mode != Constants.DeckEditorMode.LIMITED_BUILDING) {
+            return;
+        }
+        CardView existingBlueprint = null;
+        for (CardView c : this.allCards) {
+            if (Objects.equals(c.getName(), landName)) {
+                existingBlueprint = c;
+                break;
+            }
+        }
+        if (existingBlueprint != null) {
+            Card newCard = CardRepository.instance.findCard(existingBlueprint.getExpansionSetCode(), existingBlueprint.getCardNumber()).createMockCard();
+            CardView newView = new CardView(newCard);
+            this.addCardView(newView, newCard, existingBlueprint);
+            return;
+        }
+
+        CardCriteria criteria = new CardCriteria();
+        criteria.rarities(Rarity.LAND).name(landName);
+        List<CardInfo> cards = CardRepository.instance.findCards(criteria);
+        if (cards == null || cards.isEmpty()) {
+            return;
+        }
+        CardInfo chosen = null;
+        for (int i = cards.size() - 1; i >= 0; i--) {
+            CardInfo ci = cards.get(i);
+            if (!CardRepository.haveSnowLands(ci.getSetCode())) {
+                chosen = ci;
+                break;
+            }
+        }
+        if (chosen == null) {
+            chosen = cards.get(cards.size() - 1);
+        }
+        Card newCard = chosen.createMockCard();
+        CardView newView = new CardView(newCard);
+        this.addCardView(newView, newCard, null);
+    }
+
+    public void removeQuickBasicLand(String landName) {
+        if (this.mode != Constants.DeckEditorMode.FREE_BUILDING && this.mode != Constants.DeckEditorMode.LIMITED_BUILDING) {
+            return;
+        }
+        CardView toRemove = null;
+        for (int i = this.allCards.size() - 1; i >= 0; i--) {
+            CardView cv = this.allCards.get(i);
+            if (Objects.equals(cv.getName(), landName)) {
+                toRemove = cv;
+                break;
+            }
+        }
+        if (toRemove != null) {
+            this.removeCards(Collections.singletonList(toRemove));
+        }
     }
 
     public void deselectAll() {
@@ -1608,7 +1876,32 @@ CardEventProducer {
     private void updateCounts() {
         int extraDeckCount = this.allCards.stream().filter(c -> c.isExtraDeckCard()).collect(Collectors.toSet()).size();
         int maindeckCount = this.allCards.size() - extraDeckCount;
-        this.deckNameAndCountLabel.setText(this.role.getName() + " - " + maindeckCount + (extraDeckCount > 0 ? " (" + extraDeckCount + ")" : ""));
+        int creatures = this.creatureCounter.get();
+        int lands = this.landCounter.get();
+        int spells = Math.max(0, maindeckCount - creatures - lands);
+
+        if (this.role == Role.MAINDECK) {
+            this.deckNameAndCountLabel.setText(String.format("<html><b>%s</b>: <b>%d</b> cartas (Criaturas: %d, Tierras: %d, Hechizos: %d)%s</html>",
+                    this.role.getName(),
+                    maindeckCount,
+                    creatures,
+                    lands,
+                    spells,
+                    (extraDeckCount > 0 ? " [" + extraDeckCount + " extra]" : "")));
+            this.deckNameAndCountLabel.setToolTipText("<html><b>Mazo Principal</b><br>"
+                    + "\u2022 Total: <b>" + maindeckCount + "</b> cartas<br>"
+                    + "\u2022 Criaturas: <b>" + creatures + "</b><br>"
+                    + "\u2022 Tierras: <b>" + lands + "</b><br>"
+                    + "\u2022 Otros hechizos: <b>" + spells + "</b><br>"
+                    + "<i>Atajos: '+' a\u00f1adir copia, '-' quitar copia, 'S' mover a banquillo, 'E' cambiar edici\u00f3n, 'Supr' eliminar, Ctrl+Rueda ajustar</i></html>");
+        } else {
+            this.deckNameAndCountLabel.setText(String.format("<html><b>%s</b>: <b>%d</b> / 15 cartas</html>",
+                    this.role.getName(),
+                    maindeckCount));
+            this.deckNameAndCountLabel.setToolTipText("<html><b>Banquillo (Sideboard)</b><br>"
+                    + "\u2022 Total: <b>" + maindeckCount + "</b> / 15 cartas<br>"
+                    + "<i>Atajos: '+' a\u00f1adir copia, '-' quitar copia, 'S' mover a mazo principal, 'E' cambiar edici\u00f3n, 'Supr' eliminar, Ctrl+Rueda ajustar</i></html>");
+        }
         this.creatureCountLabel.setText(String.valueOf(this.creatureCounter.get()));
         this.landCountLabel.setText(String.valueOf(this.landCounter.get()));
         for (CardType cardType : this.selectByTypeButtons.keySet()) {
@@ -1628,24 +1921,52 @@ CardEventProducer {
 
     private void showCardRightClickMenu(CardView card, MouseEvent e) {
         JPopupMenu menu = new JPopupMenu();
-        JMenuItem hide = new JMenuItem("Hide (hidden in sideboard)");
-        hide.addActionListener(e2 -> this.hideSelection());
-        menu.add(hide);
-        JMenuItem invertSelection = new JMenuItem("Invert selection");
-        invertSelection.addActionListener(e2 -> this.invertSelection());
-        menu.add(invertSelection);
-        JMenuItem chooseMatching = new JMenuItem("Select same cards");
-        chooseMatching.addActionListener(e2 -> this.chooseMatching());
-        menu.add(chooseMatching);
+
+        JMenuItem addCopy = new JMenuItem("A\u00f1adir copia (+1)");
+        addCopy.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_PLUS, 0));
+        addCopy.addActionListener(e2 -> this.duplicateSelection());
+        menu.add(addCopy);
+
+        JMenuItem removeCopy = new JMenuItem("Quitar copia (-1)");
+        removeCopy.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, 0));
+        removeCopy.addActionListener(e2 -> this.removeOneCopyFromSelection());
+        menu.add(removeCopy);
+
+        DeckArea parentDeckArea = findParentDeckArea();
+        if (parentDeckArea != null) {
+            String targetZoneName = (this == parentDeckArea.getDeckList()) ? "Banquillo" : "Mazo Principal";
+            JMenuItem moveToOther = new JMenuItem("Mover a " + targetZoneName);
+            moveToOther.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0));
+            moveToOther.addActionListener(e2 -> this.moveSelectedCardsToOtherZone());
+            menu.add(moveToOther);
+        }
+
+        JMenuItem removeAll = new JMenuItem("Eliminar del mazo");
+        removeAll.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
+        removeAll.addActionListener(e2 -> this.removeSelectedCards());
+        menu.add(removeAll);
+
+        menu.add(new JPopupMenu.Separator());
+
         if (this.mode == Constants.DeckEditorMode.FREE_BUILDING) {
             JMenuItem chooseEdition = new JMenuItem("Elegir edici\u00f3n...");
+            chooseEdition.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_E, 0));
             chooseEdition.addActionListener(e2 -> this.chooseEdition(card));
             menu.add(chooseEdition);
             menu.add(new JPopupMenu.Separator());
-            JMenuItem duplicateSelection = new JMenuItem("Duplicate selected cards");
-            duplicateSelection.addActionListener(e2 -> this.duplicateSelection());
-            menu.add(duplicateSelection);
         }
+
+        JMenuItem chooseMatching = new JMenuItem("Seleccionar todas las copias");
+        chooseMatching.addActionListener(e2 -> this.chooseMatching());
+        menu.add(chooseMatching);
+
+        JMenuItem invertSelection = new JMenuItem("Invertir selecci\u00f3n");
+        invertSelection.addActionListener(e2 -> this.invertSelection());
+        menu.add(invertSelection);
+
+        JMenuItem hide = new JMenuItem("Ocultar (enviado al banquillo)");
+        hide.addActionListener(e2 -> this.hideSelection());
+        menu.add(hide);
         menu.show(e.getComponent(), e.getX(), e.getY());
     }
 
@@ -1665,15 +1986,7 @@ CardEventProducer {
         Map<String, ImageIcon> iconCache = new HashMap<>();
 
         // Detectar si estamos en un DeckArea para conocer el mazo principal / banquillo
-        DeckArea deckArea = null;
-        Container parentContainer = this.getParent();
-        while (parentContainer != null) {
-            if (parentContainer instanceof DeckArea) {
-                deckArea = (DeckArea) parentContainer;
-                break;
-            }
-            parentContainer = parentContainer.getParent();
-        }
+        final DeckArea deckArea = findParentDeckArea();
         final DragCardGrid otherGrid = (deckArea != null)
                 ? (this == deckArea.getDeckList() ? deckArea.getSideboardList() : deckArea.getDeckList())
                 : null;
@@ -2127,6 +2440,19 @@ CardEventProducer {
                 }
             }
         });
+        cardPanel.addMouseWheelListener(e -> {
+            if (e.isControlDown() && (this.mode == Constants.DeckEditorMode.FREE_BUILDING || this.mode == Constants.DeckEditorMode.LIMITED_BUILDING)) {
+                int rotation = e.getWheelRotation();
+                if (rotation < 0) {
+                    DragCardGrid.this.duplicateCard(newView);
+                } else if (rotation > 0) {
+                    DragCardGrid.this.removeCard(newView);
+                }
+                e.consume();
+            } else {
+                DragCardGrid.this.cardScroll.dispatchEvent(SwingUtilities.convertMouseEvent(cardPanel, e, DragCardGrid.this.cardScroll));
+            }
+        });
         this.cardContent.add((Component)cardPanel);
         this.cardViews.put(newView.getId(), cardPanel);
         if (newCard != null || duplicatedFromView != null) {
@@ -2367,6 +2693,22 @@ CardEventProducer {
                         };
                     }
                     countLabel = DragCardGrid.createCountLabel(this.countLabelListener);
+                    final JLabel currentCountLabel = countLabel;
+                    countLabel.addMouseWheelListener(e -> {
+                        if (DragCardGrid.this.mode != Constants.DeckEditorMode.FREE_BUILDING && DragCardGrid.this.mode != Constants.DeckEditorMode.LIMITED_BUILDING) {
+                            return;
+                        }
+                        List<CardView> stackCards = DragCardGrid.this.findCardStackByCountLabel(currentCountLabel);
+                        if (!stackCards.isEmpty()) {
+                            CardView topCard = stackCards.get(0);
+                            int rot = e.getWheelRotation();
+                            if (rot < 0) {
+                                DragCardGrid.this.duplicateCard(topCard);
+                            } else if (rot > 0) {
+                                DragCardGrid.this.removeCard(topCard);
+                            }
+                        }
+                    });
                     this.cardContent.add((Component)countLabel, (Object)0);
                     this.stackCountLabels.get(rowIndex).add(countLabel);
                 }
@@ -2429,7 +2771,7 @@ CardEventProducer {
         boolean smallMode = description.isEmpty();
         boolean supportCustomClicks = countLabel.getMouseListeners().length > 0 && !(countLabel.getMouseListeners()[0] instanceof ToolTipManager);
         countLabel.setText("<html><div style='text-align: center;'>  <div>" + amount + "</div>" + (smallMode ? "" : "  <div style=''>" + labelText + "</div>") + "</div>");
-        countLabel.setToolTipText("<html>" + amount + (smallMode ? "" : " - " + labelHint) + (supportCustomClicks ? "<br>Click on the count label to select/unselect cards stack." : ""));
+        countLabel.setToolTipText("<html>" + amount + (smallMode ? "" : " - " + labelHint) + (supportCustomClicks ? "<br>\u2022 Clic: seleccionar/deseleccionar columna<br>\u2022 Rueda de rat\u00f3n: ajustar cantidad (+/-)" : ""));
         countLabel.setVerticalAlignment(smallMode ? 0 : 1);
         if (DebugUtil.GUI_DECK_EDITOR_DRAW_COUNT_LABEL_BORDER) {
             countLabel.setBorder(BorderFactory.createLineBorder(Color.green));

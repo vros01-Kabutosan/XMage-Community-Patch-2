@@ -47,6 +47,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import mage.client.MageFrame;
 import mage.client.MagePane;
+import mage.client.util.GUISizeHelper;
 
 /**
  * Modern Dashboard UI for XMage Deck Downloader.
@@ -54,6 +55,15 @@ import mage.client.MagePane;
  * format progress bars and collapsible dark console.
  */
 public final class DeckDownloaderPane extends MagePane {
+
+    public static int scale(int value) {
+        return GUISizeHelper.dialogGuiScaleSize(value);
+    }
+
+    public static Font segoe(int style, int size) {
+        return new Font("Segoe UI", style, scale(size));
+    }
+
 
     private static final String DOWNLOADER_VERSION = "Decks V2.2 - 2026-08-11";
 
@@ -143,7 +153,7 @@ public final class DeckDownloaderPane extends MagePane {
         this.openFolder.addActionListener(this::openDeckFolder);
 
         this.output.setEditable(false);
-        this.output.setFont(new Font("Consolas", Font.PLAIN, 12));
+        this.output.setFont(new Font("Consolas", Font.PLAIN, Math.max(14, GUISizeHelper.dialogFont.getSize() - 2)));
         this.output.setBackground(new Color(15, 17, 22));
         this.output.setForeground(new Color(226, 232, 240));
         this.output.setCaretColor(ACCENT_BLUE);
@@ -167,13 +177,13 @@ public final class DeckDownloaderPane extends MagePane {
         JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         titleRow.setOpaque(false);
         JLabel titleLabel = new JLabel("Biblioteca Automática de Metajuego");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        titleLabel.setFont(segoe(Font.BOLD, 17));
         titleLabel.setForeground(TEXT_MAIN);
         titleRow.add(titleLabel);
         titleRow.add(globalStateBadge);
 
         JLabel subtitle = new JLabel(DOWNLOADER_VERSION + " • Descarga y catalogación de mazos competitivos");
-        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subtitle.setFont(segoe(Font.PLAIN, 12));
         subtitle.setForeground(TEXT_MUTED);
 
         titleBox.add(titleRow);
@@ -185,11 +195,11 @@ public final class DeckDownloaderPane extends MagePane {
         actions.setOpaque(false);
 
         JLabel srcLabel = new JLabel("Fuente:");
-        srcLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        srcLabel.setFont(segoe(Font.PLAIN, 13));
         srcLabel.setForeground(TEXT_MAIN);
 
-        source.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        source.setPreferredSize(new Dimension(150, 32));
+        source.setFont(segoe(Font.PLAIN, 13));
+        source.setPreferredSize(new Dimension(scale(160), scale(34)));
 
         actions.add(srcLabel);
         actions.add(source);
@@ -220,8 +230,8 @@ public final class DeckDownloaderPane extends MagePane {
         cardsGrid.add(mtgoCard);
         cardsGrid.add(goldfishCard);
         cardsGrid.add(top8Card);
-        cardsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 135));
-        cardsGrid.setPreferredSize(new Dimension(800, 130));
+        cardsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, scale(145)));
+        cardsGrid.setPreferredSize(new Dimension(scale(800), scale(135)));
 
         // 2. Progress and Formats Card
         JPanel progressCard = new RoundedPanel(12, CARD_BG, CARD_BORDER);
@@ -235,10 +245,10 @@ public final class DeckDownloaderPane extends MagePane {
         JPanel globalTextRow = new JPanel(new BorderLayout());
         globalTextRow.setOpaque(false);
         JLabel progTitle = new JLabel("Progreso General de Sincronización");
-        progTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        progTitle.setFont(segoe(Font.BOLD, 14));
         progTitle.setForeground(TEXT_MAIN);
 
-        globalStatusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        globalStatusLabel.setFont(segoe(Font.PLAIN, 12));
         globalStatusLabel.setForeground(TEXT_MUTED);
 
         globalTextRow.add(progTitle, BorderLayout.WEST);
@@ -246,10 +256,10 @@ public final class DeckDownloaderPane extends MagePane {
 
         globalProgressBar.setValue(0);
         globalProgressBar.setStringPainted(true);
-        globalProgressBar.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        globalProgressBar.setFont(segoe(Font.BOLD, 11));
         globalProgressBar.setForeground(ACCENT_BLUE);
         globalProgressBar.setBackground(new Color(20, 22, 28));
-        globalProgressBar.setPreferredSize(new Dimension(100, 16));
+        globalProgressBar.setPreferredSize(new Dimension(100, scale(20)));
 
         globalBox.add(globalTextRow, BorderLayout.NORTH);
         globalBox.add(globalProgressBar, BorderLayout.CENTER);
@@ -281,7 +291,7 @@ public final class DeckDownloaderPane extends MagePane {
         bar.setBorder(new EmptyBorder(6, 12, 6, 12));
 
         JLabel title = new JLabel("Consola de Registro Técnico");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        title.setFont(segoe(Font.BOLD, 12));
         title.setForeground(TEXT_MUTED);
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
@@ -326,23 +336,23 @@ public final class DeckDownloaderPane extends MagePane {
 
     private static JButton createStyledButton(String text, Color bg, Color fg) {
         JButton btn = new JButton(text);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setFont(segoe(Font.BOLD, 12));
         btn.setBackground(bg);
         btn.setForeground(fg);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setBorder(new EmptyBorder(7, 14, 7, 14));
+        btn.setBorder(new EmptyBorder(scale(7), scale(14), scale(7), scale(14)));
         return btn;
     }
 
     private static JButton createSmallButton(String text) {
         JButton btn = new JButton(text);
-        btn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        btn.setFont(segoe(Font.PLAIN, 11));
         btn.setBackground(new Color(40, 44, 56));
         btn.setForeground(TEXT_MAIN);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setBorder(new EmptyBorder(4, 10, 4, 10));
+        btn.setBorder(new EmptyBorder(scale(4), scale(10), scale(4), scale(10)));
         return btn;
     }
 
@@ -352,7 +362,22 @@ public final class DeckDownloaderPane extends MagePane {
         if (Files.isDirectory(direct, new LinkOption[0])) {
             return direct;
         }
-        return current.resolve("xmage").resolve("mage-client").resolve("config").resolve("deck-downloader");
+        Path clientConfig = current.resolve("xmage").resolve("mage-client").resolve("config").resolve("deck-downloader");
+        if (Files.isDirectory(clientConfig, new LinkOption[0])) {
+            return clientConfig;
+        }
+        Path sibling = current.resolve("mage-client").resolve("config").resolve("deck-downloader");
+        if (Files.isDirectory(sibling, new LinkOption[0])) {
+            return sibling;
+        }
+        Path parent = current.getParent();
+        if (parent != null) {
+            Path parentConfig = parent.resolve("config").resolve("deck-downloader");
+            if (Files.isDirectory(parentConfig, new LinkOption[0])) {
+                return parentConfig;
+            }
+        }
+        return direct;
     }
 
     private String pythonCommand() {
@@ -374,6 +399,8 @@ public final class DeckDownloaderPane extends MagePane {
         String[] candidates = new String[] {
             "py",
             "python",
+            localAppData != null ? localAppData + "\\Programs\\DeepSeek Harness\\resources\\runtime\\primary-runtime\\dependencies\\python\\python.exe" : null,
+            localAppData != null ? localAppData + "\\Programs\\AutoClaw2\\resources\\vendor\\python\\python.exe" : null,
             localAppData != null ? localAppData + "\\Programs\\Python\\Launcher\\py.exe" : null,
             localAppData != null ? localAppData + "\\Programs\\Python\\Python312\\python.exe" : null,
             localAppData != null ? localAppData + "\\Programs\\Python\\Python313\\python.exe" : null,
@@ -721,12 +748,12 @@ public final class DeckDownloaderPane extends MagePane {
             JPanel titleBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
             titleBox.setOpaque(false);
             nameLabel = new JLabel(title);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            nameLabel.setFont(segoe(Font.BOLD, 15));
             nameLabel.setForeground(TEXT_MAIN);
             titleBox.add(nameLabel);
 
             JLabel sub = new JLabel("(" + subtitle + ")");
-            sub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            sub.setFont(segoe(Font.PLAIN, 11));
             sub.setForeground(TEXT_MUTED);
             titleBox.add(sub);
 
@@ -747,7 +774,7 @@ public final class DeckDownloaderPane extends MagePane {
             metrics.add(rejBadge);
 
             // Activity Row
-            activityLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+            activityLabel.setFont(new Font("Segoe UI", Font.ITALIC, scale(11)));
             activityLabel.setForeground(TEXT_MUTED);
 
             this.add(top, BorderLayout.NORTH);
@@ -756,7 +783,7 @@ public final class DeckDownloaderPane extends MagePane {
         }
 
         private static void styleMetricLabel(JLabel label, Color color) {
-            label.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            label.setFont(segoe(Font.BOLD, 11));
             label.setForeground(color);
         }
 
@@ -797,21 +824,21 @@ public final class DeckDownloaderPane extends MagePane {
             this.setOpaque(false);
 
             titleLabel = new JLabel(formatName);
-            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            titleLabel.setFont(segoe(Font.BOLD, 13));
             titleLabel.setForeground(TEXT_MAIN);
-            titleLabel.setPreferredSize(new Dimension(80, 20));
+            titleLabel.setPreferredSize(new Dimension(scale(85), scale(24)));
 
             progressBar = new JProgressBar(0, 25);
             progressBar.setValue(0);
             progressBar.setStringPainted(true);
             progressBar.setString("0 / 25");
-            progressBar.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            progressBar.setFont(segoe(Font.BOLD, 11));
             progressBar.setForeground(accentColor);
             progressBar.setBackground(new Color(20, 22, 28));
-            progressBar.setPreferredSize(new Dimension(240, 16));
+            progressBar.setPreferredSize(new Dimension(scale(260), scale(20)));
 
             statusLabel = new JLabel("En cola");
-            statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            statusLabel.setFont(segoe(Font.PLAIN, 12));
             statusLabel.setForeground(TEXT_MUTED);
 
             this.add(titleLabel, BorderLayout.WEST);
@@ -848,9 +875,9 @@ public final class DeckDownloaderPane extends MagePane {
         public StatusBadge(String text, Color bg) {
             super(text, SwingConstants.CENTER);
             this.bgColor = bg;
-            this.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            this.setFont(segoe(Font.BOLD, 10));
             this.setForeground(Color.WHITE);
-            this.setBorder(new EmptyBorder(3, 8, 3, 8));
+            this.setBorder(new EmptyBorder(scale(3), scale(8), scale(3), scale(8)));
         }
 
         public void update(String text, Color bg) {

@@ -885,6 +885,21 @@ extends JPanel {
         Rectangle screenRec = MageFrame.getDesktop().getBounds();
         String screenKey = String.format("%d_x_%d", screenRec.width, screenRec.height);
         int newLocation = allLocations.getOrDefault(screenKey, -1);
+        if (newLocation == -1 && !allLocations.isEmpty()) {
+            for (Map.Entry<String, Integer> entry : allLocations.entrySet()) {
+                String[] parts = entry.getKey().split("_x_");
+                if (parts.length == 2) {
+                    try {
+                        int w = Integer.parseInt(parts[0]);
+                        int h = Integer.parseInt(parts[1]);
+                        if (Math.abs(w - screenRec.width) <= 40 && Math.abs(h - screenRec.height) <= 120) {
+                            newLocation = entry.getValue();
+                            break;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
         this.applySplitterLocationDeferred(splitPane, defaultProportion, newLocation, 0);
     }
 
@@ -949,6 +964,13 @@ extends JPanel {
         }
         if (splitPane != this.splitBattlefieldAndChats && requested > splitPane.getMaximumDividerLocation() && splitPane.getRightComponent() != null) {
             splitPane.getRightComponent().setMinimumSize(new Dimension());
+        }
+        if (splitPane == this.splitBattlefieldAndChats) {
+            int minChatWidth = Math.max(380, GUISizeHelper.dialogGuiScaleSize(240));
+            int maxDivider = splitPane.getWidth() - minChatWidth - splitPane.getDividerSize();
+            if (maxDivider > 0 && requested > maxDivider) {
+                requested = maxDivider;
+            }
         }
         splitPane.setDividerLocation(defaultProportion);
         if (requested != splitPane.getDividerLocation()) {
@@ -2927,14 +2949,14 @@ extends JPanel {
         this.splitGameAndBigCard.setResizeWeight(1.0);
         this.splitGameAndBigCard.setOneTouchExpandable(true);
         this.splitChatAndLogs = new JSplitPane();
-        this.splitChatAndLogs.setMinimumSize(new Dimension(320, 0));
+        this.splitChatAndLogs.setMinimumSize(new Dimension(Math.max(350, GUISizeHelper.dialogGuiScaleSize(240)), 0));
         this.splitChatAndLogs.setOrientation(0);
         this.splitChatAndLogs.setResizeWeight(0.0);
         this.splitChatAndLogs.setTopComponent(this.userChatPanel);
         this.splitChatAndLogs.setBottomComponent(this.gameChatPanel);
         this.splitBattlefieldAndChats = new JSplitPane();
         this.splitBattlefieldAndChats.setBorder(null);
-        this.splitBattlefieldAndChats.setResizeWeight(1.0);
+        this.splitBattlefieldAndChats.setResizeWeight(0.8);
         this.splitBattlefieldAndChats.setOneTouchExpandable(true);
         this.splitBattlefieldAndChats.setLeftComponent(this.pnlHelperHandButtonsStackArea);
         this.splitBattlefieldAndChats.setRightComponent(this.splitChatAndLogs);

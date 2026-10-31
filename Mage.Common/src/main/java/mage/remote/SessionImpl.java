@@ -10,6 +10,7 @@ import mage.game.tournament.TournamentOptions;
 import mage.interfaces.MageClient;
 import mage.interfaces.MageServer;
 import mage.interfaces.ServerState;
+import mage.utils.MageVersion;
 import mage.interfaces.callback.ClientCallback;
 import mage.players.PlayerType;
 import mage.players.net.UserData;
@@ -263,28 +264,44 @@ public class SessionImpl implements Session {
                 setLastError("");
                 logger.info("Logging: as username " + getUserName() + " to server " + connection.getHost() + ':' + connection.getPort());
                 boolean result;
+                MageVersion versionToSend = client.getVersion();
 
-                if (connection.getAdminPassword() == null) {
-                    // for backward compatibility. don't remove twice call - first one does nothing but for version checking
-                    result = server.connectUser(connection.getUsername(), connection.getPassword(), sessionId, restoreSessionId, client.getVersion(), connection.getUserIdStr());
-                } else {
-                    result = server.connectAdmin(connection.getAdminPassword(), sessionId, client.getVersion());
+                try {
+                    if (connection.getAdminPassword() == null) {
+                        // for backward compatibility. don't remove twice call - first one does nothing but for version checking
+                        result = server.connectUser(connection.getUsername(), connection.getPassword(), sessionId, restoreSessionId, versionToSend, connection.getUserIdStr());
+                    } else {
+                        result = server.connectAdmin(connection.getAdminPassword(), sessionId, versionToSend);
+                    }
+                } catch (MageVersionException ex) {
+                    MageVersion fallbackVersion = extractCompatibleServerVersion(ex);
+                    if (fallbackVersion != null) {
+                        logger.warn("Server reported different version (" + fallbackVersion + "). Adapting client version to connect...");
+                        versionToSend = fallbackVersion;
+                        if (connection.getAdminPassword() == null) {
+                            result = server.connectUser(connection.getUsername(), connection.getPassword(), sessionId, restoreSessionId, versionToSend, connection.getUserIdStr());
+                        } else {
+                            result = server.connectAdmin(connection.getAdminPassword(), sessionId, versionToSend);
+                        }
+                    } else {
+                        throw ex;
+                    }
                 }
 
                 if (result) {
                     // server state used in client side to setup game panels and dialogs, e.g. test mode info or available game types
                     serverState = server.getServerState();
                     if (serverState == null) {
-                        throw new MageVersionException(client.getVersion(), null);
+                        throw new MageVersionException(versionToSend, null);
                     }
 
                     // client side check for incompatible versions
-                    if (client.getVersion().compareTo(serverState.getVersion()) != 0) {
-                        throw new MageVersionException(client.getVersion(), serverState.getVersion());
+                    if (versionToSend.compareTo(serverState.getVersion()) != 0) {
+                        throw new MageVersionException(versionToSend, serverState.getVersion());
                     }
 
                     if (!connection.getUsername().equals(ADMIN_NAME)) {
-                        server.connectSetUserData(sessionId, connection.getUserData(), client.getVersion().toString(), connection.getUserIdStr());
+                        server.connectSetUserData(sessionId, connection.getUserData(), versionToSend.toString(), connection.getUserIdStr());
                     }
 
                     logger.info("Logging: DONE");
@@ -296,6 +313,39 @@ public class SessionImpl implements Session {
                 return false;
             }
         });
+    }
+
+    private MageVersion extractCompatibleServerVersion(MageVersionException ex) {
+        if (ex == null) {
+            return null;
+        }
+        MageVersion directServerVersion = ex.getServerVersion();
+        if (directServerVersion != null) {
+            if (directServerVersion.compareTo(client.getVersion()) != 0
+                    && directServerVersion.getMajor() == MageVersion.MAGE_VERSION_MAJOR
+                    && directServerVersion.getMinor() == MageVersion.MAGE_VERSION_MINOR
+                    && directServerVersion.getRelease() >= 60) {
+                return directServerVersion;
+            }
+        }
+        if (ex.getMessage() != null) {
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("Server version:\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)-([A-Za-z0-9_\\-]+)");
+            java.util.regex.Matcher matcher = pattern.matcher(ex.getMessage());
+            if (matcher.find()) {
+                try {
+                    int major = Integer.parseInt(matcher.group(1));
+                    int minor = Integer.parseInt(matcher.group(2));
+                    int release = Integer.parseInt(matcher.group(3));
+                    String releaseInfo = matcher.group(4);
+                    if (major == MageVersion.MAGE_VERSION_MAJOR && minor == MageVersion.MAGE_VERSION_MINOR && release >= 60) {
+                        return new MageVersion(major, minor, release, releaseInfo, client.getClass());
+                    }
+                } catch (Exception e) {
+                    logger.warn("Could not parse server version from exception: " + ex.getMessage(), e);
+                }
+            }
+        }
+        return null;
     }
 
     @Override

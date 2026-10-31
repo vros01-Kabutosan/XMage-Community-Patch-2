@@ -95,4 +95,20 @@ public class MageVersion implements Serializable, Comparable<MageVersion> {
     public String getBuildTime() {
         return this.buildTime;
     }
+
+    public int getMajor() {
+        return this.major;
+    }
+
+    public int getMinor() {
+        return this.minor;
+    }
+
+    public int getRelease() {
+        return this.release;
+    }
+
+    public String getReleaseInfo() {
+        return this.releaseInfo;
+    }
 }

@@ -73,15 +73,8 @@ public class Connection {
     }
 
     public String getURI() {
-        if (host.equals("localhost")) {
-            try {
-                InetAddress inet = getLocalAddress();
-                if (inet != null) {
-                    return transport + "://" + inet.getHostAddress() + ':' + port + '/' + serialization + "&" + threadpool + parameter;
-                }
-            } catch (SocketException ex) {
-                // just use localhost if can't find local ip
-            }
+        if (host.equals("localhost") || host.equals("127.0.0.1")) {
+            return transport + "://127.0.0.1:" + port + '/' + serialization + "&" + threadpool + parameter;
         }
         return transport + "://" + host + ':' + port + '/' + serialization + "&" + threadpool + parameter;
     }
@@ -216,21 +209,37 @@ public class Connection {
     }
 
     public static InetAddress getLocalAddress() throws SocketException {
+        InetAddress fallback = null;
         for (Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces(); interfaces.hasMoreElements();) {
             NetworkInterface iface = interfaces.nextElement();
-            if (iface.isLoopback()) {
+            if (iface.isLoopback() || !iface.isUp() || iface.isVirtual()) {
+                continue;
+            }
+            String name = (iface.getName() + " " + iface.getDisplayName()).toLowerCase();
+            // Ignore disconnected or virtual VPN tap adapters
+            if (name.contains("tap") || name.contains("vpn") || name.contains("wintun") || name.contains("tunnel")) {
                 continue;
             }
             for (InterfaceAddress addr : iface.getInterfaceAddresses()) {
                 if (addr != null) {
                     InetAddress iaddr = addr.getAddress();
                     if (iaddr instanceof Inet4Address) {
-                        return iaddr;
+                        if (!iaddr.isLoopbackAddress() && !iaddr.isLinkLocalAddress()) {
+                            if (iaddr.isSiteLocalAddress()) {
+                                return iaddr;
+                            }
+                            if (fallback == null) {
+                                fallback = iaddr;
+                            }
+                        }
                     }
                 }
             }
         }
-        return null;
+        if (fallback != null) {
+            return fallback;
+        }
+        return InetAddress.getLoopbackAddress();
     }
 
     public static String getMAC() throws SocketException {

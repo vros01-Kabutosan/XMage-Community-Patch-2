@@ -499,6 +499,17 @@ public class SessionImpl implements Session {
 
                 Map<String, String> callbackMetadata = new HashMap<>();
                 callbackMetadata.put(Bisocket.IS_CALLBACK_SERVER, "true");
+                if (connection.getHost().equals("localhost") || connection.getHost().equals("127.0.0.1")) {
+                    callbackMetadata.put("callbackServerHost", "127.0.0.1");
+                } else {
+                    try {
+                        InetAddress local = Connection.getLocalAddress();
+                        if (local != null) {
+                            callbackMetadata.put("callbackServerHost", local.getHostAddress());
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
                 if (callbackHandler == null) {
                     callbackHandler = new CallbackHandler();
                 }

@@ -177,6 +177,12 @@ de Pragmata, ajenos a XMage) y `v36-recuperacion/` (informes/herramientas V3.6).
 `Proyecto-XMage/` se conserva como archivo histórico. El servidor oficial 17171 y su
 base de datos no se tocaron.
 
+## Despliegue Oficial 1.4.63V1 y Descargadores Autónomos (2026-10-31)
+
+- Despliegue oficial completado a XMage 1.4.63V1 preservando todos los mods y configuración. Detalle completo en `CHECKPOINT-2026-10-31-MIGRACION-1.4.63.md`.
+- `installed.properties` sincronizado a `1.4.63-dev (2026-10-31 09-42)` para eliminar aviso espurio de actualización en el Launcher.
+- Modernización 100% autónoma de `goldfish_3_formatos.py` por HTTP directo (vía `/widgets/deck/js` interno) eliminando Selenium, ChromeDriver y paradas con `input()`. Los 3 descargadores (`mtgo`, `mtgtop8`, `goldfish`) operan ahora sin intervención humana y quedan totalmente integrados con `deck_library_updater.py`.
+
 ## Pendientes
 
 1. Borrar la clave basura `HKCU\Software\JavaSoft\Prefs\HKEY_CURRENT_USER` — **requiere

@@ -90,3 +90,31 @@ Todos los mods existentes se trasladaron y verificaron sin pérdida ni alteraci�
 
 - **Parche consolidado:** `J:\MTG\Laboratorio\parches\2026-10-31-migracion-1.4.63V1.patch` (2,67 MB).
 - **Rama remota:** `origin/upgrade/official-1.4.63V1` (push completado).
+
+---
+
+## 7. Corrección del Aviso de Actualización en el Launcher Oficial
+
+- **Causa raíz:** `J:\MTG\Instalacion-XMage\installed.properties` mantenía la cadena de versión antigua `xmage.version=1.4.62-dev (2026-10-03 20-47)`. El Launcher consultaba `http://xmage.today/config.json` (que reporta `"version": "1.4.63-dev (2026-10-31 09-42)"`) y detectaba una discrepancia, solicitando actualización pese a estar ya migrado.
+- **Acción realizada:**
+  1. Respaldo de seguridad creado: `installed.properties.backup-1.4.62`.
+  2. `installed.properties` actualizado a `xmage.version=1.4.63-dev (2026-10-31 09-42)`.
+  3. Eliminación de `.jar` 1.4.62 residuales en `mage-client/lib/` que interferían por orden alfabético con los 1.4.63 (los respaldos permanecen seguros en `backup-jars-1.4.62-pre-1.4.63-20261031`).
+- **Verificación:** El Launcher muestra "Up to date" y "Launch Client" directamente; el cliente inicia mostrando `Starting MAGE CLIENT version: 1.4.63-V1 (build: 2026-10-31 13:54)`.
+
+---
+
+## 8. Modernización de Descargadores Python de Decks (Autonomía 100%)
+
+- **Diagnóstico:** De los 3 descargadores (`mtgo_3_formatos_fusionado.py`, `mtgtop8_3_formatos.py`, `goldfish_3_formatos.py`), MTGO y MTGTop8 ya funcionaban por HTTP directo sin navegador. Solo `goldfish_3_formatos.py` utilizaba Selenium y `undetected_chromedriver`, abriendo ventanas de Chrome e interrumpiendo el flujo con llamadas a `input("... pulsa ENTER")`.
+- **Solución implementada:**
+  1. Se identificó la llamada AJAX interna de MTGGoldfish `/widgets/deck/js?deckId={did}` con encabezados `Referer` y `X-Requested-With`, que entrega el payload completo del mazo (`deck_input[deck]`) con código HTTP 200 directo sin requerir emulación de navegador.
+  2. Se reescribió `goldfish_3_formatos.py` eliminando completamente dependencias de Selenium, ChromeDriver y llamadas bloqueantes a consola.
+  3. Respaldo previo creado: `goldfish_3_formatos.py.bak-selenium-20261031`.
+  4. Sincronización a `fuente-xmage/config/deck-downloader/goldfish_3_formatos.py`.
+- **Resultados de prueba:**
+  - Descarga autónoma de 25 mazos Standard, 25 Pioneer y 25 Modern (75 mazos totales 60+15).
+  - Generación de 75 archivos `.dck` para Forge y 75 archivos `.txt` para XMage.
+  - Ejecución verificada e integrada con `deck_library_updater.py --source MTGGoldfish` (0 errores, resolución Scryfall por lotes, incorporación a `sample-decks/Descargados`).
+
+

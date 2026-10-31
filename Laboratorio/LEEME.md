@@ -59,6 +59,13 @@ Fuente: `XMage-1.4.62V1-src`. Parche: `parches/2026-10-25-UI-final.patch`.
      - Confirmación ágil mediante doble clic y tecla ENTER, cierre con ESC.
      - Alcance configurable: todas las copias vs solo carta seleccionada, con opción de aplicar al banquillo.
      - Ordenación numérica optimizada con `CardInfo.getCardNumberAsInt()` y protección contra nulos.
+   - v1.7 (2026-10-31): Modernización UI/UX del Deck Editor:
+     - Barra de tierras básicas rápidas (`quickLandsPanel`): 6 botones con iconos `{W}{U}{B}{R}{G}{C}` para añadir (+1 clic izq) o retirar (-1 clic der / rueda) tierras al instante.
+     - Atajos de teclado profesionales: `+` (añadir copia), `-` (quitar copia), `Supr`/`Backspace` (eliminar selección), `E` (abrir selector de edición v1.6), `S` (mover entre Maindeck y Sideboard), `Ctrl+A` (seleccionar todo), `Esc` (deseleccionar).
+     - Control de cantidad con rueda de ratón (`Ctrl + Rueda arriba/abajo` sobre cualquier carta o rueda directa sobre el contador de copias).
+     - Menú contextual ampliado con accesos directos y atajos visibles.
+     - Desglose en vivo de composición de cartas (Criaturas, Tierras, Hechizos en Maindeck y contador en Sideboard).
+     - Nombres legibles en botones de cuadrícula (`Stats / Maná`, `Visibilidad`, `Filtrar...`, `Ordenar`).
 
 ## Compilar
 

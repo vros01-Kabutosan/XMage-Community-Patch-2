@@ -1,0 +1,170 @@
+diff --git a/Mage.Client/src/main/java/mage/client/MageFrame.java b/Mage.Client/src/main/java/mage/client/MageFrame.java
+index 88e83e42f08..aab3c87b511 100644
+--- a/Mage.Client/src/main/java/mage/client/MageFrame.java
++++ b/Mage.Client/src/main/java/mage/client/MageFrame.java
+@@ -236,7 +236,12 @@ implements MageClient {
+ 
+     public static Preferences getPreferences() {
+         if (PREFS == null) {
+-            PREFS = Preferences.userNodeForPackage(MageFrame.class);
++            String customNode = System.getProperty("xmage.prefs.node");
++            if (customNode != null && !customNode.trim().isEmpty()) {
++                PREFS = Preferences.userRoot().node(customNode.trim());
++            } else {
++                PREFS = Preferences.userNodeForPackage(MageFrame.class);
++            }
+         }
+         return PREFS;
+     }
+diff --git a/Mage.Client/src/main/java/mage/client/game/GamePanel.java b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+index 9761e9ac7f5..8beb3644a96 100644
+--- a/Mage.Client/src/main/java/mage/client/game/GamePanel.java
++++ b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+@@ -402,6 +402,7 @@ extends JPanel {
+         JPanel pnlPhaseAndHand = new JPanel(new BorderLayout());
+         pnlPhaseAndHand.setOpaque(false);
+         pnlPhaseAndHand.add((Component)this.phaseSummaryBar, "South");
++        this.handContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
+         pnlPhaseAndHand.add((Component)this.handContainer, "Center");
+         pnlCommandsFeedbackAndHand.add((Component)pnlPhaseAndHand, "Center");
+         JPanel pnlCommandsSkipAndStack = new JPanel(new BorderLayout());
+@@ -910,8 +911,16 @@ extends JPanel {
+         // to the default proportion when the saved split is that degenerate.
+         int splitWidth = Math.max(1, splitPane.getWidth());
+         double expectedRight = 1.0 - defaultProportion;
+-        double actualRight = (splitWidth - newLocation - splitPane.getDividerSize()) / (double) splitWidth;
+-        if (actualRight < expectedRight * 0.35 || actualRight > 1.0 - expectedRight * 0.35) {
++        int rightPixels = splitWidth - newLocation - splitPane.getDividerSize();
++        double actualRight = rightPixels / (double) splitWidth;
++
++        if (splitPane == this.splitBattlefieldAndChats) {
++            int minChatWidth = Math.min(380, (int) Math.round(splitWidth * 0.15));
++            if (rightPixels < minChatWidth || actualRight < expectedRight * 0.55 || actualRight > 1.0 - expectedRight * 0.35) {
++                logger.info((Object)("Ignoring degenerate saved divider for battlefield/chats " + newLocation + " (" + splitWidth + " px wide, right " + rightPixels + " px, proportion " + actualRight + ")"));
++                return -1;
++            }
++        } else if (actualRight < expectedRight * 0.35 || actualRight > 1.0 - expectedRight * 0.35) {
+             logger.info((Object)("Ignoring degenerate saved divider " + newLocation + " (" + splitWidth + " px wide, right proportion " + actualRight + ")"));
+             return -1;
+         }
+@@ -938,7 +947,7 @@ extends JPanel {
+         if (requested < splitPane.getMinimumDividerLocation() && splitPane.getLeftComponent() != null) {
+             splitPane.getLeftComponent().setMinimumSize(new Dimension());
+         }
+-        if (requested > splitPane.getMaximumDividerLocation() && splitPane.getRightComponent() != null) {
++        if (splitPane != this.splitBattlefieldAndChats && requested > splitPane.getMaximumDividerLocation() && splitPane.getRightComponent() != null) {
+             splitPane.getRightComponent().setMinimumSize(new Dimension());
+         }
+         splitPane.setDividerLocation(defaultProportion);
+@@ -1171,9 +1180,8 @@ extends JPanel {
+         for (PlayAreaPanel p : this.players.values()) {
+             p.getPlayerPanel().sizePlayerPanel(false);
+         }
+-        int sharedBattlefieldMinHeight = Math.max(topPanel.getPreferredSize().height, bottomPanel.getPreferredSize().height);
+-        topPanel.setMinimumSize(new Dimension(0, sharedBattlefieldMinHeight));
+-        bottomPanel.setMinimumSize(new Dimension(0, sharedBattlefieldMinHeight));
++        topPanel.setMinimumSize(new Dimension(0, 0));
++        bottomPanel.setMinimumSize(new Dimension(0, 0));
+         GridBagConstraints panelC = new GridBagConstraints();
+         panelC.fill = 1;
+         panelC.weightx = 0.5;
+@@ -2919,6 +2927,7 @@ extends JPanel {
+         this.splitGameAndBigCard.setResizeWeight(1.0);
+         this.splitGameAndBigCard.setOneTouchExpandable(true);
+         this.splitChatAndLogs = new JSplitPane();
++        this.splitChatAndLogs.setMinimumSize(new Dimension(320, 0));
+         this.splitChatAndLogs.setOrientation(0);
+         this.splitChatAndLogs.setResizeWeight(0.0);
+         this.splitChatAndLogs.setTopComponent(this.userChatPanel);
+diff --git a/Mage.Client/src/main/java/mage/client/plugins/adapters/MageActionCallback.java b/Mage.Client/src/main/java/mage/client/plugins/adapters/MageActionCallback.java
+index 1b656eaf903..904fa518b33 100644
+--- a/Mage.Client/src/main/java/mage/client/plugins/adapters/MageActionCallback.java
++++ b/Mage.Client/src/main/java/mage/client/plugins/adapters/MageActionCallback.java
+@@ -67,7 +67,7 @@ implements ActionCallback {
+     private static final Logger logger = Logger.getLogger(MageActionCallback.class);
+     public static final int HAND_CARDS_BETWEEN_GAP_X = 5;
+     public static final int STACK_CARDS_BETWEEN_GAP_X = 5;
+-    public static final MageCardSpace HAND_CARDS_MARGINS = new MageCardSpace(10, 10, 5, 5);
++    public static final MageCardSpace HAND_CARDS_MARGINS = new MageCardSpace(10, 10, 5, 10);
+     public static final MageCardSpace STACK_CARDS_MARGINS = new MageCardSpace(10, 10, 5, 5);
+     public static final int HAND_CARDS_COMPARE_GAP_X = 30;
+     public static final int HAND_CARDS_MIN_DISTANCE_TO_START_DRAGGING = 20;
+diff --git a/Mage.Client/src/main/java/org/mage/card/arcane/MageLayer.java b/Mage.Client/src/main/java/org/mage/card/arcane/MageLayer.java
+index 81bf7cee07c..a25f0fa80a4 100644
+--- a/Mage.Client/src/main/java/org/mage/card/arcane/MageLayer.java
++++ b/Mage.Client/src/main/java/org/mage/card/arcane/MageLayer.java
+@@ -262,7 +262,7 @@ public class MageLayer extends MageCard {
+      * Old version used x2 of width/height on each side (x5 component size, slow repaints), see AnimationTest for
+      * the geometry checks
+      */
+-    static MageCardSpace getAnimationOuterSpace(int width, int height) {
++    public static MageCardSpace getAnimationOuterSpace(int width, int height) {
+         double originX = width / 2d;
+         double originY = height - originX;
+         // the farthest point of the card from the rotation center (top corners) + icons padding
+diff --git a/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java b/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java
+index c8b5104aecd..249e175454a 100644
+--- a/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java
++++ b/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java
+@@ -1,6 +1,7 @@
+ package org.mage.plugins.card;
+ 
+ import mage.cards.MageCard;
++import mage.cards.MageCardSpace;
+ import mage.cards.MagePermanent;
+ import mage.cards.action.ActionCallback;
+ import mage.client.util.*;
+@@ -336,12 +337,19 @@ public class CardPluginImpl implements CardPlugin {
+             cardWidth -= CARD_WIDTH_AUTO_FIT_INCREMENT;
+         }
+ 
++        // calculate dynamic gutters so card layers with rotation/icons outerSpace are never placed at negative coordinates
++        MageCardSpace animationSpace = (cardWidth > 0 && cardHeight > 0)
++                ? MageLayer.getAnimationOuterSpace(cardWidth, cardHeight)
++                : MageCardSpace.empty;
++        int effectiveGutterY = Math.max(GUTTER_Y, animationSpace.getTop() + 6);
++        int effectiveGutterX = Math.max(GUTTER_X, animationSpace.getLeft() + 6);
++
+         // Get size of all the rows.
+-        int x, y = GUTTER_Y;
++        int x, y = effectiveGutterY;
+         int maxRowWidth = 0;
+         for (Row row : rows) {
+             int rowBottom = 0;
+-            x = GUTTER_X;
++            x = effectiveGutterX;
+             for (int stackIndex = 0, stackCount = row.size(); stackIndex < stackCount; stackIndex++) {
+                 Stack stack = row.get(stackIndex);
+                 rowBottom = Math.max(rowBottom, y + stack.getHeight());
+@@ -352,15 +360,15 @@ public class CardPluginImpl implements CardPlugin {
+         }
+ 
+         // Position all card panels
+-        y = GUTTER_Y;
++        y = effectiveGutterY;
+         for (Row row : rows) {
+             int rowBottom = 0;
+-            x = GUTTER_X;
++            x = effectiveGutterX;
+             for (int stackIndex = 0, stackCount = row.size(); stackIndex < stackCount; stackIndex++) {
+                 Stack stack = row.get(stackIndex);
+                 // Align others to the right.
+                 if (othersOnTheRight && RowType.other.isType(stack.get(0))) {
+-                    x = playAreaWidth - GUTTER_X + extraCardSpacingX;
++                    x = playAreaWidth - effectiveGutterX + extraCardSpacingX;
+                     for (int i = stackIndex, n = row.size(); i < n; i++) {
+                         x -= row.get(i).getWidth();
+                     }
+@@ -470,7 +478,11 @@ public class CardPluginImpl implements CardPlugin {
+         for (Row row : rows) {
+             height += row.getHeight();
+         }
+-        return height - cardSpacingY + GUTTER_Y * 2;
++        int effectiveGutterY = GUTTER_Y;
++        if (cardWidth > 0 && cardHeight > 0) {
++            effectiveGutterY = Math.max(GUTTER_Y, MageLayer.getAnimationOuterSpace(cardWidth, cardHeight).getTop() + 6);
++        }
++        return height - cardSpacingY + effectiveGutterY * 2;
+     }
+ 
+     private AttachmentLayoutInfos calculateNeededNumberOfVerticalColumns(int currentCol, Map<UUID, MageCard> cards,

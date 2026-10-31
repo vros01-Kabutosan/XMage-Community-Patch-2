@@ -61,3 +61,25 @@ Archivo modificado: [`Mage.Client/src/main/java/mage/client/cards/DragCardGrid.j
   - Servidor oficial y su base de datos intactos (puerto 17171 no tocado).
 - **Parche generado**: `Laboratorio/parches/2026-10-31-deck-editor-v17.patch`.
 
+
+
+## Actualización 2026-10-31 (Fix Layout 4K & Corte de Cartas v19)
+- **Problema corregido**: Corte de cartas en campo de batalla y mano en pantallas de alta resolución (4K, 3840x2160) y colapso del divisor del panel de Chat/Registro a un ancho ilegible de 30 px.
+- **Cambios realizados**:
+  - `CardPluginImpl.java`: gutters dinámicos `effectiveGutterY` y `effectiveGutterX` calculados en base a `MageLayer.getAnimationOuterSpace(cardWidth, cardHeight)` para que las cartas de la fila superior del campo nunca se posicionen con coordenada negativa ni se corten por arriba.
+  - `GamePanel.java`:
+    - `normalizeSplitterLocation`: protección con ancho mínimo indestructible (mínimo 380 px) para `splitChatAndLogs`. Si un divisor guardado intenta estrangular el chat, se restablece automáticamente a la proporción balanceada (20%).
+    - `applySplitterLocation`: no resetear el `minimumSize` del panel de chat (`splitChatAndLogs`).
+    - Flexibilización de `sharedBattlefieldMinHeight` en `pnlBattlefield` para permitir distribución fluida al 50% de la altura sin forzar recorte del GridBagLayout.
+    - Margen inferior entre mano y `phaseSummaryBar`.
+  - `MageActionCallback.java`: margen inferior ampliado en `HAND_CARDS_MARGINS` para proteger las cajas de fuerza/resistencia (P/T).
+  - `MageLayer.java`: método `getAnimationOuterSpace` hecho `public static` para cálculo interoperable de márgenes.
+  - `MageFrame.java`: soporte para propiedad del sistema `-Dxmage.prefs.node` para aislamiento 100% garantizado de preferencias en el laboratorio.
+- **Compilación Maven**: `mage-client-1.4.63.jar` compilado con éxito (código de salida 0).
+- **Laboratorio**: probado en `LAB-UI-1.4.62-V2` con preferencias aisladas `HKCU\Software\JavaSoft\Prefs\XMageLabUIv2\mage\client` en puerto 17191.
+- **Despliegue Oficial**:
+  - Backup en `J:\MTG\Instalacion-XMage\xmage\backup-jars-1.4.63-20261031_layout\`.
+  - Desplegado `mage-client-1.4.63.jar` en `Instalacion-XMage\xmage\mage-client\lib\`.
+  - Calibración de preferencias en el registro oficial `HKCU\Software\JavaSoft\Prefs\mage\client` con valores armónicos para 4K (`guiCardBattlefieldSize=60`, `guiCardHandSize=46`, `guiChatFontSize=22`, `guiDialogFontSize=26`).
+- **Parche generado**: `Laboratorio/parches/2026-10-31-layout-4k-fix-v19.patch`.
+- **Git**: commit `af745d91f39` empujado a `origin upgrade/official-1.4.63V1`.

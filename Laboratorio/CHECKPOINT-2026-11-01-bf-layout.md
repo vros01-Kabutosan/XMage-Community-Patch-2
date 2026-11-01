@@ -83,3 +83,26 @@ arrancado y conectado al 17191, en el lobby, listo para "New Match".
   esta iteración.
 - Los diálogos de la captura del usuario (derrota + "game error") son ajenos a este
   cambio.
+
+## 7. v25 — feedback del smoke (2026-11-01 16:20)
+
+Kabutosan probó el build v24 en el laboratorio: **el scroll ya no aparece** con pocas
+cartas (objetivo principal cumplido), pero pidió dos ajustes:
+
+1. **Orden**: los permanentes deben ir debajo de las tierras. En v24 el campo del jugador
+   local ponía las criaturas arriba (comportamiento original de XMage) y el empaquetado
+   podía juntar tierras con permanentes en la misma fila. En v25:
+   - las filas se crean siempre en el orden tierras → no-permanentes → criaturas, en los
+     dos campos (commit `9ef038990f2`);
+   - `fillRow` no rellena filas de tierras y `packLeftoverIntoRow` solo empaqueta dentro del
+     mismo tipo (tierra con tierra, permanente con permanente).
+2. **Columna de logs**: no se podía redimensionar. v25 baja el mínimo de 380 px a ~160 px
+   en `splitChatAndLogs.setMinimumSize` y en los dos topes de `GamePanel`
+   (`normalizeSplitterLocation` y `applySplitterLocation`), conservando el rechazo de
+   divisores guardados degenerados.
+
+Parche: `Laboratorio/parches/2026-11-01-bf-layout-order-chat-v25.patch`.
+
+Imágenes/símbolos: el laboratorio no descarga arte ni símbolos de maná (limitación del
+entorno, no del cambio). Se han enlazado por junction `card` y `sounds` desde la
+instalación oficial para que el smoke se parezca más al cliente real.

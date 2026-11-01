@@ -1,0 +1,109 @@
+From 9ef038990f229dd0164bd4c24768f2d173aba41d Mon Sep 17 00:00:00 2001
+From: Kabutosan <kabutosan@localhost>
+Date: Sun, 1 Nov 2026 16:23:49 +0100
+Subject: [PATCH] Battlefield layout v25: lands row always on top with
+ permanents below, and allow shrinking the chat/logs column
+
+---
+ .../main/java/mage/client/game/GamePanel.java |  6 ++--
+ .../org/mage/plugins/card/CardPluginImpl.java | 32 +++++++++++--------
+ 2 files changed, 22 insertions(+), 16 deletions(-)
+
+diff --git a/Mage.Client/src/main/java/mage/client/game/GamePanel.java b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+index fbc8775ef51..943b90b4957 100644
+--- a/Mage.Client/src/main/java/mage/client/game/GamePanel.java
++++ b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+@@ -930,7 +930,7 @@ extends JPanel {
+         double actualRight = rightPixels / (double) splitWidth;
+ 
+         if (splitPane == this.splitBattlefieldAndChats) {
+-            int minChatWidth = Math.min(380, (int) Math.round(splitWidth * 0.15));
++            int minChatWidth = Math.min(160, (int) Math.round(splitWidth * 0.10));
+             if (rightPixels < minChatWidth || actualRight < expectedRight * 0.55 || actualRight > 1.0 - expectedRight * 0.35) {
+                 logger.info((Object)("Ignoring degenerate saved divider for battlefield/chats " + newLocation + " (" + splitWidth + " px wide, right " + rightPixels + " px, proportion " + actualRight + ")"));
+                 return -1;
+@@ -966,7 +966,7 @@ extends JPanel {
+             splitPane.getRightComponent().setMinimumSize(new Dimension());
+         }
+         if (splitPane == this.splitBattlefieldAndChats) {
+-            int minChatWidth = Math.max(380, GUISizeHelper.dialogGuiScaleSize(240));
++            int minChatWidth = Math.max(160, GUISizeHelper.dialogGuiScaleSize(110));
+             int maxDivider = splitPane.getWidth() - minChatWidth - splitPane.getDividerSize();
+             if (maxDivider > 0 && requested > maxDivider) {
+                 requested = maxDivider;
+@@ -2949,7 +2949,7 @@ extends JPanel {
+         this.splitGameAndBigCard.setResizeWeight(1.0);
+         this.splitGameAndBigCard.setOneTouchExpandable(true);
+         this.splitChatAndLogs = new JSplitPane();
+-        this.splitChatAndLogs.setMinimumSize(new Dimension(Math.max(350, GUISizeHelper.dialogGuiScaleSize(240)), 0));
++        this.splitChatAndLogs.setMinimumSize(new Dimension(Math.max(160, GUISizeHelper.dialogGuiScaleSize(110)), 0));
+         this.splitChatAndLogs.setOrientation(0);
+         this.splitChatAndLogs.setResizeWeight(0.0);
+         this.splitChatAndLogs.setTopComponent(this.userChatPanel);
+diff --git a/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java b/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java
+index 2f6e0ea4446..7c52586cb2a 100644
+--- a/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java
++++ b/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java
+@@ -301,19 +301,13 @@ public class CardPluginImpl implements CardPlugin {
+             Row lands = (Row) rowAllLands.clone();
+             Row others = (Row) rowAllOthers.clone();
+ 
+-            // Wrap all creatures and lands.
+-            int addOthersIndex;
+-            if (topPanel) {
+-                wrap(lands, rows, -1);
+-                wrap(others, rows, rows.size());
+-                addOthersIndex = rows.size();
+-                wrap(creatures, rows, addOthersIndex);
+-            } else {
+-                wrap(creatures, rows, -1);
+-                addOthersIndex = rows.size();
+-                wrap(lands, rows, rows.size());
+-                wrap(others, rows, rows.size());
+-            }
++            // Wrap all lands, non-permanents and creatures, always in that order: the lands
++            // stay on top of the battlefield and the permanents are placed below them (both
++            // for the local player and for the opponent).
++            wrap(lands, rows, -1);
++            wrap(others, rows, rows.size());
++            int addOthersIndex = rows.size();
++            wrap(creatures, rows, addOthersIndex);
+ 
+             // Keep the wrapped rows untouched, the packing attempts below reuse them.
+             List<Row> wrappedRows = cloneRows(rows);
+@@ -508,6 +502,10 @@ public class CardPluginImpl implements CardPlugin {
+     }
+ 
+     private void fillRow(Row sourceRow, List<Row> rows, Row row) {
++        // the lands row stays alone on top of the battlefield, permanents go below it
++        if (isLandRow(row)) {
++            return;
++        }
+         int rowWidth = row.getWidth();
+         while (!sourceRow.isEmpty()) {
+             Stack stack = sourceRow.get(0);
+@@ -566,6 +564,10 @@ public class CardPluginImpl implements CardPlugin {
+             return false;
+         }
+         Stack stack = sourceRow.get(0);
++        // lands and permanents never share a row: the lands keep their own row on top
++        if (isLandRow(row) != RowType.land.isType(stack.get(0))) {
++            return false;
++        }
+         if (getRowContentWidth(row) + stack.getWidth() + GUTTER_X * 2 > playAreaWidth) {
+             return false;
+         }
+@@ -587,6 +589,10 @@ public class CardPluginImpl implements CardPlugin {
+         return width;
+     }
+ 
++    private boolean isLandRow(Row row) {
++        return !row.isEmpty() && RowType.land.isType(row.get(0).get(0));
++    }
++
+     private int findFirstOtherStack(Row row) {
+         for (int i = 0; i < row.size(); i++) {
+             if (RowType.other.isType(row.get(i).get(0))) {
+-- 
+2.55.0.windows.3
+

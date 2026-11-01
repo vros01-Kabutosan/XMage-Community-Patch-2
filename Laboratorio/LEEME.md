@@ -55,8 +55,11 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
     - `MageFrame.doClientShutdownAndExit()`: cierre limpio garantizado con `Platform.exit()` y `System.exit(0)`.
 12. `Mage.Common/src/main/java/mage/utils/MageVersion.java` y `MageVersionException.java` (v2.3)
     - Declaración explícita de `serialVersionUID` canónico para compatibilidad binaria absoluta cliente-servidor por RMI/Bisocket (`-5872491576857560039L` y `9200806506119372910L`).
-13. `Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java` (v24)
-    - Auto-fit del campo de batalla: empaqueta tierras, criaturas y no-permanentes en las mismas filas cuando hay ancho, y permite bajar del tamaño mínimo configurado (hasta la mitad, nunca menos de 60 px) antes de activar el scroll vertical. Objetivo: no pedir desplazamiento hasta que el campo esté realmente lleno.
+13. `Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java` (v24 + v25)
+    - Auto-fit del campo de batalla: permite bajar del tamaño mínimo configurado (hasta la mitad, nunca menos de 60 px) antes de activar el scroll vertical. Objetivo: no pedir desplazamiento hasta que el campo esté realmente lleno.
+    - v25 (feedback de Kabutosan): la fila de tierras va siempre arriba y los permanentes debajo, en los dos campos. Tierras y permanentes ya no comparten fila ni se rellenan huecos entre ellos.
     - Traza de diagnóstico opcional con `-Dxmage.debug.bflayout=true`.
 14. `Mage.Client/src/main/java/mage/client/game/BattlefieldPanel.java` (v24)
     - `sortLayout()` no hace layout mientras el panel no tenga altura (un layout a altura 0 forzaba el tamaño mínimo y activaba el scrollbar).
+15. `Mage.Client/src/main/java/mage/client/game/GamePanel.java` (v25)
+    - El ancho mínimo de la columna de chat/logs baja de 380 px a ~160 px (arrastre y one-touch), manteniendo la protección contra divisores guardados degenerados al restaurar.

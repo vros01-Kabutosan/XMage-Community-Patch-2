@@ -66,3 +66,11 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
     - El ancho mínimo de la columna de chat/logs baja de 380 px a ~160 px (arrastre y one-touch), manteniendo la protección contra divisores guardados degenerados al restaurar.
 16. `Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java` y `mage/client/components/ColorPane.java` (v27)
     - El log de partida se actualiza siempre en el EDT y la pintura HTML tolera el fallo `BoxView.getOffset` del JDK repintando en vez de abortar con el diálogo "CLIENT - unhandled error in GUI".
+17. `Mage.Client/src/main/java/mage/client/cards/Cards.java` y `mage/client/game/GamePanel.java` (v28)
+    - Modernización integral de la Pila Flotante (*The Stack*):
+      - Fondo Obsidian/Slate con doble borde metálico y sombra suave de elevación.
+      - Cabecera interactiva con título dorado `PILA DE RESOLUCIÓN (N)`, botón de colapso rápido `[-]`/`[+]` y grip de redimensionamiento visible.
+      - Badges visuales LIFO: `#1 PRÓXIMO` (esmeralda brillante) en la carta que va a resolver y `#2`, `#3`... en capas inferiores.
+      - Supresión de iconos de permanentes confusos (como `ABILITY_REACH`) en habilidades disparadas de la pila.
+      - HUD con información clara de orden, controlador, tipo (`⚡ Habilidad Disparada / Hechizo`) y objetivo dinámico (`🎯 Objetivo: <Nombre>`).
+      - Sombras 3D entre cartas apiladas verticalmente para mayor sensación de profundidad.

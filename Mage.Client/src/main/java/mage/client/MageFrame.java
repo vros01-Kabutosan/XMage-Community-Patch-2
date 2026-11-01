@@ -1732,10 +1732,30 @@ implements MageClient {
     }
 
     private void doClientShutdownAndExit() {
-        this.tablesPane.cleanUp();
-        CardRepository.instance.closeDB(true);
-        Plugins.instance.shutdown();
-        this.dispose();
+        try {
+            this.tablesPane.cleanUp();
+        } catch (Throwable t) {
+            LOGGER.error("Error during tablesPane.cleanUp", t);
+        }
+        try {
+            CardRepository.instance.closeDB(true);
+        } catch (Throwable t) {
+            LOGGER.error("Error during CardRepository.closeDB", t);
+        }
+        try {
+            Plugins.instance.shutdown();
+        } catch (Throwable t) {
+            LOGGER.error("Error during Plugins.shutdown", t);
+        }
+        try {
+            this.dispose();
+        } catch (Throwable t) {
+            LOGGER.error("Error during MageFrame.dispose", t);
+        }
+        try {
+            javafx.application.Platform.exit();
+        } catch (Throwable ignore) {
+        }
         System.exit(0);
     }
 

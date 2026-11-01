@@ -59,21 +59,35 @@ public enum CardRepository {
         if (!file.exists()) {
             file.mkdirs();
         }
+        ConnectionSource connectionSource = null;
         try {
-            ConnectionSource connectionSource = new JdbcConnectionSource(DatabaseUtils.prepareH2Connection(DatabaseUtils.DB_NAME_CARDS, true));
-
-            boolean isObsolete = RepositoryUtil.isDatabaseObsolete(connectionSource, VERSION_ENTITY_NAME, CARD_DB_VERSION);
-            boolean isNewBuild = RepositoryUtil.isNewBuildRun(connectionSource, VERSION_ENTITY_NAME, CardRepository.class); // recreate db on new build
-            if (isObsolete || isNewBuild) {
-                //System.out.println("Local cards db is outdated, cleaning...");
-                TableUtils.dropTable(connectionSource, CardInfo.class, true);
-            }
-
-            TableUtils.createTableIfNotExists(connectionSource, CardInfo.class);
-            cardsDao = DaoManager.createDao(connectionSource, CardInfo.class);
+            connectionSource = new JdbcConnectionSource(DatabaseUtils.prepareH2Connection(DatabaseUtils.DB_NAME_CARDS, true));
         } catch (SQLException e) {
-            Logger.getLogger(CardRepository.class).error("Error creating card repository - " + e, e);
-            processMemoryErrors(e);
+            Logger.getLogger(CardRepository.class).warn("Initial connection to card repository failed (" + e.getMessage() + "), checking for stale lock...");
+            DatabaseUtils.checkAndFixStaleH2Lock(DatabaseUtils.DB_NAME_CARDS);
+            try {
+                connectionSource = new JdbcConnectionSource(DatabaseUtils.prepareH2Connection(DatabaseUtils.DB_NAME_CARDS, true));
+                Logger.getLogger(CardRepository.class).info("Connection to card repository recovered successfully after stale lock cleanup.");
+            } catch (SQLException ex) {
+                Logger.getLogger(CardRepository.class).error("Error creating card repository - " + ex, ex);
+                processMemoryErrors(ex);
+            }
+        }
+        if (connectionSource != null) {
+            try {
+                boolean isObsolete = RepositoryUtil.isDatabaseObsolete(connectionSource, VERSION_ENTITY_NAME, CARD_DB_VERSION);
+                boolean isNewBuild = RepositoryUtil.isNewBuildRun(connectionSource, VERSION_ENTITY_NAME, CardRepository.class); // recreate db on new build
+                if (isObsolete || isNewBuild) {
+                    //System.out.println("Local cards db is outdated, cleaning...");
+                    TableUtils.dropTable(connectionSource, CardInfo.class, true);
+                }
+
+                TableUtils.createTableIfNotExists(connectionSource, CardInfo.class);
+                cardsDao = DaoManager.createDao(connectionSource, CardInfo.class);
+            } catch (SQLException e) {
+                Logger.getLogger(CardRepository.class).error("Error configuring card repository tables - " + e, e);
+                processMemoryErrors(e);
+            }
         }
     }
 

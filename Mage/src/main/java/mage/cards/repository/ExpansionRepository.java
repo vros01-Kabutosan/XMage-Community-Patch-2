@@ -41,26 +41,37 @@ public enum ExpansionRepository {
         if (!file.exists()) {
             file.mkdirs();
         }
+        ConnectionSource connectionSource = null;
         try {
-            ConnectionSource connectionSource = new JdbcConnectionSource(DatabaseUtils.prepareH2Connection(DatabaseUtils.DB_NAME_CARDS, true));
-
-            boolean isObsolete = RepositoryUtil.isDatabaseObsolete(connectionSource, VERSION_ENTITY_NAME, EXPANSION_DB_VERSION);
-            boolean isNewBuild = RepositoryUtil.isNewBuildRun(connectionSource, VERSION_ENTITY_NAME, ExpansionRepository.class); // recreate db on new build
-            if (isObsolete || isNewBuild) {
-                //System.out.println("Local sets db is outdated, cleaning...");
-                TableUtils.dropTable(connectionSource, ExpansionInfo.class, true);
-            }
-
-            TableUtils.createTableIfNotExists(connectionSource, ExpansionInfo.class);
-            expansionDao = DaoManager.createDao(connectionSource, ExpansionInfo.class);
-            instanceInitialized = true;
-
-            eventSource.fireRepositoryDbLoaded();
+            connectionSource = new JdbcConnectionSource(DatabaseUtils.prepareH2Connection(DatabaseUtils.DB_NAME_CARDS, true));
         } catch (SQLException e) {
-            // TODO: add app close?
-            e.printStackTrace();
+            Logger.getLogger(ExpansionRepository.class).warn("Initial connection to expansion repository failed (" + e.getMessage() + "), checking for stale lock...");
+            DatabaseUtils.checkAndFixStaleH2Lock(DatabaseUtils.DB_NAME_CARDS);
+            try {
+                connectionSource = new JdbcConnectionSource(DatabaseUtils.prepareH2Connection(DatabaseUtils.DB_NAME_CARDS, true));
+                Logger.getLogger(ExpansionRepository.class).info("Connection to expansion repository recovered successfully after stale lock cleanup.");
+            } catch (SQLException ex) {
+                Logger.getLogger(ExpansionRepository.class).error("Error creating expansion repository - " + ex, ex);
+            }
         }
+        if (connectionSource != null) {
+            try {
+                boolean isObsolete = RepositoryUtil.isDatabaseObsolete(connectionSource, VERSION_ENTITY_NAME, EXPANSION_DB_VERSION);
+                boolean isNewBuild = RepositoryUtil.isNewBuildRun(connectionSource, VERSION_ENTITY_NAME, ExpansionRepository.class); // recreate db on new build
+                if (isObsolete || isNewBuild) {
+                    //System.out.println("Local sets db is outdated, cleaning...");
+                    TableUtils.dropTable(connectionSource, ExpansionInfo.class, true);
+                }
 
+                TableUtils.createTableIfNotExists(connectionSource, ExpansionInfo.class);
+                expansionDao = DaoManager.createDao(connectionSource, ExpansionInfo.class);
+                instanceInitialized = true;
+
+                eventSource.fireRepositoryDbLoaded();
+            } catch (SQLException e) {
+                Logger.getLogger(ExpansionRepository.class).error("Error configuring expansion repository tables - " + e, e);
+            }
+        }
     }
 
     /**

@@ -1,6 +1,14 @@
 package mage.cards.repository;
 
 import mage.util.DebugUtil;
+import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.Properties;
 
 /**
  * Helper class for database
@@ -8,6 +16,16 @@ import mage.util.DebugUtil;
  * @author JayDi85
  */
 public class DatabaseUtils {
+
+    private static final Logger logger = Logger.getLogger(DatabaseUtils.class);
+
+    static {
+        // Ensure H2 binds and advertises localhost (127.0.0.1) for AUTO_SERVER
+        // instead of binding to or advertising external / VPN / TAP virtual adapter addresses.
+        if (System.getProperty("h2.bindAddress") == null) {
+            System.setProperty("h2.bindAddress", "127.0.0.1");
+        }
+    }
 
     // warning, do not change names or db format
     // h2
@@ -25,6 +43,11 @@ public class DatabaseUtils {
      * @param improveCaches use memory optimizations for cards database (no needs for other dbs)
      */
     public static String prepareH2Connection(String dbName, boolean improveCaches) {
+        if (System.getProperty("h2.bindAddress") == null) {
+            System.setProperty("h2.bindAddress", "127.0.0.1");
+        }
+        checkAndFixStaleH2Lock(dbName);
+
         // example: jdbc:h2:file:./db/cards.h2;AUTO_SERVER=TRUE;IGNORECASE=TRUE
         String res = String.format("jdbc:h2:file:./db/%s", dbName);
 
@@ -55,6 +78,58 @@ public class DatabaseUtils {
         }
 
         return res;
+    }
+
+    /**
+     * Check if a stale or unreachable .lock.db file exists from a previous crash,
+     * killed process, or disconnected VPN/network interface, and delete it to prevent
+     * SocketTimeoutException on startup.
+     */
+    public static void checkAndFixStaleH2Lock(String dbName) {
+        try {
+            File lockFile = new File("db/" + dbName + ".lock.db");
+            if (!lockFile.exists() || !lockFile.isFile()) {
+                return;
+            }
+            Properties props = new Properties();
+            try (FileInputStream in = new FileInputStream(lockFile)) {
+                props.load(in);
+            }
+            String server = props.getProperty("server");
+            if (server == null || server.trim().isEmpty()) {
+                logger.warn("Cleaning corrupt H2 lock file: " + lockFile.getName());
+                lockFile.delete();
+                return;
+            }
+            String[] parts = server.split(":");
+            String host = parts[0].trim();
+            int port = parts.length > 1 ? Integer.parseInt(parts[1].trim()) : 0;
+
+            boolean isDeadOrUnreachable = false;
+            if (!"localhost".equalsIgnoreCase(host) && !"127.0.0.1".equals(host)) {
+                // External / VPN / virtual TAP address recorded in lock file
+                isDeadOrUnreachable = true;
+            } else if (port > 0) {
+                // Test if the server process on localhost is actually alive and listening
+                try (Socket s = new Socket()) {
+                    s.connect(new InetSocketAddress(host, port), 300);
+                } catch (IOException ex) {
+                    isDeadOrUnreachable = true;
+                }
+            } else {
+                isDeadOrUnreachable = true;
+            }
+
+            if (isDeadOrUnreachable) {
+                logger.warn("Found stale/unreachable H2 lock file " + lockFile.getName() + " pointing to " + server + ". Cleaning up...");
+                boolean deleted = lockFile.delete();
+                if (!deleted) {
+                    lockFile.deleteOnExit();
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Could not check/clean H2 lock file for " + dbName + ": " + e.getMessage());
+        }
     }
 
     /**

@@ -930,7 +930,7 @@ extends JPanel {
         double actualRight = rightPixels / (double) splitWidth;
 
         if (splitPane == this.splitBattlefieldAndChats) {
-            int minChatWidth = Math.min(380, (int) Math.round(splitWidth * 0.15));
+            int minChatWidth = Math.min(160, (int) Math.round(splitWidth * 0.10));
             if (rightPixels < minChatWidth || actualRight < expectedRight * 0.55 || actualRight > 1.0 - expectedRight * 0.35) {
                 logger.info((Object)("Ignoring degenerate saved divider for battlefield/chats " + newLocation + " (" + splitWidth + " px wide, right " + rightPixels + " px, proportion " + actualRight + ")"));
                 return -1;
@@ -966,7 +966,7 @@ extends JPanel {
             splitPane.getRightComponent().setMinimumSize(new Dimension());
         }
         if (splitPane == this.splitBattlefieldAndChats) {
-            int minChatWidth = Math.max(380, GUISizeHelper.dialogGuiScaleSize(240));
+            int minChatWidth = Math.max(160, GUISizeHelper.dialogGuiScaleSize(110));
             int maxDivider = splitPane.getWidth() - minChatWidth - splitPane.getDividerSize();
             if (maxDivider > 0 && requested > maxDivider) {
                 requested = maxDivider;
@@ -2949,7 +2949,7 @@ extends JPanel {
         this.splitGameAndBigCard.setResizeWeight(1.0);
         this.splitGameAndBigCard.setOneTouchExpandable(true);
         this.splitChatAndLogs = new JSplitPane();
-        this.splitChatAndLogs.setMinimumSize(new Dimension(Math.max(350, GUISizeHelper.dialogGuiScaleSize(240)), 0));
+        this.splitChatAndLogs.setMinimumSize(new Dimension(Math.max(160, GUISizeHelper.dialogGuiScaleSize(110)), 0));
         this.splitChatAndLogs.setOrientation(0);
         this.splitChatAndLogs.setResizeWeight(0.0);
         this.splitChatAndLogs.setTopComponent(this.userChatPanel);

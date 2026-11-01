@@ -301,19 +301,13 @@ public class CardPluginImpl implements CardPlugin {
             Row lands = (Row) rowAllLands.clone();
             Row others = (Row) rowAllOthers.clone();
 
-            // Wrap all creatures and lands.
-            int addOthersIndex;
-            if (topPanel) {
-                wrap(lands, rows, -1);
-                wrap(others, rows, rows.size());
-                addOthersIndex = rows.size();
-                wrap(creatures, rows, addOthersIndex);
-            } else {
-                wrap(creatures, rows, -1);
-                addOthersIndex = rows.size();
-                wrap(lands, rows, rows.size());
-                wrap(others, rows, rows.size());
-            }
+            // Wrap all lands, non-permanents and creatures, always in that order: the lands
+            // stay on top of the battlefield and the permanents are placed below them (both
+            // for the local player and for the opponent).
+            wrap(lands, rows, -1);
+            wrap(others, rows, rows.size());
+            int addOthersIndex = rows.size();
+            wrap(creatures, rows, addOthersIndex);
 
             // Keep the wrapped rows untouched, the packing attempts below reuse them.
             List<Row> wrappedRows = cloneRows(rows);
@@ -508,6 +502,10 @@ public class CardPluginImpl implements CardPlugin {
     }
 
     private void fillRow(Row sourceRow, List<Row> rows, Row row) {
+        // the lands row stays alone on top of the battlefield, permanents go below it
+        if (isLandRow(row)) {
+            return;
+        }
         int rowWidth = row.getWidth();
         while (!sourceRow.isEmpty()) {
             Stack stack = sourceRow.get(0);
@@ -566,6 +564,10 @@ public class CardPluginImpl implements CardPlugin {
             return false;
         }
         Stack stack = sourceRow.get(0);
+        // lands and permanents never share a row: the lands keep their own row on top
+        if (isLandRow(row) != RowType.land.isType(stack.get(0))) {
+            return false;
+        }
         if (getRowContentWidth(row) + stack.getWidth() + GUTTER_X * 2 > playAreaWidth) {
             return false;
         }
@@ -585,6 +587,10 @@ public class CardPluginImpl implements CardPlugin {
             width += stack.getWidth();
         }
         return width;
+    }
+
+    private boolean isLandRow(Row row) {
+        return !row.isEmpty() && RowType.land.isType(row.get(0).get(0));
     }
 
     private int findFirstOtherStack(Row row) {

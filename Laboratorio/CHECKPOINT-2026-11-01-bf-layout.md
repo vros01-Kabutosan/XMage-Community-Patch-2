@@ -106,3 +106,22 @@ Parche: `Laboratorio/parches/2026-11-01-bf-layout-order-chat-v25.patch`.
 Imágenes/símbolos: el laboratorio no descarga arte ni símbolos de maná (limitación del
 entorno, no del cambio). Se han enlazado por junction `card` y `sounds` desde la
 instalación oficial para que el smoke se parezca más al cliente real.
+
+## 8. v26 — instalación oficial (2026-11-01 16:55)
+
+Kabutosan desplegó v25 en su instalación y reportó: el orden quedaba "al revés" (tierras
+antes que permanentes en su propio campo) y las cartas salían más pequeñas de lo posible.
+
+- **Orden**: se restaura el layout espejado. Campo local: criaturas arriba, tierras debajo.
+  Campo del rival: tierras arriba, criaturas debajo. Se mantiene que tierras y permanentes
+  no compartan fila.
+- **Tamaño**: el auto-fit medía la altura con un cálculo conservador
+  (`getRowsHeight`: dos gutters menos `cardSpacingY`). Ahora usa `getFinalLayoutHeight`
+  (gutter + suma de filas, exactamente la altura que se devuelve como `preferredSize`), así
+  que aprovecha el alto real del panel. Además el paso de búsqueda baja de 10 px a 2 px,
+  con lo que la carta queda a 1-2 px del máximo que cabe sin scrollbar.
+- Desplegado en `Instalacion-XMage\xmage\mage-client\lib\mage-client-1.4.63.jar`
+  (hash `8F80738C…4E467`), backup previo en
+  `backup-jars-1.4.63-20261101_bf-layout-v26\mage-client-1.4.63.jar` (v25, `A54327C3…`).
+- Cliente oficial relanzado y conectado a 17171 para la comprobación visual.
+- Parche: `Laboratorio/parches/2026-11-01-bf-layout-fit-v26.patch` (commit `5e1d66511fe`).

@@ -1,0 +1,125 @@
+From 5e1d66511fe69b4acf6865f72ca9d2f707df5c69 Mon Sep 17 00:00:00 2001
+From: Kabutosan <kabutosan@localhost>
+Date: Sun, 1 Nov 2026 16:56:37 +0100
+Subject: [PATCH] Battlefield layout v26: mirrored rows again, exact fit height
+ and 2px auto-fit step (bigger cards without scrollbars)
+
+---
+ .../org/mage/plugins/card/CardPluginImpl.java | 55 ++++++++++++-------
+ 1 file changed, 36 insertions(+), 19 deletions(-)
+
+diff --git a/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java b/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java
+index 7c52586cb2a..23cc8a42ad7 100644
+--- a/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java
++++ b/Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java
+@@ -60,9 +60,9 @@ public class CardPluginImpl implements CardPlugin {
+     private static final int cardStackMax = 5;
+     private int cardWidthMin = (int) GUISizeHelper.battlefieldCardMinDimension.getWidth();
+     private int cardWidthMax = (int) GUISizeHelper.battlefieldCardMaxDimension.getWidth();
+-    // card width increment for auto-size searching (bigger value - faster draw
+-    // speed on screen size, but not as accurate)
+-    private static final int CARD_WIDTH_AUTO_FIT_INCREMENT = 10;
++    // card width increment for auto-size searching (smaller value = cards closer to the
++    // biggest size that still fits without scrollbars, but more layout iterations)
++    private static final int CARD_WIDTH_AUTO_FIT_INCREMENT = 2;
+     // the auto-fit can shrink the cards below the configured minimum (but never below
+     // this width) to keep the vertical scrollbar disabled while the battlefield has only
+     // a few permanents on it
+@@ -301,13 +301,21 @@ public class CardPluginImpl implements CardPlugin {
+             Row lands = (Row) rowAllLands.clone();
+             Row others = (Row) rowAllOthers.clone();
+ 
+-            // Wrap all lands, non-permanents and creatures, always in that order: the lands
+-            // stay on top of the battlefield and the permanents are placed below them (both
+-            // for the local player and for the opponent).
+-            wrap(lands, rows, -1);
+-            wrap(others, rows, rows.size());
+-            int addOthersIndex = rows.size();
+-            wrap(creatures, rows, addOthersIndex);
++            // Wrap all creatures, lands and non-permanents. The rows are mirrored between both
++            // battlefields: the local player keeps the creatures on top and the lands below,
++            // while the opponent shows the lands on top and the creatures below.
++            int addOthersIndex;
++            if (topPanel) {
++                wrap(lands, rows, -1);
++                wrap(others, rows, rows.size());
++                addOthersIndex = rows.size();
++                wrap(creatures, rows, addOthersIndex);
++            } else {
++                wrap(creatures, rows, -1);
++                addOthersIndex = rows.size();
++                wrap(lands, rows, rows.size());
++                wrap(others, rows, rows.size());
++            }
+ 
+             // Keep the wrapped rows untouched, the packing attempts below reuse them.
+             List<Row> wrappedRows = cloneRows(rows);
+@@ -475,7 +483,7 @@ public class CardPluginImpl implements CardPlugin {
+                 if (!allowHeightOverflow && rowWidth > playAreaWidth) {
+                     break;
+                 }
+-                if (!allowHeightOverflow && getRowsHeight(rows) + sourceRow.getHeight() > playAreaHeight) {
++                if (!allowHeightOverflow && getFinalLayoutHeight(rows, currentRow.getHeight()) > playAreaHeight) {
+                     break;
+                 }
+                 rows.add(insertIndex == -1 ? rows.size() : insertIndex, currentRow);
+@@ -487,7 +495,7 @@ public class CardPluginImpl implements CardPlugin {
+         if (!currentRow.isEmpty()) {
+             int rowWidth = currentRow.getWidth();
+             if (allowHeightOverflow || rowWidth <= playAreaWidth) {
+-                if (allowHeightOverflow || getRowsHeight(rows) + sourceRow.getHeight() <= playAreaHeight) {
++                if (allowHeightOverflow || getFinalLayoutHeight(rows, currentRow.getHeight()) <= playAreaHeight) {
+                     rows.add(insertIndex == -1 ? rows.size() : insertIndex, currentRow);
+                 }
+             }
+@@ -514,23 +522,32 @@ public class CardPluginImpl implements CardPlugin {
+                 break;
+             }
+             if (stack.getHeight() > row.getHeight()
+-                    && getRowsHeight(rows) - row.getHeight() + stack.getHeight() > playAreaHeight) {
++                    && getFinalLayoutHeight(rows, row.getHeight()) - row.getHeight() + stack.getHeight() > playAreaHeight) {
+                 break;
+             }
+             row.add(sourceRow.remove(0));
+         }
+     }
+ 
+-    private int getRowsHeight(List<Row> rows) {
+-        int height = 0;
++    /**
++     * Height the battlefield needs with the given rows plus one extra row, measured the same
++     * way as the final layout (top gutter + rows). This is the value that decides whether the
++     * vertical scrollbar appears, so the auto-fit compares against it instead of guessing with
++     * extra gutters and spacings (that made the cards smaller than needed).
++     */
++    private int getFinalLayoutHeight(List<Row> rows, int extraRowHeight) {
++        int height = getEffectiveGutterY() + extraRowHeight;
+         for (Row row : rows) {
+             height += row.getHeight();
+         }
+-        int effectiveGutterY = GUTTER_Y;
++        return height;
++    }
++
++    private int getEffectiveGutterY() {
+         if (cardWidth > 0 && cardHeight > 0) {
+-            effectiveGutterY = Math.max(GUTTER_Y, MageLayer.getAnimationOuterSpace(cardWidth, cardHeight).getTop() + 6);
++            return Math.max(GUTTER_Y, MageLayer.getAnimationOuterSpace(cardWidth, cardHeight).getTop() + 6);
+         }
+-        return height - cardSpacingY + effectiveGutterY * 2;
++        return GUTTER_Y;
+     }
+ 
+     private List<Row> cloneRows(List<Row> source) {
+@@ -572,7 +589,7 @@ public class CardPluginImpl implements CardPlugin {
+             return false;
+         }
+         if (stack.getHeight() > row.getHeight()
+-                && getRowsHeight(rows) - row.getHeight() + stack.getHeight() > playAreaHeight) {
++                && getFinalLayoutHeight(rows, row.getHeight()) - row.getHeight() + stack.getHeight() > playAreaHeight) {
+             return false;
+         }
+         sourceRow.remove(0);
+-- 
+2.55.0.windows.3
+

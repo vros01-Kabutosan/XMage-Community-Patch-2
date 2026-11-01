@@ -125,3 +125,32 @@ antes que permanentes en su propio campo) y las cartas salían más pequeñas de
   `backup-jars-1.4.63-20261101_bf-layout-v26\mage-client-1.4.63.jar` (v25, `A54327C3…`).
 - Cliente oficial relanzado y conectado a 17171 para la comprobación visual.
 - Parche: `Laboratorio/parches/2026-11-01-bf-layout-fit-v26.patch` (commit `5e1d66511fe`).
+
+## 9. v27 — error de GUI en el log de partida (2026-11-01 17:18)
+
+Durante una partida salió el diálogo `CLIENT - unhandled error in GUI -
+ArrayIndexOutOfBoundsException`. El stack del `mageclient.log` señala al renderizado HTML
+del chat/log, no al campo de batalla:
+
+```
+java.lang.ArrayIndexOutOfBoundsException: 163
+  at javax.swing.text.BoxView.getOffset(BoxView.java:1101)
+  at javax.swing.text.BoxView.paint(...)
+  at javax.swing.text.html.BlockView.paint(...)
+  at javax.swing.plaf.synth.SynthEditorPaneUI.paint(...)
+  at mage.client.components.ColorPane.paintChildren(ColorPane.java:52)
+```
+
+Es el fallo conocido del visor HTML de Swing cuando el documento se modifica mientras se
+está pintando. Cambios (commit `05150250309`):
+
+- `ChatPanelBasic`: los mensajes se añaden con `appendToConversation`, que fuerza el EDT
+  (`invokeLater`) cuando la llamada llega desde un hilo de callback.
+- `ColorPane`: `paintChildren`/`paintComponent` capturan el `ArrayIndexOutOfBoundsException`
+  del `BoxView` y programan un `repaint()` en vez de dejar que suba al `EDTExceptionHandler`
+  (el diálogo bloqueante). Es un guardián: no oculta la causa, evita el diálogo y el frame
+  perdido se repinta.
+
+Desplegado: jar hash `40C10814…D1C6E`, backup previo en
+`backup-jars-1.4.63-20261101_chat-paint-fix-v27\`, cliente relanzado a 17171.
+Parche: `Laboratorio/parches/2026-11-01-chat-paint-fix-v27.patch`.

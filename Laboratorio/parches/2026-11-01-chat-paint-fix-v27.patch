@@ -1,0 +1,90 @@
+From 051502503090f6d364e1c84a8d492baec9f05c8b Mon Sep 17 00:00:00 2001
+From: Kabutosan <kabutosan@localhost>
+Date: Sun, 1 Nov 2026 17:21:20 +0100
+Subject: [PATCH] Chat log: update the html document on the EDT and guard the
+ html paint against the JDK BoxView crash (v27)
+
+---
+ .../java/mage/client/chat/ChatPanelBasic.java | 20 ++++++++++++++++---
+ .../mage/client/components/ColorPane.java     | 14 +++++++++++--
+ 2 files changed, 29 insertions(+), 5 deletions(-)
+
+diff --git a/Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java b/Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java
+index 94530bdf18f..37d7d15a912 100644
+--- a/Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java
++++ b/Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java
+@@ -272,16 +272,16 @@ public class ChatPanelBasic extends javax.swing.JPanel {
+                 text.append(getColoredText(userColor, username + userSeparator));
+             }
+             text.append(getColoredText(textColor, ManaSymbols.replaceSymbolsWithHTML(message, ManaSymbols.Type.CHAT)));
+-            this.txtConversation.append(text.toString());
++            appendToConversation(text.toString());
+         } else if (cachedProfanityFilterValue.equals("1")) {
+             if (username != null && !username.isEmpty()) {
+                 text.append(getColoredText("black", username + userSeparator));
+             }
+             text.append(getColoredText(textColor, ManaSymbols.replaceSymbolsWithHTML("<font color=black size=-2>" + message + "</font> <font size=-2>Profanity detected.  Type: <font color=green>/w " + SessionHandler.getUserName() + " profanity 0</font>' to turn the filter off</font></font>", ManaSymbols.Type.CHAT)));
+-            this.txtConversation.append(text.toString());
++            appendToConversation(text.toString());
+         } else if (cachedProfanityFilterValue.equals("2")) {
+             text.append(getColoredText(textColor, ManaSymbols.replaceSymbolsWithHTML("<font color=black size=-2>" + username + ": Profanity detected.  To make it less strict, type: </font> <font color=green size=-2>/w " + SessionHandler.getUserName() + " profanity 1</font>", ManaSymbols.Type.CHAT)));
+-            this.txtConversation.append(text.toString());
++            appendToConversation(text.toString());
+         }
+     }
+ 
+@@ -293,6 +293,20 @@ public class ChatPanelBasic extends javax.swing.JPanel {
+         return "<font color='" + color + "'>" + text + "</font>";
+     }
+ 
++    /**
++     * Appends a message to the conversation. Swing only allows to modify the document from
++     * the EDT: the game log was updated from the callback threads, and changing the html
++     * document while it was painted corrupted the view (ArrayIndexOutOfBoundsException in
++     * BoxView.getOffset, seen as "CLIENT - unhandled error in GUI").
++     */
++    private void appendToConversation(String text) {
++        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
++            txtConversation.append(text);
++        } else {
++            javax.swing.SwingUtilities.invokeLater(() -> txtConversation.append(text));
++        }
++    }
++
+     public String getText() {
+         return txtConversation.getText();
+     }
+diff --git a/Mage.Client/src/main/java/mage/client/components/ColorPane.java b/Mage.Client/src/main/java/mage/client/components/ColorPane.java
+index ed70cc9f0a7..8db0d08bd90 100644
+--- a/Mage.Client/src/main/java/mage/client/components/ColorPane.java
++++ b/Mage.Client/src/main/java/mage/client/components/ColorPane.java
+@@ -49,7 +49,13 @@ public class ColorPane extends MageEditorPane {
+     @Override
+     public void paintChildren(Graphics g) {
+         // TODO: research, maybe no needs in good opaque + background settings
+-        super.paintComponent(g);
++        try {
++            super.paintComponent(g);
++        } catch (ArrayIndexOutOfBoundsException ex) {
++            // known JDK html bug (BoxView.getOffset) when the document is updated while it is
++            // painted; skip this frame and repaint later instead of breaking the whole client
++            SwingUtilities.invokeLater(this::repaint);
++        }
+     }
+ 
+     /**
+@@ -60,6 +66,10 @@ public class ColorPane extends MageEditorPane {
+     @Override
+     public void paintComponent(Graphics g) {
+         // TODO: research, maybe no needs in good opaque + background settings
+-        super.paintChildren(g);
++        try {
++            super.paintChildren(g);
++        } catch (ArrayIndexOutOfBoundsException ex) {
++            SwingUtilities.invokeLater(this::repaint);
++        }
+     }
+ }
+-- 
+2.55.0.windows.3
+

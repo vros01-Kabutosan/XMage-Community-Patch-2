@@ -64,3 +64,5 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
     - `sortLayout()` no hace layout mientras el panel no tenga altura (un layout a altura 0 forzaba el tamaño mínimo y activaba el scrollbar).
 15. `Mage.Client/src/main/java/mage/client/game/GamePanel.java` (v25)
     - El ancho mínimo de la columna de chat/logs baja de 380 px a ~160 px (arrastre y one-touch), manteniendo la protección contra divisores guardados degenerados al restaurar.
+16. `Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java` y `mage/client/components/ColorPane.java` (v27)
+    - El log de partida se actualiza siempre en el EDT y la pintura HTML tolera el fallo `BoxView.getOffset` del JDK repintando en vez de abortar con el diálogo "CLIENT - unhandled error in GUI".

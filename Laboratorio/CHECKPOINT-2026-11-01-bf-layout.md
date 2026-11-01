@@ -68,6 +68,12 @@
 Si el smoke pasa: backup de jars oficiales y despliegue de `mage-client-1.4.63.jar` en
 `Instalacion-XMage/xmage/mage-client/lib/`.
 
+**Estado a 2026-11-01 16:15:** el smoke visual sigue pendiente. La automatización de la UI
+desde el agente no es fiable en este equipo: `mouse_event` y `SendInput` no llegan a la
+ventana Java (solo funcionó la activación de ventana y algún `SendKeys` aislado), así que
+la partida de prueba la tiene que abrir Kabutosan. El cliente de laboratorio queda
+arrancado y conectado al 17191, en el lobby, listo para "New Match".
+
 ## 6. Pendiente / no incluido
 
 - **Columna de logs** (chat+logs a la derecha): sigue con el mínimo de 380 px impuesto en

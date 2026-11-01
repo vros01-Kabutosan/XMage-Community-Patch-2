@@ -315,7 +315,9 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
     }
 
     public void sortLayout() {
-        if (battlefield == null || this.getWidth() < 1) { // Can't do layout when panel is not sized yet
+        // Can't do layout when panel is not sized yet: a zero height would force the
+        // auto-fit to fall back to the minimum card size and enable the scrollbars.
+        if (battlefield == null || this.getWidth() < 1 || this.getHeight() < 1) {
             return;
         }
 

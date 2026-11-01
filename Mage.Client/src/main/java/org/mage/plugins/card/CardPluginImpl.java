@@ -63,8 +63,15 @@ public class CardPluginImpl implements CardPlugin {
     // card width increment for auto-size searching (bigger value - faster draw
     // speed on screen size, but not as accurate)
     private static final int CARD_WIDTH_AUTO_FIT_INCREMENT = 10;
+    // the auto-fit can shrink the cards below the configured minimum (but never below
+    // this width) to keep the vertical scrollbar disabled while the battlefield has only
+    // a few permanents on it
+    private static final int CARD_WIDTH_HARD_MIN = 60;
 
     private static final boolean stackVertical = false;
+
+    // debug: print the battlefield auto-fit decisions (-Dxmage.debug.bflayout=true)
+    private static final boolean DEBUG_LAYOUT = Boolean.getBoolean("xmage.debug.bflayout");
 
     private int playAreaWidth, playAreaHeight;
     private int cardWidth, cardHeight;
@@ -308,32 +315,53 @@ public class CardPluginImpl implements CardPlugin {
                 wrap(others, rows, rows.size());
             }
 
-            // Store the current rows and others.
-            List<Row> storedRows = new ArrayList<>(rows.size());
-            for (Row row : rows) {
-                storedRows.add((Row) row.clone());
-            }
+            // Keep the wrapped rows untouched, the packing attempts below reuse them.
+            List<Row> wrappedRows = cloneRows(rows);
             Row storedOthers = (Row) others.clone();
-            // Fill in all rows with others.
+
+            // Attempt 1: fill the wrapped rows with the non-permanent cards.
             for (Row row : rows) {
                 fillRow(others, rows, row);
             }
 
-            // Stop if everything fits, otherwise revert back to the stored values.
+            // Stop if everything fits, otherwise retry with the stored values.
             if (creatures.isEmpty() && lands.isEmpty() && others.isEmpty()) {
                 break;
             }
-            rows = storedRows;
-            others = storedOthers;
-            // Try to put others on their own row(s) and fill in the rest.
+
+            // Attempt 2: put the non-permanent cards on their own row(s) and fill the rest.
+            rows = cloneRows(wrappedRows);
+            others = (Row) storedOthers.clone();
             wrap(others, rows, addOthersIndex);
             for (Row row : rows) {
                 fillRow(others, rows, row);
+            }
+            if (creatures.isEmpty() && lands.isEmpty() && others.isEmpty()) {
+                break;
+            }
+
+            // Attempt 3: pack the leftover lands and creatures inside the rows that are
+            // already wrapped. Rows used to be split by card type, so a wide and short
+            // battlefield needed one vertical row per type and started to scroll with only
+            // a few permanents on it. Packing them together keeps the cards on screen (and
+            // bigger) until the battlefield is really full.
+            rows = cloneRows(wrappedRows);
+            others = (Row) storedOthers.clone();
+            fillRowsWithLeftovers(rows, others, lands, creatures);
+            if (!others.isEmpty()) {
+                wrap(others, rows, rows.size());
+            }
+            if (!lands.isEmpty()) {
+                wrap(lands, rows, rows.size());
+            }
+            if (!creatures.isEmpty()) {
+                wrap(creatures, rows, rows.size());
             }
             // If that still doesn't fit, scale down.
             if (creatures.isEmpty() && lands.isEmpty() && others.isEmpty()) {
                 break;
             }
+
             cardWidth -= CARD_WIDTH_AUTO_FIT_INCREMENT;
         }
 
@@ -409,6 +437,17 @@ public class CardPluginImpl implements CardPlugin {
         // scrollbars speed
         scrollPane.getVerticalScrollBar().setUnitIncrement(GUISizeHelper.getCardsScrollbarUnitInc(cardHeight));
 
+        if (DEBUG_LAYOUT) {
+            Dimension viewport = scrollPane.getViewport().getExtentSize();
+            LOGGER.info(String.format("Battlefield layout: panel=%dx%d visibleRect=%dx%d viewport=%dx%d"
+                            + " playArea=%dx%d cardWidth=%d (min=%d hardMin=%d) rows=%d layoutHeight=%d scrollBarVisible=%s",
+                    battlefieldPanel.getWidth(), battlefieldPanel.getHeight(),
+                    rect.width, rect.height,
+                    viewport.width, viewport.height,
+                    playAreaWidth, playAreaHeight, cardWidth, cardWidthMin, getCardWidthHardMin(), rows.size(), y,
+                    scrollPane.getVerticalScrollBar().isVisible()));
+        }
+
         return y;
     }
 
@@ -416,10 +455,21 @@ public class CardPluginImpl implements CardPlugin {
         return list == null || list.isEmpty();
     }
 
+    /**
+     * Smallest card width the auto-fit may use before accepting vertical scrolling.
+     * Half of the configured minimum keeps the cards readable, the hard minimum keeps
+     * them usable on very small windows.
+     */
+    private int getCardWidthHardMin() {
+        return Math.min(cardWidthMin, Math.max(CARD_WIDTH_HARD_MIN, cardWidthMin / 2));
+    }
+
     private int wrap(Row sourceRow, List<Row> rows, int insertIndex) {
-        // The cards are sure to fit (with vertical scrolling) at the minimum card
-        // width.
-        boolean allowHeightOverflow = (cardWidth <= cardWidthMin);
+        // The cards are sure to fit (with vertical scrolling) at the hard minimum card
+        // width. Between the configured minimum and that hard minimum the auto-fit keeps
+        // shrinking, so a short battlefield never requests vertical scrolling while it has
+        // only a few permanents on it.
+        boolean allowHeightOverflow = (cardWidth <= getCardWidthHardMin());
 
         Row currentRow = new Row();
         for (int i = 0, n = sourceRow.size() - 1; i <= n; i++) {
@@ -483,6 +533,67 @@ public class CardPluginImpl implements CardPlugin {
             effectiveGutterY = Math.max(GUTTER_Y, MageLayer.getAnimationOuterSpace(cardWidth, cardHeight).getTop() + 6);
         }
         return height - cardSpacingY + effectiveGutterY * 2;
+    }
+
+    private List<Row> cloneRows(List<Row> source) {
+        List<Row> result = new ArrayList<>(source.size());
+        for (Row row : source) {
+            result.add((Row) row.clone());
+        }
+        return result;
+    }
+
+    /**
+     * Pack leftover cards inside the already wrapped rows, so different card types
+     * (lands, creatures and non-permanents) can share a row when there is free width.
+     */
+    private void fillRowsWithLeftovers(List<Row> rows, Row... sources) {
+        boolean packed = true;
+        while (packed) {
+            packed = false;
+            for (Row row : rows) {
+                for (Row source : sources) {
+                    if (packLeftoverIntoRow(source, rows, row)) {
+                        packed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean packLeftoverIntoRow(Row sourceRow, List<Row> rows, Row row) {
+        if (sourceRow.isEmpty()) {
+            return false;
+        }
+        Stack stack = sourceRow.get(0);
+        if (getRowContentWidth(row) + stack.getWidth() + GUTTER_X * 2 > playAreaWidth) {
+            return false;
+        }
+        if (stack.getHeight() > row.getHeight()
+                && getRowsHeight(rows) - row.getHeight() + stack.getHeight() > playAreaHeight) {
+            return false;
+        }
+        sourceRow.remove(0);
+        // keep the non-permanent cards on the right side of the row (see othersOnTheRight)
+        row.add(findFirstOtherStack(row), stack);
+        return true;
+    }
+
+    private int getRowContentWidth(Row row) {
+        int width = 0;
+        for (Stack stack : row) {
+            width += stack.getWidth();
+        }
+        return width;
+    }
+
+    private int findFirstOtherStack(Row row) {
+        for (int i = 0; i < row.size(); i++) {
+            if (RowType.other.isType(row.get(i).get(0))) {
+                return i;
+            }
+        }
+        return row.size();
     }
 
     private AttachmentLayoutInfos calculateNeededNumberOfVerticalColumns(int currentCol, Map<UUID, MageCard> cards,

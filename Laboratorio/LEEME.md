@@ -1,4 +1,4 @@
-# Laboratorio XMage — UI 1.4.63 (actualizado 2026-10-31)
+# Laboratorio XMage — UI 1.4.63 (actualizado 2026-11-01)
 
 > **Norma permanente para cualquier worker/IA:** todo cambio se prueba primero en este
 > laboratorio (puerto 17191) y solo se despliega en `J:\MTG\Instalacion-XMage` cuando el
@@ -50,3 +50,13 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
    - Moderno dashboard minimalista para descarga y actualización de decks con parsing en tiempo real.
 10. `Mage.Server/src/main/java/mage/server/MageServerImpl.java`
     - `markGameTypesLoadFinished()`: corta la espera de 180 s cuando no hay plugins de game types.
+11. `Mage/src/main/java/mage/cards/repository/DatabaseUtils.java` (v2.2)
+    - `checkAndFixStaleH2Lock()`: autocuración y borrado automático de ficheros `.lock.db` huérfanos o con procesos zombis caídos, enlazando H2 `AUTO_SERVER` a `127.0.0.1`.
+    - `MageFrame.doClientShutdownAndExit()`: cierre limpio garantizado con `Platform.exit()` y `System.exit(0)`.
+12. `Mage.Common/src/main/java/mage/utils/MageVersion.java` y `MageVersionException.java` (v2.3)
+    - Declaración explícita de `serialVersionUID` canónico para compatibilidad binaria absoluta cliente-servidor por RMI/Bisocket (`-5872491576857560039L` y `9200806506119372910L`).
+13. `Mage.Client/src/main/java/org/mage/plugins/card/CardPluginImpl.java` (v24)
+    - Auto-fit del campo de batalla: empaqueta tierras, criaturas y no-permanentes en las mismas filas cuando hay ancho, y permite bajar del tamaño mínimo configurado (hasta la mitad, nunca menos de 60 px) antes de activar el scroll vertical. Objetivo: no pedir desplazamiento hasta que el campo esté realmente lleno.
+    - Traza de diagnóstico opcional con `-Dxmage.debug.bflayout=true`.
+14. `Mage.Client/src/main/java/mage/client/game/BattlefieldPanel.java` (v24)
+    - `sortLayout()` no hace layout mientras el panel no tenga altura (un layout a altura 0 forzaba el tamaño mínimo y activaba el scrollbar).

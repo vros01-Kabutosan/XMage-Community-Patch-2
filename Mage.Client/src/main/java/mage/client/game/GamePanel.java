@@ -14,6 +14,7 @@ import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GradientPaint;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -306,6 +307,10 @@ extends JPanel {
     private JLabel floatingStackTitleLabel;
     private JLabel floatingStackTypeLabel;
     private JLabel floatingStackOrderLabel;
+    private JLabel floatingStackTargetLabel;
+    private String floatingStackLastTargetLabel = "";
+    private boolean floatingStackIsMinimized = false;
+    private int floatingStackNormalHeight = 470;
     private JPanel floatingStackHeader;
     private static final String STACK_HEADER_BADGE_MARKER = "XCP_STACK_HEADER_BADGE_V1_2_1_9";
     private Point floatingStackDragOrigin;
@@ -1535,44 +1540,96 @@ extends JPanel {
     private JPanel createFloatingStackHeader() {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
-        header.setBorder(new EmptyBorder(8, 12, 4, 12));
+        header.setBorder(new EmptyBorder(8, 12, 6, 12));
+
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
-        this.floatingStackTitleLabel = new JLabel("The Stack (0)");
-        this.floatingStackTitleLabel.setFont(GUISizeHelper.dialogFont.deriveFont(1));
-        this.floatingStackTitleLabel.setForeground(new Color(132, 181, 232));
+        this.floatingStackTitleLabel = new JLabel("PILA DE RESOLUCI\u00d3N (0)");
+        this.floatingStackTitleLabel.setFont(GUISizeHelper.dialogFont.deriveFont(Font.BOLD, GUISizeHelper.dialogFont.getSize2D() + 1.0f));
+        this.floatingStackTitleLabel.setForeground(new Color(230, 195, 110));
         this.floatingStackTitleLabel.setHorizontalAlignment(0);
-        this.floatingStackTitleLabel.setToolTipText("The object marked 1st resolves first");
+        this.floatingStackTitleLabel.setToolTipText("El objeto marcado #1 resuelve primero (LIFO)");
         titleRow.add((Component)this.floatingStackTitleLabel, "Center");
+
+        JButton btnMin = new JButton("-");
+        btnMin.setFont(GUISizeHelper.dialogFont.deriveFont(Font.BOLD, Math.max(11.0f, GUISizeHelper.dialogFont.getSize2D() - 1.0f)));
+        btnMin.setForeground(new Color(195, 210, 230));
+        btnMin.setBackground(new Color(30, 38, 52));
+        btnMin.setFocusPainted(false);
+        btnMin.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(75, 95, 120), 1),
+            new EmptyBorder(1, 6, 1, 6)
+        ));
+        btnMin.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnMin.setToolTipText("Minimizar / Expandir pila flotante");
+        btnMin.addActionListener(e -> {
+            if (this.floatingStackFrame == null) {
+                return;
+            }
+            if (!this.floatingStackIsMinimized) {
+                this.floatingStackNormalHeight = this.floatingStackFrame.getHeight();
+                int compactHeight = this.floatingStackHeader.getPreferredSize().height + 22;
+                this.floatingStackFrame.setSize(this.floatingStackFrame.getWidth(), compactHeight);
+                this.stackObjects.setVisible(false);
+                btnMin.setText("+");
+                this.floatingStackIsMinimized = true;
+            } else {
+                int restoreH = Math.max(380, this.floatingStackNormalHeight);
+                this.stackObjects.setVisible(true);
+                this.floatingStackFrame.setSize(this.floatingStackFrame.getWidth(), restoreH);
+                btnMin.setText("-");
+                this.floatingStackIsMinimized = false;
+            }
+            this.floatingStackFrame.revalidate();
+            this.floatingStackFrame.repaint();
+        });
+        titleRow.add((Component)btnMin, "East");
         header.add((Component)titleRow, "North");
+
         this.floatingStackTypeLabel = new JLabel("");
         this.floatingStackTypeLabel.setOpaque(true);
-        this.floatingStackTypeLabel.setForeground(new Color(250, 235, 185));
-        this.floatingStackTypeLabel.setBackground(new Color(18, 22, 28, 238));
-        this.floatingStackTypeLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(185, 151, 72, 235)), new EmptyBorder(2, 8, 2, 8)));
-        this.floatingStackTypeLabel.setFont(GUISizeHelper.dialogFont.deriveFont(1));
+        this.floatingStackTypeLabel.setForeground(new Color(255, 235, 180));
+        this.floatingStackTypeLabel.setBackground(new Color(38, 29, 14, 240));
+        this.floatingStackTypeLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(195, 150, 55, 230)), new EmptyBorder(2, 8, 2, 8)));
+        this.floatingStackTypeLabel.setFont(GUISizeHelper.dialogFont.deriveFont(Font.BOLD, Math.max(10.0f, GUISizeHelper.dialogFont.getSize2D() - 2.0f)));
         this.floatingStackTypeLabel.setVisible(false);
-        JPanel typeRow = new JPanel(new FlowLayout(1, 0, 1));
+        JPanel typeRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 1));
         typeRow.setOpaque(false);
         typeRow.add(this.floatingStackTypeLabel);
+
         this.floatingStackOrderLabel = new JLabel("");
         this.floatingStackOrderLabel.setOpaque(true);
-        this.floatingStackOrderLabel.setForeground(new Color(166, 224, 181));
-        this.floatingStackOrderLabel.setBackground(new Color(24, 49, 34, 220));
-        this.floatingStackOrderLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(78, 137, 95, 190)), new EmptyBorder(1, 5, 1, 5)));
-        this.floatingStackOrderLabel.setFont(GUISizeHelper.dialogFont.deriveFont(0, Math.max(9.0f, GUISizeHelper.dialogFont.getSize2D() - 3.0f)));
+        this.floatingStackOrderLabel.setForeground(new Color(190, 245, 205));
+        this.floatingStackOrderLabel.setBackground(new Color(16, 45, 28, 240));
+        this.floatingStackOrderLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(55, 140, 85, 230)), new EmptyBorder(2, 8, 2, 8)));
+        this.floatingStackOrderLabel.setFont(GUISizeHelper.dialogFont.deriveFont(Font.BOLD, Math.max(10.0f, GUISizeHelper.dialogFont.getSize2D() - 2.0f)));
         this.floatingStackOrderLabel.setHorizontalAlignment(0);
-        this.floatingStackOrderLabel.setToolTipText("Next to resolve");
+        this.floatingStackOrderLabel.setToolTipText("Pr\u00f3ximo a resolver");
         this.floatingStackOrderLabel.setVisible(false);
-        JPanel orderRow = new JPanel(new FlowLayout(1, 0, 1));
+        JPanel orderRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 1));
         orderRow.setOpaque(false);
         orderRow.add(this.floatingStackOrderLabel);
+
+        this.floatingStackTargetLabel = new JLabel("");
+        this.floatingStackTargetLabel.setOpaque(true);
+        this.floatingStackTargetLabel.setForeground(new Color(185, 225, 255));
+        this.floatingStackTargetLabel.setBackground(new Color(14, 34, 52, 240));
+        this.floatingStackTargetLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(48, 120, 185, 230)), new EmptyBorder(2, 8, 2, 8)));
+        this.floatingStackTargetLabel.setFont(GUISizeHelper.dialogFont.deriveFont(Font.PLAIN, Math.max(9.0f, GUISizeHelper.dialogFont.getSize2D() - 3.0f)));
+        this.floatingStackTargetLabel.setHorizontalAlignment(0);
+        this.floatingStackTargetLabel.setVisible(false);
+        JPanel targetRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 1));
+        targetRow.setOpaque(false);
+        targetRow.add(this.floatingStackTargetLabel);
+
         JPanel statusRows = new JPanel();
         statusRows.setOpaque(false);
-        statusRows.setLayout(new BoxLayout(statusRows, 1));
-        statusRows.add(typeRow);
+        statusRows.setLayout(new BoxLayout(statusRows, BoxLayout.Y_AXIS));
         statusRows.add(orderRow);
+        statusRows.add(typeRow);
+        statusRows.add(targetRow);
         header.add((Component)statusRows, "South");
+
         MouseAdapter dragAdapter = new MouseAdapter(){
 
             @Override
@@ -1610,6 +1667,8 @@ extends JPanel {
         this.floatingStackTypeLabel.addMouseMotionListener(dragAdapter);
         this.floatingStackOrderLabel.addMouseListener(dragAdapter);
         this.floatingStackOrderLabel.addMouseMotionListener(dragAdapter);
+        this.floatingStackTargetLabel.addMouseListener(dragAdapter);
+        this.floatingStackTargetLabel.addMouseMotionListener(dragAdapter);
         return header;
     }
 
@@ -1650,10 +1709,23 @@ extends JPanel {
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     int width = this.getWidth() - 1;
                     int height = this.getHeight() - 1;
-                    int arc = Math.min(28, Math.max(18, Math.min(width, height) / 6));
-                    g2.setColor(new Color(22, 27, 33, 250));
+                    int arc = Math.min(24, Math.max(16, Math.min(width, height) / 8));
+                    g2.setColor(new Color(0, 0, 0, 120));
+                    g2.fillRoundRect(2, 2, width - 2, height - 2, arc, arc);
+
+                    GradientPaint bg = new GradientPaint(
+                        0, 0, new Color(22, 28, 38, 252),
+                        0, height, new Color(10, 13, 19, 254)
+                    );
+                    g2.setPaint(bg);
                     g2.fillRoundRect(0, 0, width, height, arc, arc);
-                    g2.setColor(new Color(92, 101, 114, 220));
+
+                    GradientPaint border = new GradientPaint(
+                        0, 0, new Color(210, 175, 85, 230),
+                        0, height, new Color(68, 84, 108, 190)
+                    );
+                    g2.setPaint(border);
+                    g2.setStroke(new BasicStroke(1.5f));
                     g2.drawRoundRect(0, 0, width, height, arc, arc);
                 }
                 finally {
@@ -1684,11 +1756,26 @@ extends JPanel {
         this.floatingStackHeader = this.createFloatingStackHeader();
         content.add((Component)this.floatingStackHeader, "North");
         content.add((Component)this.stackObjects, "Center");
-        JPanel bottomResizeGrip = new JPanel(new BorderLayout());
+        JPanel bottomResizeGrip = new JPanel(new BorderLayout()){
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                try {
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    int cx = this.getWidth() / 2;
+                    int cy = this.getHeight() / 2;
+                    g2.setColor(new Color(130, 155, 185, 160));
+                    g2.fillRoundRect(cx - 18, cy - 1, 36, 3, 2, 2);
+                } finally {
+                    g2.dispose();
+                }
+            }
+        };
         bottomResizeGrip.setOpaque(false);
         bottomResizeGrip.setPreferredSize(new Dimension(1, 12));
-        bottomResizeGrip.setCursor(Cursor.getPredefinedCursor(9));
-        bottomResizeGrip.setToolTipText(null);
+        bottomResizeGrip.setCursor(Cursor.getPredefinedCursor(Cursor.S_RESIZE_CURSOR));
+        bottomResizeGrip.setToolTipText("Arrastrar para ajustar altura");
         MouseAdapter bottomResizeAdapter = new MouseAdapter(){
 
             @Override
@@ -1769,6 +1856,9 @@ extends JPanel {
         this.floatingStackTitleLabel = null;
         this.floatingStackTypeLabel = null;
         this.floatingStackOrderLabel = null;
+        this.floatingStackTargetLabel = null;
+        this.floatingStackLastTargetLabel = "";
+        this.floatingStackIsMinimized = false;
         this.floatingStackDragOrigin = null;
         this.floatingStackResizeOrigin = null;
         this.floatingStackResizeStartSize = null;
@@ -1785,30 +1875,95 @@ extends JPanel {
         this.floatingStackAuditSignatureKnown = false;
     }
 
+    private String getFloatingStackControllerLabel(CardView card) {
+        if (card == null) {
+            return "";
+        }
+        if (card.isAbility()) {
+            UUID sourceId = card.getParentId();
+            if (sourceId != null && this.players != null) {
+                for (PlayAreaPanel pa : this.players.values()) {
+                    if (pa != null && pa.getBattlefieldPanel() != null && pa.getBattlefieldPanel().getPermanentPanels() != null) {
+                        if (pa.getBattlefieldPanel().getPermanentPanels().containsKey(sourceId)) {
+                            if (pa.getPlayerPanel() != null && pa.getPlayerPanel().getPlayer() != null) {
+                                return pa.getPlayerPanel().getPlayer().getName();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    private String getFloatingStackTargetLabel(CardView card) {
+        if (card == null || card.getTargets() == null || card.getTargets().isEmpty() || this.players == null) {
+            return "";
+        }
+        List<String> targetNames = new ArrayList<>();
+        for (UUID targetId : card.getTargets()) {
+            if (targetId == null) {
+                continue;
+            }
+            PlayAreaPanel playerArea = this.players.get(targetId);
+            if (playerArea != null && playerArea.getPlayerPanel() != null && playerArea.getPlayerPanel().getPlayer() != null) {
+                targetNames.add(playerArea.getPlayerPanel().getPlayer().getName());
+                continue;
+            }
+            boolean found = false;
+            for (PlayAreaPanel pa : this.players.values()) {
+                if (pa != null && pa.getBattlefieldPanel() != null && pa.getBattlefieldPanel().getPermanentPanels() != null) {
+                    MageCard perm = pa.getBattlefieldPanel().getPermanentPanels().get(targetId);
+                    if (perm != null && perm.getOriginal() != null) {
+                        String name = perm.getOriginal().getName();
+                        if (name != null && !name.isEmpty()) {
+                            targetNames.add(name);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+        }
+        if (targetNames.isEmpty()) {
+            return "";
+        }
+        String targetsStr = String.join(", ", targetNames);
+        if (targetsStr.length() > 30) {
+            targetsStr = targetsStr.substring(0, 27) + "...";
+        }
+        String safe = targetsStr.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+        return "<html><div style=\"text-align:center\">\u25ce <b>Objetivo:</b> " + safe + "</div></html>";
+    }
+
     private String getFloatingStackTypeLabel(CardView card) {
         if (card == null) {
             return "";
         }
+        String controller = this.getFloatingStackControllerLabel(card);
+        String prefix = controller.isEmpty() ? "" : "[" + controller + "] \u00b7 ";
+
         AbilityType abilityType = card.getAbilityType();
         if (abilityType == AbilityType.SPELL || card.getMageObjectType() == MageObjectType.SPELL) {
-            return "Spell";
+            return prefix + "Hechizo";
         }
         if (!card.isAbility() && abilityType == null) {
-            return "";
+            return prefix;
         }
         if (abilityType == null || abilityType.isTriggeredAbility()) {
-            return "Triggered Ability";
+            return prefix + "\u26a1 Habilidad Disparada";
         }
         if (abilityType.isActivatedAbility()) {
-            return "Activated Ability";
+            return prefix + "\u26a1 Habilidad Activada";
         }
         if (abilityType == AbilityType.STATIC) {
-            return "Static Ability";
+            return prefix + "Habilidad Est\u00e1tica";
         }
         if (abilityType == AbilityType.SPECIAL_ACTION) {
-            return "Special Action";
+            return prefix + "Acci\u00f3n Especial";
         }
-        return (Object)((Object)abilityType) + " Ability";
+        return prefix + (Object)((Object)abilityType) + " Ability";
     }
 
     private String getFloatingStackOrderLabel(CardView card) {
@@ -1817,10 +1972,10 @@ extends JPanel {
         }
         String name = card.getName();
         if (name == null || name.trim().isEmpty()) {
-            name = "unnamed object";
+            name = "objeto sin nombre";
         }
-        String safeName = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\\\"", "&quot;");
-        return "<html><div style=\"width:220px;text-align:center\">NEXT \u00b7 " + safeName + "</div></html>";
+        String safeName = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+        return "<html><div style=\"width:220px;text-align:center\"><b>#1 PR\u00d3XIMO</b> &bull; " + safeName + "</div></html>";
     }
 
     private void updateFloatingStackVisibility(GameView game) {
@@ -1828,14 +1983,15 @@ extends JPanel {
         int objectCount = game.getStack().size();
         CardView topStackObject = game.getStack().isEmpty() ? null : (CardView)game.getStack().values().iterator().next();
         String type = this.getFloatingStackTypeLabel(topStackObject);
+        String target = this.getFloatingStackTargetLabel(topStackObject);
         if (this.floatingStackFrame == null) {
             this.initFloatingStackWindow();
         }
         boolean bl = hasObjects = objectCount > 0;
         if (this.floatingStackFrame != null) {
             if (this.floatingStackTitleLabel != null && objectCount != this.floatingStackLastObjectCount) {
-                String title = "The Stack (" + objectCount + ")";
-                String titleTooltip = "The object marked 1st resolves first (" + objectCount + " object" + (objectCount == 1 ? "" : "s") + ")";
+                String title = "PILA DE RESOLUCI\u00d3N (" + objectCount + ")";
+                String titleTooltip = "El objeto marcado #1 resuelve primero (" + objectCount + " objeto" + (objectCount == 1 ? "" : "s") + ")";
                 this.floatingStackTitleLabel.setText(title);
                 this.floatingStackTitleLabel.setToolTipText(titleTooltip);
                 this.floatingStackLastObjectCount = objectCount;
@@ -1861,6 +2017,16 @@ extends JPanel {
                 }
                 if (this.floatingStackOrderLabel.isVisible() != hasObjects) {
                     this.floatingStackOrderLabel.setVisible(hasObjects);
+                }
+            }
+            if (this.floatingStackTargetLabel != null) {
+                if (!target.equals(this.floatingStackLastTargetLabel)) {
+                    this.floatingStackTargetLabel.setText(target);
+                    this.floatingStackLastTargetLabel = target;
+                }
+                boolean targetVisible = !target.isEmpty();
+                if (this.floatingStackTargetLabel.isVisible() != targetVisible) {
+                    this.floatingStackTargetLabel.setVisible(targetVisible);
                 }
             }
             if (hasObjects) {

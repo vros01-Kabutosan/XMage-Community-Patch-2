@@ -3,12 +3,20 @@
  */
 package mage.client.cards;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -24,6 +32,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import mage.abilities.icon.CardIcon;
+import mage.abilities.icon.CardIconCategory;
 import mage.abilities.icon.CardIconRenderSettings;
 import mage.abilities.icon.CardIconType;
 import mage.cards.MageCard;
@@ -209,7 +218,13 @@ implements CardEventProducer {
                 tmp.overrideId(card.getId());
                 tmp.setAbilityType(card.getAbilityType());
                 tmp.getCardIcons().clear();
-                tmp.getCardIcons().addAll(card.getCardIcons());
+                if (card.getCardIcons() != null) {
+                    for (CardIcon icon : card.getCardIcons()) {
+                        if (icon.getIconType() == null || icon.getIconType().getCategory() != CardIconCategory.ABILITY) {
+                            tmp.getCardIcons().add(icon);
+                        }
+                    }
+                }
                 card = tmp;
             }
             // oficial 1.4.62: ya no se limpia abilityType en el resto de
@@ -388,7 +403,15 @@ implements CardEventProducer {
     private void initComponents(boolean skipAddingScrollPane) {
         this.setBorder(BorderFactory.createLineBorder(new Color(0, 0, 0, 0)));
         this.setLayout(new BorderLayout());
-        this.cardArea = new JPanel();
+        this.cardArea = new JPanel() {
+            @Override
+            protected void paintChildren(Graphics g) {
+                super.paintChildren(g);
+                if (Cards.this.verticalStackLayout) {
+                    Cards.this.paintVerticalStackDecorations((Graphics2D) g);
+                }
+            }
+        };
         this.cardArea.setLayout(new FlowLayout(0, 0, 0));
         if (skipAddingScrollPane) {
             this.add((Component)this.cardArea, "Center");
@@ -464,5 +487,136 @@ implements CardEventProducer {
     @Override
     public CardEventSource getCardEventSource() {
         return this.cardEventSource;
+    }
+
+    private void paintVerticalStackDecorations(Graphics2D g) {
+        if (this.cards.isEmpty() || this.cardArea.getComponentCount() == 0) {
+            return;
+        }
+        Graphics2D g2 = (Graphics2D) g.create();
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+            List<MageCard> cardsToLayout = new ArrayList<>(this.cards.values());
+            int total = cardsToLayout.size();
+            if (total == 0) {
+                return;
+            }
+
+            Font badgeFont = GUISizeHelper.dialogFont.deriveFont(Font.BOLD, Math.max(10.0f, GUISizeHelper.dialogFont.getSize2D() - 2.0f));
+            Font smallBadgeFont = GUISizeHelper.dialogFont.deriveFont(Font.BOLD, Math.max(9.0f, GUISizeHelper.dialogFont.getSize2D() - 3.0f));
+
+            for (int i = 0; i < total; i++) {
+                MageCard mageCard = cardsToLayout.get(i);
+                if (!(mageCard instanceof Component)) {
+                    continue;
+                }
+                Component comp = (Component) mageCard;
+                if (!comp.isVisible()) {
+                    continue;
+                }
+                Rectangle bounds = comp.getBounds();
+                CardView cardView = mageCard.getOriginal();
+                boolean isAbility = cardView != null && cardView.isAbility();
+
+                if (i == 0) {
+                    // Cima de la pila: resplandor dorado
+                    g2.setColor(new Color(230, 185, 80, 140));
+                    g2.setStroke(new BasicStroke(2.0f));
+                    g2.drawRoundRect(bounds.x - 1, bounds.y - 1, bounds.width + 2, bounds.height + 2, 8, 8);
+
+                    // Badge "#1 PROXIMO"
+                    int badgeH = 20;
+                    int badgeW = 92;
+                    int bx = bounds.x + 6;
+                    int by = bounds.y + 6;
+
+                    GradientPaint gp = new GradientPaint(bx, by, new Color(24, 94, 52, 235), bx, by + badgeH, new Color(13, 56, 31, 245));
+                    g2.setPaint(gp);
+                    g2.fillRoundRect(bx, by, badgeW, badgeH, 10, 10);
+                    g2.setColor(new Color(82, 196, 125, 230));
+                    g2.setStroke(new BasicStroke(1.2f));
+                    g2.drawRoundRect(bx, by, badgeW, badgeH, 10, 10);
+
+                    g2.setFont(badgeFont);
+                    g2.setColor(Color.WHITE);
+                    FontMetrics fm = g2.getFontMetrics();
+                    String text = "#1 PRÓXIMO";
+                    int tx = bx + (badgeW - fm.stringWidth(text)) / 2;
+                    int ty = by + ((badgeH - fm.getHeight()) / 2) + fm.getAscent();
+                    g2.drawString(text, tx, ty);
+
+                    // Si es habilidad, badge "⚡ HABILIDAD"
+                    if (isAbility) {
+                        int hbx = bx + badgeW + 4;
+                        int hbw = 88;
+                        GradientPaint hgp = new GradientPaint(hbx, by, new Color(130, 85, 20, 235), hbx, by + badgeH, new Color(80, 50, 10, 245));
+                        g2.setPaint(hgp);
+                        g2.fillRoundRect(hbx, by, hbw, badgeH, 10, 10);
+                        g2.setColor(new Color(230, 175, 60, 230));
+                        g2.drawRoundRect(hbx, by, hbw, badgeH, 10, 10);
+
+                        g2.setFont(smallBadgeFont);
+                        g2.setColor(new Color(255, 245, 210));
+                        fm = g2.getFontMetrics();
+                        String htext = "⚡ HABILIDAD";
+                        int htx = hbx + (hbw - fm.stringWidth(htext)) / 2;
+                        int hty = by + ((badgeH - fm.getHeight()) / 2) + fm.getAscent();
+                        g2.drawString(htext, htx, hty);
+                    }
+                } else {
+                    // Cartas inferiores en la pila: (#2, #3, etc.)
+                    int badgeH = 18;
+                    int badgeW = 34;
+                    int bx = bounds.x + 6;
+                    int by = bounds.y + 4;
+
+                    GradientPaint gp = new GradientPaint(bx, by, new Color(40, 52, 70, 235), bx, by + badgeH, new Color(22, 29, 39, 245));
+                    g2.setPaint(gp);
+                    g2.fillRoundRect(bx, by, badgeW, badgeH, 8, 8);
+                    g2.setColor(new Color(95, 120, 155, 200));
+                    g2.setStroke(new BasicStroke(1.0f));
+                    g2.drawRoundRect(bx, by, badgeW, badgeH, 8, 8);
+
+                    g2.setFont(smallBadgeFont);
+                    g2.setColor(new Color(210, 225, 245));
+                    FontMetrics fm = g2.getFontMetrics();
+                    String text = "#" + (i + 1);
+                    int tx = bx + (badgeW - fm.stringWidth(text)) / 2;
+                    int ty = by + ((badgeH - fm.getHeight()) / 2) + fm.getAscent();
+                    g2.drawString(text, tx, ty);
+
+                    if (isAbility) {
+                        int hbx = bx + badgeW + 3;
+                        int hbw = 20;
+                        g2.setColor(new Color(30, 24, 15, 220));
+                        g2.fillRoundRect(hbx, by, hbw, badgeH, 8, 8);
+                        g2.setColor(new Color(185, 145, 55, 180));
+                        g2.drawRoundRect(hbx, by, hbw, badgeH, 8, 8);
+                        g2.setColor(new Color(245, 205, 100));
+                        String st = "⚡";
+                        g2.drawString(st, hbx + (hbw - fm.stringWidth(st)) / 2, ty);
+                    }
+
+                    // Sombra de caida (Drop Shadow) entre capas
+                    MageCard overlyingCard = cardsToLayout.get(i - 1);
+                    if (overlyingCard instanceof Component) {
+                        Rectangle overBounds = ((Component) overlyingCard).getBounds();
+                        int shadowY = overBounds.y - 4;
+                        if (shadowY > bounds.y && shadowY < bounds.y + bounds.height) {
+                            GradientPaint shadow = new GradientPaint(
+                                bounds.x, shadowY, new Color(0, 0, 0, 0),
+                                bounds.x, overBounds.y, new Color(0, 0, 0, 160)
+                            );
+                            g2.setPaint(shadow);
+                            g2.fillRect(bounds.x, shadowY, bounds.width, 4);
+                        }
+                    }
+                }
+            }
+        } finally {
+            g2.dispose();
+        }
     }
 }

@@ -49,7 +49,13 @@ public class ColorPane extends MageEditorPane {
     @Override
     public void paintChildren(Graphics g) {
         // TODO: research, maybe no needs in good opaque + background settings
-        super.paintComponent(g);
+        try {
+            super.paintComponent(g);
+        } catch (ArrayIndexOutOfBoundsException ex) {
+            // known JDK html bug (BoxView.getOffset) when the document is updated while it is
+            // painted; skip this frame and repaint later instead of breaking the whole client
+            SwingUtilities.invokeLater(this::repaint);
+        }
     }
 
     /**
@@ -60,6 +66,10 @@ public class ColorPane extends MageEditorPane {
     @Override
     public void paintComponent(Graphics g) {
         // TODO: research, maybe no needs in good opaque + background settings
-        super.paintChildren(g);
+        try {
+            super.paintChildren(g);
+        } catch (ArrayIndexOutOfBoundsException ex) {
+            SwingUtilities.invokeLater(this::repaint);
+        }
     }
 }

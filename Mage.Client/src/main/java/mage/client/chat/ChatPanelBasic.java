@@ -272,16 +272,16 @@ public class ChatPanelBasic extends javax.swing.JPanel {
                 text.append(getColoredText(userColor, username + userSeparator));
             }
             text.append(getColoredText(textColor, ManaSymbols.replaceSymbolsWithHTML(message, ManaSymbols.Type.CHAT)));
-            this.txtConversation.append(text.toString());
+            appendToConversation(text.toString());
         } else if (cachedProfanityFilterValue.equals("1")) {
             if (username != null && !username.isEmpty()) {
                 text.append(getColoredText("black", username + userSeparator));
             }
             text.append(getColoredText(textColor, ManaSymbols.replaceSymbolsWithHTML("<font color=black size=-2>" + message + "</font> <font size=-2>Profanity detected.  Type: <font color=green>/w " + SessionHandler.getUserName() + " profanity 0</font>' to turn the filter off</font></font>", ManaSymbols.Type.CHAT)));
-            this.txtConversation.append(text.toString());
+            appendToConversation(text.toString());
         } else if (cachedProfanityFilterValue.equals("2")) {
             text.append(getColoredText(textColor, ManaSymbols.replaceSymbolsWithHTML("<font color=black size=-2>" + username + ": Profanity detected.  To make it less strict, type: </font> <font color=green size=-2>/w " + SessionHandler.getUserName() + " profanity 1</font>", ManaSymbols.Type.CHAT)));
-            this.txtConversation.append(text.toString());
+            appendToConversation(text.toString());
         }
     }
 
@@ -291,6 +291,20 @@ public class ChatPanelBasic extends javax.swing.JPanel {
 
     protected String getColoredText(String color, String text) {
         return "<font color='" + color + "'>" + text + "</font>";
+    }
+
+    /**
+     * Appends a message to the conversation. Swing only allows to modify the document from
+     * the EDT: the game log was updated from the callback threads, and changing the html
+     * document while it was painted corrupted the view (ArrayIndexOutOfBoundsException in
+     * BoxView.getOffset, seen as "CLIENT - unhandled error in GUI").
+     */
+    private void appendToConversation(String text) {
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            txtConversation.append(text);
+        } else {
+            javax.swing.SwingUtilities.invokeLater(() -> txtConversation.append(text));
+        }
     }
 
     public String getText() {

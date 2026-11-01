@@ -9,6 +9,8 @@ import java.io.Serializable;
  */
 public class MageVersion implements Serializable, Comparable<MageVersion> {
 
+    private static final long serialVersionUID = -5872491576857560039L;
+
     // version must be compatible with maven version numbers
     // launcher can update only to the newest version
     // example: 1.4.48-V1-beta3

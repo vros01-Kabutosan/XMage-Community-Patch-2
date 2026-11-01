@@ -8,6 +8,8 @@ import mage.utils.MageVersion;
  */
 public class MageVersionException extends MageException {
 
+    private static final long serialVersionUID = 9200806506119372910L;
+
     private final MageVersion clientVersion;
     private final MageVersion serverVersion;
 

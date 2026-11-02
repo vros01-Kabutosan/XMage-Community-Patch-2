@@ -74,3 +74,11 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
       - Supresión de iconos de permanentes confusos (como `ABILITY_REACH`) en habilidades disparadas de la pila.
       - HUD con información clara de orden, controlador, tipo (`⚡ Habilidad Disparada / Hechizo`) y objetivo dinámico (`🎯 Objetivo: <Nombre>`).
       - Sombras 3D entre cartas apiladas verticalmente para mayor sensación de profundidad.
+18. `Mage.Client/src/main/java/org/mage/card/arcane/CardPanelRenderModeImage.java`, `mage/client/util/gui/Arrow.java` y `mage/client/game/HelperPanel.java` (v29)
+    - Modernización del Campo de Batalla (*Battlefield*):
+      - Halos de resplandor suave (*Soft Bloom*) en cartas jugables (cian eléctrico), seleccionadas (esmeralda), objetivos (ámbar) y combate (carmesí).
+      - P/T dinámico con colorimetría semántica (aumentos en verde, reducciones en rojo) y resistencia teñida en rojo-daño ante daño de combate acumulado.
+      - Mareo de invocación no obstructivo: ilustración 100% visible, niebla mística basal y badge de vórtice dorado en esquina superior con tooltip.
+      - Contadores nítidos antialiased centrados con sombra y texto blanco.
+      - Flechas cinemáticas de combate/selección con gradiente longitudinal, sombra suave y reborde luminoso.
+      - Botones de acción del HelperPanel con jerarquía cromática (verde para OK/Done, rojo para Cancel/No, ámbar para Special).

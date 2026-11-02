@@ -757,12 +757,33 @@ public class HelperPanel extends JPanel {
             Graphics2D g = (Graphics2D) graphics.create();
             try {
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color top = getModel().isPressed() ? new Color(74, 91, 112) : new Color(58, 70, 88);
-                Color bottom = getModel().isPressed() ? new Color(43, 54, 70) : new Color(35, 43, 56);
-                if (getModel().isRollover() && !getModel().isPressed()) {
-                    top = new Color(72, 86, 107);
-                    bottom = new Color(45, 56, 72);
+
+                String btnText = getText() == null ? "" : getText().toLowerCase();
+                boolean isPositive = btnText.contains("ok") || btnText.contains("done") || btnText.contains("yes") || btnText.contains("hecho") || btnText.contains("s\u00ED");
+                boolean isNegative = btnText.contains("cancel") || btnText.contains("no") || btnText.contains("pass");
+                boolean isSpecial = btnText.contains("special") || btnText.contains("undo");
+
+                Color top;
+                Color bottom;
+
+                if (isPositive) {
+                    top = getModel().isPressed() ? new Color(5, 120, 75) : (getModel().isRollover() ? new Color(16, 165, 105) : new Color(13, 148, 96));
+                    bottom = getModel().isPressed() ? new Color(4, 80, 52) : (getModel().isRollover() ? new Color(6, 105, 72) : new Color(5, 90, 60));
+                } else if (isNegative) {
+                    top = getModel().isPressed() ? new Color(153, 27, 27) : (getModel().isRollover() ? new Color(220, 38, 38) : new Color(185, 28, 28));
+                    bottom = getModel().isPressed() ? new Color(110, 20, 20) : (getModel().isRollover() ? new Color(145, 25, 25) : new Color(127, 29, 29));
+                } else if (isSpecial) {
+                    top = getModel().isPressed() ? new Color(146, 64, 14) : (getModel().isRollover() ? new Color(217, 119, 6) : new Color(180, 115, 15));
+                    bottom = getModel().isPressed() ? new Color(110, 45, 10) : (getModel().isRollover() ? new Color(140, 58, 12) : new Color(120, 53, 15));
+                } else {
+                    top = getModel().isPressed() ? new Color(74, 91, 112) : new Color(58, 70, 88);
+                    bottom = getModel().isPressed() ? new Color(43, 54, 70) : new Color(35, 43, 56);
+                    if (getModel().isRollover() && !getModel().isPressed()) {
+                        top = new Color(72, 86, 107);
+                        bottom = new Color(45, 56, 72);
+                    }
                 }
+
                 if (!isEnabled()) {
                     top = new Color(54, 60, 70);
                     bottom = new Color(39, 44, 53);
@@ -812,8 +833,27 @@ public class HelperPanel extends JPanel {
             Graphics2D g = (Graphics2D) graphics.create();
             try {
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g.setColor(isFocusOwner() ? new Color(224, 232, 244, 235) : new Color(133, 149, 174, 225));
+
+                String btnText = getText() == null ? "" : getText().toLowerCase();
+                boolean isPositive = btnText.contains("ok") || btnText.contains("done") || btnText.contains("yes") || btnText.contains("hecho") || btnText.contains("s\u00ED");
+                boolean isNegative = btnText.contains("cancel") || btnText.contains("no") || btnText.contains("pass");
+                boolean isSpecial = btnText.contains("special") || btnText.contains("undo");
+
+                Color borderCol;
+                if (isFocusOwner()) {
+                    borderCol = new Color(255, 255, 255, 240);
+                } else if (isPositive) {
+                    borderCol = new Color(52, 211, 153, 220);
+                } else if (isNegative) {
+                    borderCol = new Color(248, 113, 113, 220);
+                } else if (isSpecial) {
+                    borderCol = new Color(251, 191, 36, 220);
+                } else {
+                    borderCol = new Color(133, 149, 174, 225);
+                }
+
                 int arc = Math.min(height, 20);
+                g.setColor(borderCol);
                 g.drawRoundRect(0, 0, width, height, arc, arc);
             } finally {
                 g.dispose();

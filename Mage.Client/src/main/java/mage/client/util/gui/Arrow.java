@@ -45,13 +45,24 @@ public class Arrow extends JPanel {
         g2d.translate(startX, startY);
         g2d.rotate(Math.atan2(ey, ex));
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
         g2d.setComposite(composite);
-        g2d.setColor(this.color);
-        //debug stroke draw
-        //float[] dash2 = {10, 5};
-        //g2d.setStroke(new BasicStroke(3.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10.0f, dash2, 0));
+
+        // 1. Soft outer drop shadow for depth
+        g2d.setStroke(new BasicStroke(4.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2d.setColor(new Color(0, 0, 0, 75));
+        g2d.draw(arrow);
+
+        // 2. Kinetic gradient fill from translucent origin to vivid target
+        Color c = this.color != null ? this.color : Color.red;
+        Color startCol = new Color(c.getRed(), c.getGreen(), c.getBlue(), 120);
+        Color endCol = new Color(c.getRed(), c.getGreen(), c.getBlue(), 245);
+        g2d.setPaint(new GradientPaint(0, 0, startCol, length, 0, endCol));
         g2d.fill(arrow);
-        g2d.setColor(this.strokeColor);
+
+        // 3. Crisp luminous antialiased inner rim
+        g2d.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2d.setColor(new Color(255, 255, 255, 175));
         g2d.draw(arrow);
     }
 

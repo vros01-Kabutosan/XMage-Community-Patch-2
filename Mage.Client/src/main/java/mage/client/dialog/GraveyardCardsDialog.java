@@ -90,7 +90,9 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
         // revertOrder is ignored on purpose: the card grid of the search
         // window always sorts by card name, so the graveyard uses the same order
         cardArea.clearCardEventListeners();
-        cardArea.loadCards(showCards, bigCard, gameId);
+        // Use narrow column mode so cards are ALWAYS stacked in vertical columns
+        // identical to library search / deck columns, even when < 10 cards.
+        cardArea.loadCardsNarrow(showCards, bigCard, gameId);
 
         int qty = qtyCardTypes(showCards);
         String newTitle = playerName + "'s graveyard (" + showCards.size() + ")  -  " + qty
@@ -100,13 +102,14 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
 
         pack();
 
-        // same clamp as ShowCardsDialog: never bigger than the desktop, never smaller than 480x320
+        // Adaptive clamp matching columns: never bigger than desktop, never smaller than title width
         Container desktop = getParent() != null ? getParent() : MageFrame.getDesktop();
         if (desktop != null && desktop.getWidth() > 0 && desktop.getHeight() > 0) {
-            int maxWidth = Math.max(480, desktop.getWidth() - 32);
-            int maxHeight = Math.max(320, desktop.getHeight() - 48);
-            int width = Math.min(maxWidth, Math.max(480, this.getWidth()));
-            int height = Math.min(maxHeight, Math.max(320, this.getHeight()));
+            int titleMinW = 280;
+            int maxWidth = Math.max(titleMinW, desktop.getWidth() - 32);
+            int maxHeight = Math.max(260, desktop.getHeight() - 48);
+            int width = Math.min(maxWidth, Math.max(titleMinW, this.getWidth()));
+            int height = Math.min(maxHeight, Math.max(260, this.getHeight()));
             this.setSize(width, height);
         }
 
@@ -161,12 +164,15 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
      */
     private void initComponents() {
         cardArea = new CardArea();
+        cardArea.setCustomMinWidth(0);
+        cardArea.setDarkTheme(true);
 
         setClosable(true);
         setResizable(true);
-        setMinimumSize(new Dimension(480, 320));
+        setMinimumSize(new Dimension(260, 240));
         getContentPane().setLayout(new java.awt.BorderLayout());
         getContentPane().add(cardArea, java.awt.BorderLayout.CENTER);
+        getContentPane().setBackground(new Color(22, 26, 35));
         pack();
     }
 }

@@ -56,6 +56,8 @@ public class CardArea extends JPanel implements CardEventProducer {
     private CardIconOrder customCardIconOrder = null;
     private CardIconColor customCardIconColor = null;
     private int customCardIconsMaxVisibleCount = 0;
+    private int customMinWidth = -1;
+    private int cardColumns = 1;
 
     /**
      * Create the panel.
@@ -118,10 +120,44 @@ public class CardArea extends JPanel implements CardEventProducer {
         this.verticalCardOffset = verticalCardOffset;
     }
 
+    public void setCustomMinWidth(int customMinWidth) {
+        this.customMinWidth = customMinWidth;
+    }
+
+    public int getCardColumns() {
+        return this.cardColumns;
+    }
+
+    public Dimension getCardDimension() {
+        return this.cardDimension;
+    }
+
+    public void setDarkTheme(boolean enabled) {
+        if (enabled) {
+            Color darkBg = new Color(22, 26, 35);
+            this.setBackground(darkBg);
+            this.setOpaque(true);
+            if (scrollPane != null) {
+                scrollPane.setBackground(darkBg);
+                scrollPane.setOpaque(true);
+                scrollPane.setBorder(BorderFactory.createEmptyBorder());
+                if (scrollPane.getViewport() != null) {
+                    scrollPane.getViewport().setBackground(darkBg);
+                    scrollPane.getViewport().setOpaque(true);
+                }
+            }
+            if (cardArea != null) {
+                cardArea.setBackground(darkBg);
+                cardArea.setOpaque(true);
+            }
+        }
+    }
+
     private void fixDialogSize() {
         // fix panel size (must include scrolls and scrollbar clearance)
         Dimension newSize = new Dimension(cardArea.getPreferredSize());
-        int minWidth = Math.max(480, (int) Math.round(cardDimension.width * 2.2));
+        int defaultMinWidth = Math.max(480, (int) Math.round(cardDimension.width * 2.2));
+        int minWidth = customMinWidth >= 0 ? customMinWidth : defaultMinWidth;
         int scrollBarPad = Math.max(20, GUISizeHelper.scrollBarSize);
         newSize.width = Math.max(minWidth, newSize.width + scrollBarPad + 24);
         newSize.height += scrollBarPad + 24;
@@ -186,6 +222,7 @@ public class CardArea extends JPanel implements CardEventProducer {
             addCard(card, bigCard, gameId, rectangle);
             cardsAdded++;
         }
+        this.cardColumns = cardsAdded;
         cardArea.setPreferredSize(new Dimension(
                 cardDimension.width * showCards.size() + (Math.max(0, cardsAdded - 1) * xOffsetBetweenCardsOrColumns),
                 cardDimension.height + verticalCardOffset
@@ -249,6 +286,7 @@ public class CardArea extends JPanel implements CardEventProducer {
                 }
             }
         }
+        this.cardColumns = columns;
         int extraBottomPadding = Math.max(24, verticalCardOffset);
         cardArea.setPreferredSize(new Dimension(
                 cardDimension.width * columns + xOffsetBetweenCardsOrColumns * (columns - 1),

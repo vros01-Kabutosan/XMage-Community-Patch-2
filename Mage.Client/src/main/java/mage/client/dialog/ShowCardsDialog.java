@@ -141,12 +141,14 @@
      private void initComponents() {
 
          cardArea = new CardArea();
+         cardArea.setDarkTheme(true);
 
          setClosable(true);
          setResizable(true);
          setMinimumSize(new Dimension(480, 320));
          getContentPane().setLayout(new java.awt.BorderLayout());
          getContentPane().add(cardArea, java.awt.BorderLayout.CENTER);
+         getContentPane().setBackground(new Color(22, 26, 35));
          setGUISize();
          pack();
      }

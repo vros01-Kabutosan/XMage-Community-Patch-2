@@ -97,6 +97,17 @@ core desplegado no tiene.
 
 ## Pendiente
 
+- ~~**Cliente**: refrescar `mage-client\lib`~~ **HECHO el mismo día 21:45** (con autorización
+  del usuario): cliente cerrado (CloseMainWindow no bastó, force kill), backup de sus 4 jars
+  en `backup-jars-1.4.63-20261109_token_api_fix\cliente\`, copiados
+  `mage-1.4.63.jar` + `mage-common-1.4.63.jar` + `mage-sets-1.4.63.jar` +
+  `mage-deck-constructed-1.4.63.jar` del build nuevo (se conserva `mage-client-1.4.63.jar`
+  v30 del 02/11 con los mods UI). Cliente relanzado con la línea exacta del launcher
+  (PID 37184, log `client-console-20261109.log`): actualizó su base de datos de cartas
+  (591 sets nuevos, única vez) y el fix v22 de locks H2 **auto-curó** el lock que dejó el
+  cierre forzado; auto-reconexión y login "Kabutosan" OK. Cliente y servidor quedan en el
+  mismo build limpio del 09/11.
+
 - **Cliente**: `mage-client\lib` conserva `mage-1.4.63.jar` + `mage-sets-1.4.63.jar` +
   `mage-common-1.4.63.jar` del 01/11-31/10 (los mismos jars mixtos). En el cliente es
   **latente e inofensivo** (el cliente no ejecuta lógica de juego ni crea tokens), pero

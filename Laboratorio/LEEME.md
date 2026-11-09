@@ -90,6 +90,27 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
       - Tema oscuro Obsidian (#161A23 / 
 ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y su Viewport, eliminando el fondo gris claro desfasado y unificando el estilo con la mesa de juego.
 
+20. `Mage.Common/src/main/java/mage/db/**` (v31, 2026-11-09)
+    - Restauración del paquete fuente `mage.db` (EntityManager + EntityManagerTest + model/Feedback + model/Log) verbatim del delta oficial upstream (`79aec614fc2`). El upgrade 1.4.63 lo dejó fuera y la regla global `**/db` del `.gitignore` lo tenía ignorado, con lo que `Mage.Server` no compilaba desde source (`package mage.db does not exist` en FeedbackServiceImpl) y los jars desplegados dependían de clases recicladas de builds viejos. Aditivo: negación en `.gitignore` + 4 ficheros upstream, sin tocar código existente. Sin él, el feedback del servidor daría ClassNotFoundException en runtime.
+
+## Disciplina de build y despliegue (2026-11-09)
+
+Aprendido a la dura con el bug `NoSuchMethodError: Token.putOntoBattlefield` (detalle completo
+en `CHECKPOINT-2026-11-09-fix-token-api.md`):
+
+- **Para desplegar, SIEMPRE `mvn clean package`** (nunca incremental): el compilador
+  incremental recicla `target/classes` viejos cuando los mtimes del delta oficial no están
+  alineados y produce jars mixtos (interfaz `Token` API nueva + `CreateTokenEffect`/`Embalm`
+  /`Eternalize`/`RoleType` API vieja = crash de partida al crear cualquier token). El comando
+  histórico sin `clean` queda PROHIBIDO para despliegues.
+- **Los jars mage se despliegan SIEMPRE juntos y del mismo build** (core, common, sets,
+  server, player-ai y plugins): nunca un subset. Script oficial:
+  `Laboratorio\desplegar-oficial.ps1` (exige servidor parado, crea
+  `backup-jars-<version>-<fecha>_<tag>\`, copia 5 lib + 27 plugins).
+- Verificación de coherencia post-build y post-despliegue: escáner de constant-pool
+  `LAB-UI-1.4.62-V2/capturas/20261109-fix-token-api/scan_putob.py` (compara todas las
+  referencias a `Token.putOntoBattlefield` contra los descriptores que declara el core).
+
 ## Estado git y sincronización (2026-11-09)
 
 - El remoto `vros01-Kabutosan/XMage-Community-Patch-2` recibe dos repos locales:

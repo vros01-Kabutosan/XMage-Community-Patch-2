@@ -1,4 +1,4 @@
-# Laboratorio XMage — UI 1.4.63 (actualizado 2026-11-01)
+# Laboratorio XMage — UI 1.4.63 (actualizado 2026-11-09)
 
 > **Norma permanente para cualquier worker/IA:** todo cambio se prueba primero en este
 > laboratorio (puerto 17191) y solo se despliega en `J:\MTG\Instalacion-XMage` cuando el
@@ -15,8 +15,9 @@ modificado de XMage 1.4.63V1 de Kabutosan. La instalación oficial vive aparte, 
 | `XMage-1.4.62V1-src/` | Fuente completa del fork (git, rama `upgrade/official-1.4.63V1`). Aquí se compila. |
 | `LAB-UI-1.4.62-V2/` | Laboratorio ejecutable aislado: `cliente/` + `servidor/` (puerto 17191), scripts, logs y `capturas/` con la evidencia de los smokes. |
 | `parches/` | Parches consolidados de los mods (`2026-10-31-layout-4k-fix-v19.patch`, `2026-10-31-migracion-1.4.63V1.patch`, etc.). |
-| `Proyecto-XMage/` | Archivo histórico 1.4.61 (legado, solo consulta). No se usa para probar. |
+| `Proyecto-XMage/` | Legado 1.4.61 retirado del disco el 2026-11-01 y archivado en `_archivo/20261101/` (la carpeta quedó vacía). Su baja del árbol git se registró el 2026-11-09; la historia lo conserva. |
 | `_archivo/20261025/` | Material antiguo retirado del flujo activo (logs viejos, labs anteriores, restos de recuperación) y limpieza autorizada del 2026-10-25. Detalle exacto en `_archivo/20261025/INVENTARIO-LIMPIEZA-2026-10-25.md`. |
+| `_archivo/20261101/` | Reorganización del 2026-11-01 (script `reorganizar-2026-11-01.ps1`): legado `Proyecto-XMage/`, config del repo raíz, caches de herramientas y worktrees huérfanos. No se versiona. |
 
 ## Mods activos (todos aditivos)
 
@@ -88,3 +89,18 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
       - Ajuste adaptativo y proporcional de la ventana según el número de columnas (	itleMinW = 280), evitando marcos gigantes innecesarios.
       - Tema oscuro Obsidian (#161A23 / 
 ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y su Viewport, eliminando el fondo gris claro desfasado y unificando el estilo con la mesa de juego.
+
+## Estado git y sincronización (2026-11-09)
+
+- El remoto `vros01-Kabutosan/XMage-Community-Patch-2` recibe dos repos locales:
+  - `XMage-1.4.62V1-src/` (código): ramas `upgrade/official-1.4.62V1` y `upgrade/official-1.4.63V1`
+    sincronizadas con GitHub (último commit de código = UI Mod v30).
+  - `J:\MTG` (proyecto/docs, rama `main`): sincronizado el 2026-11-09. El `main` histórico del
+    remoto (instantánea 2026-09-06) se conservó como ancestro del merge `-s ours`
+    (`ddfd96b6e4b`); el árbol de `main` refleja el disco.
+- Bajas registradas en `main` el 2026-11-09: el legado `Proyecto-XMage/` (~122k ficheros ya
+  archivados en `_archivo/20261101/`). La historia git conserva todo; detalle en
+  `CHECKPOINT-2026-11-09-sync-git.md`.
+- Ignorados a partir del 2026-11-09 (no se versionan): `.kilo/` y `Laboratorio/acl-recovery-*/`.
+- `Instalacion-XMage/` sigue sin versionarse (binarios pesados); su estado queda documentado en
+  los checkpoints y con backups de jars en `Instalacion-XMage\xmage\backup-jars-*`.

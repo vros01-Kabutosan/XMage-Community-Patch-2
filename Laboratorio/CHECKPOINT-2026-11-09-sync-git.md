@@ -35,26 +35,39 @@ ni deploy.
 
 1. `.gitignore`: añadidas reglas para `.kilo/` (worktrees de herramienta) y
    `Laboratorio/acl-recovery-*/` (recuperaciones internas). No se versionan a partir de hoy.
-2. Commit de contenido `1af3f8be601` — «sync: estado actual del proyecto»: mods/, parches nuevos
+2. Commit de contenido `37bbd859289` — «sync: estado actual del proyecto»: mods/, parches nuevos
    (v20, v21, v22, v23, v30), checkpoints 2026-11-01 y 2026-11-02-graveyard-v30 y actualización de
    LEEME/checkpoints/propuesta pendientes desde la sesión v28-v30.
-3. Commit de baja del legado `bb92a54c6fd` — 121.974 ficheros de `Laboratorio/Proyecto-XMage`
+3. Commit de baja del legado `b29aa7dafcd` — 121.974 ficheros de `Laboratorio/Proyecto-XMage`
    fuera del árbol. El contenido sigue consultable en `_archivo/20261101/` y la historia git lo
    conserva (solo sumar, nunca restar).
-4. Merge `ddfd96b6e4b` — `git merge -s ours --allow-unrelated-histories origin/main`: el `main`
+4. Merge `38bbb2550c7` — `git merge -s ours --allow-unrelated-histories origin/main`: el `main`
    histórico del remoto (6e870991089) queda como ancestro del merge (no se pierde nada y el push
    es fast-forward, sin force) y el árbol resultante es fiel al disco.
 5. Commit de documentación de esta misma sesión: este checkpoint + sección de LEEME.
-6. `git push -u origin main` → `main` en GitHub pasa a reflejar el estado actual del proyecto.
+6. Primer `git push -u origin main` RECHAZADO por el hook de GitHub (GH001, pre-receive): la
+   historia arrastraba 3 ficheros generados de la era 1.4.61 por encima del límite de 100 MB por
+   fichero.
+7. Reescritura de la historia LOCAL de `main` con `git filter-branch --index-filter` (2 pasadas)
+   retirando de TODA la historia los 3 H2: `.../RC1.1-BLINDADA/client/db/cards.h2.mv.db` (292 MB),
+   `.../RC1.1-BLINDADA/xmage/mage-server/db/cards.h2.mv.db` (293 MB) y
+   `.../RC1.1-BLINDADA/xmage/mage-client/db/cards.h2.mv.db` (292 MB). Los SHAs definitivos tras la
+   reescritura son los citados en los puntos 2-4; la cadena original queda SOLO en local, en la
+   rama `backup/main-pre-rewrite-20261109` (72d35df8f48) y en `refs/original/*`. Esa historia nunca
+   llegó a GitHub, así que la reescritura no afecta a nadie más. Los 3 .db eran datos generados de
+   la era 1.4.61 (regenerables); no estaban ya en ninguna ruta del disco.
+8. Segundo `git push -u origin main` → `main` en GitHub pasa a reflejar el estado actual del
+   proyecto (fast-forward, sin force). Verificación previa al push: mayor blob alcanzable desde
+   `main` = 79,4 MB (solo warning de GitHub, sin bloqueo); 0 ficheros >100 MB.
 
 ## 4. Verificación
 
-- `git log --graph`: `ddfd96b6e4b` tiene como padres `bb92a54c6fd` (historia real del proyecto) y
+- `git log --graph`: `38bbb2550c7` tiene como padres `b29aa7dafcd` (historia real del proyecto) y
   `6e870991089` (main histórico del remoto). `git merge-base HEAD origin/main` = 6e870991089 ✔.
 - Estado de trabajo limpio tras cada commit (`git status --porcelain` = 0 entradas).
-- Tras el push: `git ls-remote origin` debe mostrar `main` = commit de documentación, y las ramas
-  de código sin cambios (`upgrade/official-1.4.62V1` = 97550128868, `upgrade/official-1.4.63V1` =
-  05b8c76cf2a).
+- Tras el push: `git ls-remote origin` debe mostrar `main` = último commit de documentación de
+  esta sesión, y las ramas de código sin cambios (`upgrade/official-1.4.62V1` = 97550128868,
+  `upgrade/official-1.4.63V1` = 05b8c76cf2a).
 
 ## 5. Reglas aplicadas y notas para futuras sesiones
 

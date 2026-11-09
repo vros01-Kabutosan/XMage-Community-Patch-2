@@ -97,7 +97,9 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     sincronizadas con GitHub (último commit de código = UI Mod v30).
   - `J:\MTG` (proyecto/docs, rama `main`): sincronizado el 2026-11-09. El `main` histórico del
     remoto (instantánea 2026-09-06) se conservó como ancestro del merge `-s ours`
-    (`ddfd96b6e4b`); el árbol de `main` refleja el disco.
+    (`38bbb2550c7`); el árbol de `main` refleja el disco. La historia se reescribió el mismo día
+    para retirar 3 ficheros H2 >100 MB de la era 1.4.61 (SHAs definitivos en el checkpoint
+    2026-11-09; cadena original solo local en `backup/main-pre-rewrite-20261109`).
 - Bajas registradas en `main` el 2026-11-09: el legado `Proyecto-XMage/` (~122k ficheros ya
   archivados en `_archivo/20261101/`). La historia git conserva todo; detalle en
   `CHECKPOINT-2026-11-09-sync-git.md`.

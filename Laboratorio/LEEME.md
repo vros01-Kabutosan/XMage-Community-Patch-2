@@ -82,3 +82,9 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
       - Contadores nítidos antialiased centrados con sombra y texto blanco.
       - Flechas cinemáticas de combate/selección con gradiente longitudinal, sombra suave y reborde luminoso.
       - Botones de acción del HelperPanel con jerarquía cromática (verde para OK/Done, rojo para Cancel/No, ámbar para Special).
+19. Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java, mage/client/cards/CardArea.java y mage/client/dialog/ShowCardsDialog.java (v30)
+    - Unificación y modernización de la vista del Cementerio (*Graveyard*) y Búsqueda de Biblioteca (*Library Search*):
+      - Visualización vertical en cascada / columnas idéntica a la vista de búsqueda de biblioteca (loadCardsNarrow / loadCardsMany), eliminando la fila horizontal plana y el espacio vacío inferior cuando hay menos de 10 cartas.
+      - Ajuste adaptativo y proporcional de la ventana según el número de columnas (	itleMinW = 280), evitando marcos gigantes innecesarios.
+      - Tema oscuro Obsidian (#161A23 / 
+ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y su Viewport, eliminando el fondo gris claro desfasado y unificando el estilo con la mesa de juego.

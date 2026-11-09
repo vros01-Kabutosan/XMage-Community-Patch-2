@@ -71,3 +71,4 @@
 - Parche: `Laboratorio\parches\2026-11-02-battlefield-visual-modernization-v29.patch` (19.195 bytes).
 - Backup: `Instalacion-XMage\xmage\backup-jars-1.4.63-20261102_battlefield\mage-client-1.4.63.jar`.
 - Despliegue: `Instalacion-XMage\xmage\mage-client\lib\mage-client-1.4.63.jar`.
+

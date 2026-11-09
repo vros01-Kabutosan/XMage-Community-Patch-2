@@ -69,3 +69,4 @@ Cuando el usuario dé la orden de iniciar cualquiera de estos bloques:
 4. Hacer backup del jar oficial en `Instalacion-XMage\xmage\backup-jars-...`.
 5. Desplegar en instalación oficial `Instalacion-XMage\xmage\mage-client\lib`.
 6. Generar parche en `Laboratorio/parches/`, actualizar `LEEME.md` y hacer commit/push en `upgrade/official-1.4.63V1`.
+

@@ -1,0 +1,146 @@
+diff --git a/Mage.Client/src/main/java/mage/client/cards/CardArea.java b/Mage.Client/src/main/java/mage/client/cards/CardArea.java
+index b9f1c2b81ae..b61b08a433c 100644
+--- a/Mage.Client/src/main/java/mage/client/cards/CardArea.java
++++ b/Mage.Client/src/main/java/mage/client/cards/CardArea.java
+@@ -56,6 +56,8 @@ public class CardArea extends JPanel implements CardEventProducer {
+     private CardIconOrder customCardIconOrder = null;
+     private CardIconColor customCardIconColor = null;
+     private int customCardIconsMaxVisibleCount = 0;
++    private int customMinWidth = -1;
++    private int cardColumns = 1;
+ 
+     /**
+      * Create the panel.
+@@ -118,10 +120,44 @@ public class CardArea extends JPanel implements CardEventProducer {
+         this.verticalCardOffset = verticalCardOffset;
+     }
+ 
++    public void setCustomMinWidth(int customMinWidth) {
++        this.customMinWidth = customMinWidth;
++    }
++
++    public int getCardColumns() {
++        return this.cardColumns;
++    }
++
++    public Dimension getCardDimension() {
++        return this.cardDimension;
++    }
++
++    public void setDarkTheme(boolean enabled) {
++        if (enabled) {
++            Color darkBg = new Color(22, 26, 35);
++            this.setBackground(darkBg);
++            this.setOpaque(true);
++            if (scrollPane != null) {
++                scrollPane.setBackground(darkBg);
++                scrollPane.setOpaque(true);
++                scrollPane.setBorder(BorderFactory.createEmptyBorder());
++                if (scrollPane.getViewport() != null) {
++                    scrollPane.getViewport().setBackground(darkBg);
++                    scrollPane.getViewport().setOpaque(true);
++                }
++            }
++            if (cardArea != null) {
++                cardArea.setBackground(darkBg);
++                cardArea.setOpaque(true);
++            }
++        }
++    }
++
+     private void fixDialogSize() {
+         // fix panel size (must include scrolls and scrollbar clearance)
+         Dimension newSize = new Dimension(cardArea.getPreferredSize());
+-        int minWidth = Math.max(480, (int) Math.round(cardDimension.width * 2.2));
++        int defaultMinWidth = Math.max(480, (int) Math.round(cardDimension.width * 2.2));
++        int minWidth = customMinWidth >= 0 ? customMinWidth : defaultMinWidth;
+         int scrollBarPad = Math.max(20, GUISizeHelper.scrollBarSize);
+         newSize.width = Math.max(minWidth, newSize.width + scrollBarPad + 24);
+         newSize.height += scrollBarPad + 24;
+@@ -186,6 +222,7 @@ public class CardArea extends JPanel implements CardEventProducer {
+             addCard(card, bigCard, gameId, rectangle);
+             cardsAdded++;
+         }
++        this.cardColumns = cardsAdded;
+         cardArea.setPreferredSize(new Dimension(
+                 cardDimension.width * showCards.size() + (Math.max(0, cardsAdded - 1) * xOffsetBetweenCardsOrColumns),
+                 cardDimension.height + verticalCardOffset
+@@ -249,6 +286,7 @@ public class CardArea extends JPanel implements CardEventProducer {
+                 }
+             }
+         }
++        this.cardColumns = columns;
+         int extraBottomPadding = Math.max(24, verticalCardOffset);
+         cardArea.setPreferredSize(new Dimension(
+                 cardDimension.width * columns + xOffsetBetweenCardsOrColumns * (columns - 1),
+diff --git a/Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java b/Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java
+index 209ef899533..edafce999eb 100644
+--- a/Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java
++++ b/Mage.Client/src/main/java/mage/client/dialog/GraveyardCardsDialog.java
+@@ -90,7 +90,9 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
+         // revertOrder is ignored on purpose: the card grid of the search
+         // window always sorts by card name, so the graveyard uses the same order
+         cardArea.clearCardEventListeners();
+-        cardArea.loadCards(showCards, bigCard, gameId);
++        // Use narrow column mode so cards are ALWAYS stacked in vertical columns
++        // identical to library search / deck columns, even when < 10 cards.
++        cardArea.loadCardsNarrow(showCards, bigCard, gameId);
+ 
+         int qty = qtyCardTypes(showCards);
+         String newTitle = playerName + "'s graveyard (" + showCards.size() + ")  -  " + qty
+@@ -100,13 +102,14 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
+ 
+         pack();
+ 
+-        // same clamp as ShowCardsDialog: never bigger than the desktop, never smaller than 480x320
++        // Adaptive clamp matching columns: never bigger than desktop, never smaller than title width
+         Container desktop = getParent() != null ? getParent() : MageFrame.getDesktop();
+         if (desktop != null && desktop.getWidth() > 0 && desktop.getHeight() > 0) {
+-            int maxWidth = Math.max(480, desktop.getWidth() - 32);
+-            int maxHeight = Math.max(320, desktop.getHeight() - 48);
+-            int width = Math.min(maxWidth, Math.max(480, this.getWidth()));
+-            int height = Math.min(maxHeight, Math.max(320, this.getHeight()));
++            int titleMinW = 280;
++            int maxWidth = Math.max(titleMinW, desktop.getWidth() - 32);
++            int maxHeight = Math.max(260, desktop.getHeight() - 48);
++            int width = Math.min(maxWidth, Math.max(titleMinW, this.getWidth()));
++            int height = Math.min(maxHeight, Math.max(260, this.getHeight()));
+             this.setSize(width, height);
+         }
+ 
+@@ -161,12 +164,15 @@ public class GraveyardCardsDialog extends MageDialog implements MageDesktopIconi
+      */
+     private void initComponents() {
+         cardArea = new CardArea();
++        cardArea.setCustomMinWidth(0);
++        cardArea.setDarkTheme(true);
+ 
+         setClosable(true);
+         setResizable(true);
+-        setMinimumSize(new Dimension(480, 320));
++        setMinimumSize(new Dimension(260, 240));
+         getContentPane().setLayout(new java.awt.BorderLayout());
+         getContentPane().add(cardArea, java.awt.BorderLayout.CENTER);
++        getContentPane().setBackground(new Color(22, 26, 35));
+         pack();
+     }
+ }
+diff --git a/Mage.Client/src/main/java/mage/client/dialog/ShowCardsDialog.java b/Mage.Client/src/main/java/mage/client/dialog/ShowCardsDialog.java
+index 0f81e508a63..eb43cab2608 100644
+--- a/Mage.Client/src/main/java/mage/client/dialog/ShowCardsDialog.java
++++ b/Mage.Client/src/main/java/mage/client/dialog/ShowCardsDialog.java
+@@ -141,12 +141,14 @@
+      private void initComponents() {
+ 
+          cardArea = new CardArea();
++         cardArea.setDarkTheme(true);
+ 
+          setClosable(true);
+          setResizable(true);
+          setMinimumSize(new Dimension(480, 320));
+          getContentPane().setLayout(new java.awt.BorderLayout());
+          getContentPane().add(cardArea, java.awt.BorderLayout.CENTER);
++         getContentPane().setBackground(new Color(22, 26, 35));
+          setGUISize();
+          pack();
+      }

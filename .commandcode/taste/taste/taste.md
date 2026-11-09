@@ -5,3 +5,4 @@
 - Keep the MTG root minimal: only the personal installation folder plus one aggregate folder (e.g. Laboratorio) for everything else; move non-installation content into that aggregate folder. Confidence: 0.85
 - For the MTG/XMage project, keep all project files under `J:\\MTG\\Instalacion-XMage`; unrelated directories (e.g. DD2) should only be used as junctions to satisfy hardcoded client paths, not as storage, and any visible references to them should be cleaned from project files/logs. Confidence: 0.95
 - Respond in Spanish (user communicates in Spanish). Confidence: 0.9
+- When adjusting the UI, adapt layouts to the user's screen resolution and fit content without unnecessary scrolling (e.g., battlefield cards should fit on screen at the current resolution until the battlefield is full); respect saved configuration/preferences and do not reset or override settings to force a fit. Confidence: 0.9

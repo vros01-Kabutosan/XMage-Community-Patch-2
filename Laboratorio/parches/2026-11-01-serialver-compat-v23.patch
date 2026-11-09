@@ -1,0 +1,40 @@
+From 57326e1763d0c30182d0c8f399c379a688bbf4e8 Mon Sep 17 00:00:00 2001
+From: v r <vros01-Kabutosan@users.noreply.github.com>
+Date: Sun, 1 Nov 2026 01:54:56 +0100
+Subject: [PATCH] Fix serialVersionUID compatibility on MageVersion and
+ MageVersionException (v2.3)
+
+---
+ Mage.Common/src/main/java/mage/remote/MageVersionException.java | 2 ++
+ Mage.Common/src/main/java/mage/utils/MageVersion.java           | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/Mage.Common/src/main/java/mage/remote/MageVersionException.java b/Mage.Common/src/main/java/mage/remote/MageVersionException.java
+index 2d93ff17976..6358a669020 100644
+--- a/Mage.Common/src/main/java/mage/remote/MageVersionException.java
++++ b/Mage.Common/src/main/java/mage/remote/MageVersionException.java
+@@ -8,6 +8,8 @@ import mage.utils.MageVersion;
+  */
+ public class MageVersionException extends MageException {
+ 
++    private static final long serialVersionUID = 9200806506119372910L;
++
+     private final MageVersion clientVersion;
+     private final MageVersion serverVersion;
+ 
+diff --git a/Mage.Common/src/main/java/mage/utils/MageVersion.java b/Mage.Common/src/main/java/mage/utils/MageVersion.java
+index cf318fe5af9..073ad1031ed 100644
+--- a/Mage.Common/src/main/java/mage/utils/MageVersion.java
++++ b/Mage.Common/src/main/java/mage/utils/MageVersion.java
+@@ -9,6 +9,8 @@ import java.io.Serializable;
+  */
+ public class MageVersion implements Serializable, Comparable<MageVersion> {
+ 
++    private static final long serialVersionUID = -5872491576857560039L;
++
+     // version must be compatible with maven version numbers
+     // launcher can update only to the newest version
+     // example: 1.4.48-V1-beta3
+-- 
+2.55.0.windows.3
+

@@ -48,3 +48,7 @@ Laboratorio/_archivo/
 *.suo
 *.user
 
+
+# --- Herramientas y recuperaciones internas (no se versionan) ---
+.kilo/
+Laboratorio/acl-recovery-*/

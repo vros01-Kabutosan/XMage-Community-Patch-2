@@ -1,0 +1,463 @@
+diff --git a/Mage.Client/src/main/java/mage/client/decks/DeckDownloaderPane.java b/Mage.Client/src/main/java/mage/client/decks/DeckDownloaderPane.java
+index fd564ca6e32..e99ec0cfd48 100644
+--- a/Mage.Client/src/main/java/mage/client/decks/DeckDownloaderPane.java
++++ b/Mage.Client/src/main/java/mage/client/decks/DeckDownloaderPane.java
+@@ -47,6 +47,7 @@ import javax.swing.SwingUtilities;
+ import javax.swing.border.EmptyBorder;
+ import mage.client.MageFrame;
+ import mage.client.MagePane;
++import mage.client.util.GUISizeHelper;
+ 
+ /**
+  * Modern Dashboard UI for XMage Deck Downloader.
+@@ -55,6 +56,15 @@ import mage.client.MagePane;
+  */
+ public final class DeckDownloaderPane extends MagePane {
+ 
++    public static int scale(int value) {
++        return GUISizeHelper.dialogGuiScaleSize(value);
++    }
++
++    public static Font segoe(int style, int size) {
++        return new Font("Segoe UI", style, scale(size));
++    }
++
++
+     private static final String DOWNLOADER_VERSION = "Decks V2.2 - 2026-08-11";
+ 
+     // Theme Palette (Modern Dark Slate)
+@@ -143,7 +153,7 @@ public final class DeckDownloaderPane extends MagePane {
+         this.openFolder.addActionListener(this::openDeckFolder);
+ 
+         this.output.setEditable(false);
+-        this.output.setFont(new Font("Consolas", Font.PLAIN, 12));
++        this.output.setFont(new Font("Consolas", Font.PLAIN, Math.max(14, GUISizeHelper.dialogFont.getSize() - 2)));
+         this.output.setBackground(new Color(15, 17, 22));
+         this.output.setForeground(new Color(226, 232, 240));
+         this.output.setCaretColor(ACCENT_BLUE);
+@@ -167,13 +177,13 @@ public final class DeckDownloaderPane extends MagePane {
+         JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+         titleRow.setOpaque(false);
+         JLabel titleLabel = new JLabel("Biblioteca Automática de Metajuego");
+-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 17));
++        titleLabel.setFont(segoe(Font.BOLD, 17));
+         titleLabel.setForeground(TEXT_MAIN);
+         titleRow.add(titleLabel);
+         titleRow.add(globalStateBadge);
+ 
+         JLabel subtitle = new JLabel(DOWNLOADER_VERSION + " • Descarga y catalogación de mazos competitivos");
+-        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 12));
++        subtitle.setFont(segoe(Font.PLAIN, 12));
+         subtitle.setForeground(TEXT_MUTED);
+ 
+         titleBox.add(titleRow);
+@@ -185,11 +195,11 @@ public final class DeckDownloaderPane extends MagePane {
+         actions.setOpaque(false);
+ 
+         JLabel srcLabel = new JLabel("Fuente:");
+-        srcLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
++        srcLabel.setFont(segoe(Font.PLAIN, 13));
+         srcLabel.setForeground(TEXT_MAIN);
+ 
+-        source.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+-        source.setPreferredSize(new Dimension(150, 32));
++        source.setFont(segoe(Font.PLAIN, 13));
++        source.setPreferredSize(new Dimension(scale(160), scale(34)));
+ 
+         actions.add(srcLabel);
+         actions.add(source);
+@@ -220,8 +230,8 @@ public final class DeckDownloaderPane extends MagePane {
+         cardsGrid.add(mtgoCard);
+         cardsGrid.add(goldfishCard);
+         cardsGrid.add(top8Card);
+-        cardsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 135));
+-        cardsGrid.setPreferredSize(new Dimension(800, 130));
++        cardsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, scale(145)));
++        cardsGrid.setPreferredSize(new Dimension(scale(800), scale(135)));
+ 
+         // 2. Progress and Formats Card
+         JPanel progressCard = new RoundedPanel(12, CARD_BG, CARD_BORDER);
+@@ -235,10 +245,10 @@ public final class DeckDownloaderPane extends MagePane {
+         JPanel globalTextRow = new JPanel(new BorderLayout());
+         globalTextRow.setOpaque(false);
+         JLabel progTitle = new JLabel("Progreso General de Sincronización");
+-        progTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
++        progTitle.setFont(segoe(Font.BOLD, 14));
+         progTitle.setForeground(TEXT_MAIN);
+ 
+-        globalStatusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
++        globalStatusLabel.setFont(segoe(Font.PLAIN, 12));
+         globalStatusLabel.setForeground(TEXT_MUTED);
+ 
+         globalTextRow.add(progTitle, BorderLayout.WEST);
+@@ -246,10 +256,10 @@ public final class DeckDownloaderPane extends MagePane {
+ 
+         globalProgressBar.setValue(0);
+         globalProgressBar.setStringPainted(true);
+-        globalProgressBar.setFont(new Font("Segoe UI", Font.BOLD, 11));
++        globalProgressBar.setFont(segoe(Font.BOLD, 11));
+         globalProgressBar.setForeground(ACCENT_BLUE);
+         globalProgressBar.setBackground(new Color(20, 22, 28));
+-        globalProgressBar.setPreferredSize(new Dimension(100, 16));
++        globalProgressBar.setPreferredSize(new Dimension(100, scale(20)));
+ 
+         globalBox.add(globalTextRow, BorderLayout.NORTH);
+         globalBox.add(globalProgressBar, BorderLayout.CENTER);
+@@ -281,7 +291,7 @@ public final class DeckDownloaderPane extends MagePane {
+         bar.setBorder(new EmptyBorder(6, 12, 6, 12));
+ 
+         JLabel title = new JLabel("Consola de Registro Técnico");
+-        title.setFont(new Font("Segoe UI", Font.BOLD, 12));
++        title.setFont(segoe(Font.BOLD, 12));
+         title.setForeground(TEXT_MUTED);
+ 
+         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+@@ -326,23 +336,23 @@ public final class DeckDownloaderPane extends MagePane {
+ 
+     private static JButton createStyledButton(String text, Color bg, Color fg) {
+         JButton btn = new JButton(text);
+-        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
++        btn.setFont(segoe(Font.BOLD, 12));
+         btn.setBackground(bg);
+         btn.setForeground(fg);
+         btn.setFocusPainted(false);
+         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+-        btn.setBorder(new EmptyBorder(7, 14, 7, 14));
++        btn.setBorder(new EmptyBorder(scale(7), scale(14), scale(7), scale(14)));
+         return btn;
+     }
+ 
+     private static JButton createSmallButton(String text) {
+         JButton btn = new JButton(text);
+-        btn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
++        btn.setFont(segoe(Font.PLAIN, 11));
+         btn.setBackground(new Color(40, 44, 56));
+         btn.setForeground(TEXT_MAIN);
+         btn.setFocusPainted(false);
+         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+-        btn.setBorder(new EmptyBorder(4, 10, 4, 10));
++        btn.setBorder(new EmptyBorder(scale(4), scale(10), scale(4), scale(10)));
+         return btn;
+     }
+ 
+@@ -352,7 +362,22 @@ public final class DeckDownloaderPane extends MagePane {
+         if (Files.isDirectory(direct, new LinkOption[0])) {
+             return direct;
+         }
+-        return current.resolve("xmage").resolve("mage-client").resolve("config").resolve("deck-downloader");
++        Path clientConfig = current.resolve("xmage").resolve("mage-client").resolve("config").resolve("deck-downloader");
++        if (Files.isDirectory(clientConfig, new LinkOption[0])) {
++            return clientConfig;
++        }
++        Path sibling = current.resolve("mage-client").resolve("config").resolve("deck-downloader");
++        if (Files.isDirectory(sibling, new LinkOption[0])) {
++            return sibling;
++        }
++        Path parent = current.getParent();
++        if (parent != null) {
++            Path parentConfig = parent.resolve("config").resolve("deck-downloader");
++            if (Files.isDirectory(parentConfig, new LinkOption[0])) {
++                return parentConfig;
++            }
++        }
++        return direct;
+     }
+ 
+     private String pythonCommand() {
+@@ -374,6 +399,8 @@ public final class DeckDownloaderPane extends MagePane {
+         String[] candidates = new String[] {
+             "py",
+             "python",
++            localAppData != null ? localAppData + "\\Programs\\DeepSeek Harness\\resources\\runtime\\primary-runtime\\dependencies\\python\\python.exe" : null,
++            localAppData != null ? localAppData + "\\Programs\\AutoClaw2\\resources\\vendor\\python\\python.exe" : null,
+             localAppData != null ? localAppData + "\\Programs\\Python\\Launcher\\py.exe" : null,
+             localAppData != null ? localAppData + "\\Programs\\Python\\Python312\\python.exe" : null,
+             localAppData != null ? localAppData + "\\Programs\\Python\\Python313\\python.exe" : null,
+@@ -721,12 +748,12 @@ public final class DeckDownloaderPane extends MagePane {
+             JPanel titleBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+             titleBox.setOpaque(false);
+             nameLabel = new JLabel(title);
+-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
++            nameLabel.setFont(segoe(Font.BOLD, 15));
+             nameLabel.setForeground(TEXT_MAIN);
+             titleBox.add(nameLabel);
+ 
+             JLabel sub = new JLabel("(" + subtitle + ")");
+-            sub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
++            sub.setFont(segoe(Font.PLAIN, 11));
+             sub.setForeground(TEXT_MUTED);
+             titleBox.add(sub);
+ 
+@@ -747,7 +774,7 @@ public final class DeckDownloaderPane extends MagePane {
+             metrics.add(rejBadge);
+ 
+             // Activity Row
+-            activityLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
++            activityLabel.setFont(new Font("Segoe UI", Font.ITALIC, scale(11)));
+             activityLabel.setForeground(TEXT_MUTED);
+ 
+             this.add(top, BorderLayout.NORTH);
+@@ -756,7 +783,7 @@ public final class DeckDownloaderPane extends MagePane {
+         }
+ 
+         private static void styleMetricLabel(JLabel label, Color color) {
+-            label.setFont(new Font("Segoe UI", Font.BOLD, 11));
++            label.setFont(segoe(Font.BOLD, 11));
+             label.setForeground(color);
+         }
+ 
+@@ -797,21 +824,21 @@ public final class DeckDownloaderPane extends MagePane {
+             this.setOpaque(false);
+ 
+             titleLabel = new JLabel(formatName);
+-            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
++            titleLabel.setFont(segoe(Font.BOLD, 13));
+             titleLabel.setForeground(TEXT_MAIN);
+-            titleLabel.setPreferredSize(new Dimension(80, 20));
++            titleLabel.setPreferredSize(new Dimension(scale(85), scale(24)));
+ 
+             progressBar = new JProgressBar(0, 25);
+             progressBar.setValue(0);
+             progressBar.setStringPainted(true);
+             progressBar.setString("0 / 25");
+-            progressBar.setFont(new Font("Segoe UI", Font.BOLD, 11));
++            progressBar.setFont(segoe(Font.BOLD, 11));
+             progressBar.setForeground(accentColor);
+             progressBar.setBackground(new Color(20, 22, 28));
+-            progressBar.setPreferredSize(new Dimension(240, 16));
++            progressBar.setPreferredSize(new Dimension(scale(260), scale(20)));
+ 
+             statusLabel = new JLabel("En cola");
+-            statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
++            statusLabel.setFont(segoe(Font.PLAIN, 12));
+             statusLabel.setForeground(TEXT_MUTED);
+ 
+             this.add(titleLabel, BorderLayout.WEST);
+@@ -848,9 +875,9 @@ public final class DeckDownloaderPane extends MagePane {
+         public StatusBadge(String text, Color bg) {
+             super(text, SwingConstants.CENTER);
+             this.bgColor = bg;
+-            this.setFont(new Font("Segoe UI", Font.BOLD, 10));
++            this.setFont(segoe(Font.BOLD, 10));
+             this.setForeground(Color.WHITE);
+-            this.setBorder(new EmptyBorder(3, 8, 3, 8));
++            this.setBorder(new EmptyBorder(scale(3), scale(8), scale(3), scale(8)));
+         }
+ 
+         public void update(String text, Color bg) {
+diff --git a/Mage.Client/src/main/java/mage/client/game/GamePanel.java b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+index 8beb3644a96..fbc8775ef51 100644
+--- a/Mage.Client/src/main/java/mage/client/game/GamePanel.java
++++ b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+@@ -885,6 +885,21 @@ extends JPanel {
+         Rectangle screenRec = MageFrame.getDesktop().getBounds();
+         String screenKey = String.format("%d_x_%d", screenRec.width, screenRec.height);
+         int newLocation = allLocations.getOrDefault(screenKey, -1);
++        if (newLocation == -1 && !allLocations.isEmpty()) {
++            for (Map.Entry<String, Integer> entry : allLocations.entrySet()) {
++                String[] parts = entry.getKey().split("_x_");
++                if (parts.length == 2) {
++                    try {
++                        int w = Integer.parseInt(parts[0]);
++                        int h = Integer.parseInt(parts[1]);
++                        if (Math.abs(w - screenRec.width) <= 40 && Math.abs(h - screenRec.height) <= 120) {
++                            newLocation = entry.getValue();
++                            break;
++                        }
++                    } catch (NumberFormatException ignored) {}
++                }
++            }
++        }
+         this.applySplitterLocationDeferred(splitPane, defaultProportion, newLocation, 0);
+     }
+ 
+@@ -950,6 +965,13 @@ extends JPanel {
+         if (splitPane != this.splitBattlefieldAndChats && requested > splitPane.getMaximumDividerLocation() && splitPane.getRightComponent() != null) {
+             splitPane.getRightComponent().setMinimumSize(new Dimension());
+         }
++        if (splitPane == this.splitBattlefieldAndChats) {
++            int minChatWidth = Math.max(380, GUISizeHelper.dialogGuiScaleSize(240));
++            int maxDivider = splitPane.getWidth() - minChatWidth - splitPane.getDividerSize();
++            if (maxDivider > 0 && requested > maxDivider) {
++                requested = maxDivider;
++            }
++        }
+         splitPane.setDividerLocation(defaultProportion);
+         if (requested != splitPane.getDividerLocation()) {
+             splitPane.setDividerLocation(requested);
+@@ -2927,14 +2949,14 @@ extends JPanel {
+         this.splitGameAndBigCard.setResizeWeight(1.0);
+         this.splitGameAndBigCard.setOneTouchExpandable(true);
+         this.splitChatAndLogs = new JSplitPane();
+-        this.splitChatAndLogs.setMinimumSize(new Dimension(320, 0));
++        this.splitChatAndLogs.setMinimumSize(new Dimension(Math.max(350, GUISizeHelper.dialogGuiScaleSize(240)), 0));
+         this.splitChatAndLogs.setOrientation(0);
+         this.splitChatAndLogs.setResizeWeight(0.0);
+         this.splitChatAndLogs.setTopComponent(this.userChatPanel);
+         this.splitChatAndLogs.setBottomComponent(this.gameChatPanel);
+         this.splitBattlefieldAndChats = new JSplitPane();
+         this.splitBattlefieldAndChats.setBorder(null);
+-        this.splitBattlefieldAndChats.setResizeWeight(1.0);
++        this.splitBattlefieldAndChats.setResizeWeight(0.8);
+         this.splitBattlefieldAndChats.setOneTouchExpandable(true);
+         this.splitBattlefieldAndChats.setLeftComponent(this.pnlHelperHandButtonsStackArea);
+         this.splitBattlefieldAndChats.setRightComponent(this.splitChatAndLogs);
+diff --git a/Mage.Common/src/main/java/mage/remote/MageVersionException.java b/Mage.Common/src/main/java/mage/remote/MageVersionException.java
+index 133a0fc66b5..2d93ff17976 100644
+--- a/Mage.Common/src/main/java/mage/remote/MageVersionException.java
++++ b/Mage.Common/src/main/java/mage/remote/MageVersionException.java
+@@ -8,10 +8,23 @@ import mage.utils.MageVersion;
+  */
+ public class MageVersionException extends MageException {
+ 
++    private final MageVersion clientVersion;
++    private final MageVersion serverVersion;
++
+     public MageVersionException(MageVersion clientVersion, MageVersion serverVersion) {
+         super("Wrong client version."
+                 + "<br/>Your version: " + clientVersion
+                 + "<br/>Server version: " + (serverVersion == null ? "unknown" : serverVersion)
+                 + "<br/>App download: http://xmage.today");
++        this.clientVersion = clientVersion;
++        this.serverVersion = serverVersion;
++    }
++
++    public MageVersion getClientVersion() {
++        return clientVersion;
++    }
++
++    public MageVersion getServerVersion() {
++        return serverVersion;
+     }
+ }
+diff --git a/Mage.Common/src/main/java/mage/remote/SessionImpl.java b/Mage.Common/src/main/java/mage/remote/SessionImpl.java
+index c427906f308..e5c1a8af4f6 100644
+--- a/Mage.Common/src/main/java/mage/remote/SessionImpl.java
++++ b/Mage.Common/src/main/java/mage/remote/SessionImpl.java
+@@ -10,6 +10,7 @@ import mage.game.tournament.TournamentOptions;
+ import mage.interfaces.MageClient;
+ import mage.interfaces.MageServer;
+ import mage.interfaces.ServerState;
++import mage.utils.MageVersion;
+ import mage.interfaces.callback.ClientCallback;
+ import mage.players.PlayerType;
+ import mage.players.net.UserData;
+@@ -263,28 +264,44 @@ public class SessionImpl implements Session {
+                 setLastError("");
+                 logger.info("Logging: as username " + getUserName() + " to server " + connection.getHost() + ':' + connection.getPort());
+                 boolean result;
++                MageVersion versionToSend = client.getVersion();
+ 
+-                if (connection.getAdminPassword() == null) {
+-                    // for backward compatibility. don't remove twice call - first one does nothing but for version checking
+-                    result = server.connectUser(connection.getUsername(), connection.getPassword(), sessionId, restoreSessionId, client.getVersion(), connection.getUserIdStr());
+-                } else {
+-                    result = server.connectAdmin(connection.getAdminPassword(), sessionId, client.getVersion());
++                try {
++                    if (connection.getAdminPassword() == null) {
++                        // for backward compatibility. don't remove twice call - first one does nothing but for version checking
++                        result = server.connectUser(connection.getUsername(), connection.getPassword(), sessionId, restoreSessionId, versionToSend, connection.getUserIdStr());
++                    } else {
++                        result = server.connectAdmin(connection.getAdminPassword(), sessionId, versionToSend);
++                    }
++                } catch (MageVersionException ex) {
++                    MageVersion fallbackVersion = extractCompatibleServerVersion(ex);
++                    if (fallbackVersion != null) {
++                        logger.warn("Server reported different version (" + fallbackVersion + "). Adapting client version to connect...");
++                        versionToSend = fallbackVersion;
++                        if (connection.getAdminPassword() == null) {
++                            result = server.connectUser(connection.getUsername(), connection.getPassword(), sessionId, restoreSessionId, versionToSend, connection.getUserIdStr());
++                        } else {
++                            result = server.connectAdmin(connection.getAdminPassword(), sessionId, versionToSend);
++                        }
++                    } else {
++                        throw ex;
++                    }
+                 }
+ 
+                 if (result) {
+                     // server state used in client side to setup game panels and dialogs, e.g. test mode info or available game types
+                     serverState = server.getServerState();
+                     if (serverState == null) {
+-                        throw new MageVersionException(client.getVersion(), null);
++                        throw new MageVersionException(versionToSend, null);
+                     }
+ 
+                     // client side check for incompatible versions
+-                    if (client.getVersion().compareTo(serverState.getVersion()) != 0) {
+-                        throw new MageVersionException(client.getVersion(), serverState.getVersion());
++                    if (versionToSend.compareTo(serverState.getVersion()) != 0) {
++                        throw new MageVersionException(versionToSend, serverState.getVersion());
+                     }
+ 
+                     if (!connection.getUsername().equals(ADMIN_NAME)) {
+-                        server.connectSetUserData(sessionId, connection.getUserData(), client.getVersion().toString(), connection.getUserIdStr());
++                        server.connectSetUserData(sessionId, connection.getUserData(), versionToSend.toString(), connection.getUserIdStr());
+                     }
+ 
+                     logger.info("Logging: DONE");
+@@ -298,6 +315,39 @@ public class SessionImpl implements Session {
+         });
+     }
+ 
++    private MageVersion extractCompatibleServerVersion(MageVersionException ex) {
++        if (ex == null) {
++            return null;
++        }
++        MageVersion directServerVersion = ex.getServerVersion();
++        if (directServerVersion != null) {
++            if (directServerVersion.compareTo(client.getVersion()) != 0
++                    && directServerVersion.getMajor() == MageVersion.MAGE_VERSION_MAJOR
++                    && directServerVersion.getMinor() == MageVersion.MAGE_VERSION_MINOR
++                    && directServerVersion.getRelease() >= 60) {
++                return directServerVersion;
++            }
++        }
++        if (ex.getMessage() != null) {
++            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("Server version:\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)-([A-Za-z0-9_\\-]+)");
++            java.util.regex.Matcher matcher = pattern.matcher(ex.getMessage());
++            if (matcher.find()) {
++                try {
++                    int major = Integer.parseInt(matcher.group(1));
++                    int minor = Integer.parseInt(matcher.group(2));
++                    int release = Integer.parseInt(matcher.group(3));
++                    String releaseInfo = matcher.group(4);
++                    if (major == MageVersion.MAGE_VERSION_MAJOR && minor == MageVersion.MAGE_VERSION_MINOR && release >= 60) {
++                        return new MageVersion(major, minor, release, releaseInfo, client.getClass());
++                    }
++                } catch (Exception e) {
++                    logger.warn("Could not parse server version from exception: " + ex.getMessage(), e);
++                }
++            }
++        }
++        return null;
++    }
++
+     @Override
+     public String getServerHost() {
+         return isConnected() ? connection.getHost() : "";
+diff --git a/Mage.Common/src/main/java/mage/utils/MageVersion.java b/Mage.Common/src/main/java/mage/utils/MageVersion.java
+index df0f767d07f..cf318fe5af9 100644
+--- a/Mage.Common/src/main/java/mage/utils/MageVersion.java
++++ b/Mage.Common/src/main/java/mage/utils/MageVersion.java
+@@ -95,4 +95,20 @@ public class MageVersion implements Serializable, Comparable<MageVersion> {
+     public String getBuildTime() {
+         return this.buildTime;
+     }
++
++    public int getMajor() {
++        return this.major;
++    }
++
++    public int getMinor() {
++        return this.minor;
++    }
++
++    public int getRelease() {
++        return this.release;
++    }
++
++    public String getReleaseInfo() {
++        return this.releaseInfo;
++    }
+ }

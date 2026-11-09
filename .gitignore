@@ -6,6 +6,11 @@ syntax: glob
 **/target
 #un-ignore target implementations
 !Mage/src/main/java/mage/target
+#un-ignore the mage.db source package in Mage.Common (java source, not a database:
+# EntityManager + model are required by mage-server FeedbackService; without this
+# negation **/db swallowed the package and mage-server could not compile from source)
+!Mage.Common/src/main/java/mage/db/
+!Mage.Common/src/main/java/mage/db/**
 
 # logs and logs rotation
 *.log

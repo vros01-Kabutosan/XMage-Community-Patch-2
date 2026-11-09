@@ -56,9 +56,27 @@ ni deploy.
    rama `backup/main-pre-rewrite-20261109` (72d35df8f48) y en `refs/original/*`. Esa historia nunca
    llegó a GitHub, así que la reescritura no afecta a nadie más. Los 3 .db eran datos generados de
    la era 1.4.61 (regenerables); no estaban ya en ninguna ruta del disco.
-8. Segundo `git push -u origin main` → `main` en GitHub pasa a reflejar el estado actual del
-   proyecto (fast-forward, sin force). Verificación previa al push: mayor blob alcanzable desde
-   `main` = 79,4 MB (solo warning de GitHub, sin bloqueo); 0 ficheros >100 MB.
+8. Segundo `git push -u origin main` → RECHAZADO de nuevo, esta vez por el ruleset del repo:
+   «XMAGE MAIN PROTECTED» (ruleset 21808545, enforcement active, sin bypass para nadie) exige
+   pull request con 1 aprobación de una cuenta distinta a la del último push. Verificación previa
+   al push: mayor blob alcanzable desde `main` = 79,4 MB (solo warning de GitHub, sin bloqueo);
+   0 ficheros >100 MB.
+9. Vía conformista: el mismo árbol se subió a la rama `sync/proyecto-20261109` y se abrió el
+   PR #26 (`sync/proyecto-20261109` → `main`). Su merge por API fue rechazado por la misma regla
+   («New changes require approval from someone other than the last pusher»): GitHub no permite
+   auto-aprobación y el ruleset no tiene bypass_actors.
+10. Decisión de Kabutosan (2026-11-09): relajar el ruleset y aterrizar `main` por push directo.
+    El token de git no puede editar rulesets (PATCH 404 sin permiso de administración), así que
+    el cambio se hace a mano en la web: Settings → Rules → Rulesets → «XMAGE MAIN PROTECTED» →
+    desmarcar «Require a pull request before merging» → Save changes. Las reglas `deletion` y
+    `non_fast_forward` se mantienen durante la operación.
+11. Tras aterrizar `main`, el ruleset se RESTAURA a su estado original (3 reglas: deletion,
+    non_fast_forward y pull_request con required_approving_review_count=1,
+    dismiss_stale_reviews_on_push=true, require_last_push_approval=true,
+    required_review_thread_resolution=true, require_extra_approval_for_unattributed_changes=true,
+    allowed_merge_methods=[merge, squash, rebase]; conditions ref_name include refs/heads/main;
+    bypass_actors vacío). Respaldo exacto del ruleset en
+    `Laboratorio/respaldo-ruleset-main-20261109.json` y el PR #26 se cierra con nota.
 
 ## 4. Verificación
 

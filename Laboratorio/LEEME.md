@@ -93,6 +93,12 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
 20. `Mage.Common/src/main/java/mage/db/**` (v31, 2026-11-09)
     - Restauración del paquete fuente `mage.db` (EntityManager + EntityManagerTest + model/Feedback + model/Log) verbatim del delta oficial upstream (`79aec614fc2`). El upgrade 1.4.63 lo dejó fuera y la regla global `**/db` del `.gitignore` lo tenía ignorado, con lo que `Mage.Server` no compilaba desde source (`package mage.db does not exist` en FeedbackServiceImpl) y los jars desplegados dependían de clases recicladas de builds viejos. Aditivo: negación en `.gitignore` + 4 ficheros upstream, sin tocar código existente. Sin él, el feedback del servidor daría ClassNotFoundException en runtime.
 
+21. `Mage.Client/src/main/java/mage/client/deckeditor/DeckEditorPanel.java` y `mage/client/util/AiDeckLibrary.java` (v32, 2026-11-13)
+    - El botón **LOAD** del Deck Editor abre siempre `sample-decks\Descargados` (la carpeta de los mazos descargados por el descargador: Modern / Pioneer / Standard), en lugar de la última ruta recordada en la preferencia `lastDeckFolder`.
+    - Reutiliza `AiDeckLibrary.downloadedDeckRoot()` (antes `private`, ahora `public`) para que el editor y el pool de mazos de la IA resuelvan la misma carpeta: una única fuente de verdad, sin rutas hardcodeadas.
+    - Fallback conservado: si `Descargados` no existe, se vuelve al comportamiento anterior (`lastDeckFolder`). SAVE, Import/Export, el selector de mazo de la mesa y los torneos quedan **sin cambios** (mismo criterio pedido por Kabutosan: solo LOAD del editor).
+    - Parche: `parches\2026-11-13-load-folder-descargados-v32.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\126-prueba-load-descargados.log`.
+
 ## Disciplina de build y despliegue (2026-11-09)
 
 Aprendido a la dura con el bug `NoSuchMethodError: Token.putOntoBattlefield` (detalle completo

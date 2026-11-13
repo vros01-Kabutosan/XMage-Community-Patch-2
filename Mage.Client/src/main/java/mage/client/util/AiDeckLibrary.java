@@ -69,7 +69,8 @@ public final class AiDeckLibrary {
         }
     }
 
-    private static Path downloadedDeckRoot() {
+    /** Root folder of the decks downloaded by the deck downloader (shared with the deck editor's LOAD dialog). */
+    public static Path downloadedDeckRoot() {
         Path current = Paths.get(System.getProperty("user.dir", ".")).toAbsolutePath();
         Path direct = current.resolve("config").resolve("deck-downloader");
         if (Files.isDirectory(direct)) {

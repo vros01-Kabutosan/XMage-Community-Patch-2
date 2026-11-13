@@ -41,6 +41,7 @@ import mage.client.deck.generator.DeckGenerator.DeckGeneratorException;
 import mage.client.dialog.AddLandDialog;
 import mage.client.dialog.PreferencesDialog;
 import mage.client.plugins.impl.Plugins;
+import mage.client.util.AiDeckLibrary;
 import mage.client.util.Event;
 import mage.client.util.Listener;
 import mage.client.util.audio.AudioManager;
@@ -1519,7 +1520,11 @@ public class DeckEditorPanel extends javax.swing.JPanel {
 
     private void btnLoadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLoadActionPerformed
         String lastFolder = MageFrame.getPreferences().get(LAST_DECK_FOLDER, "");
-        if (!lastFolder.isEmpty()) {
+        // LOAD always opens on the downloaded decks folder (sample-decks/Descargados)
+        File downloadedFolder = AiDeckLibrary.downloadedDeckRoot().toFile();
+        if (downloadedFolder.isDirectory()) {
+            fcSelectDeck.setCurrentDirectory(downloadedFolder);
+        } else if (!lastFolder.isEmpty()) {
             fcSelectDeck.setCurrentDirectory(new File(lastFolder));
         }
         int ret = fcSelectDeck.showOpenDialog(this);

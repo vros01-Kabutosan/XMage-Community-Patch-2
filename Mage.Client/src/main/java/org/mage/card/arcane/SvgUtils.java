@@ -35,6 +35,10 @@ public class SvgUtils {
 
     private static boolean haveSvgSupport = false;
 
+    // v33: css file -> data URI. The css temp file is only re-read/re-encoded once per css file;
+    // prepareCss invalidates the entry whenever it (re)writes the file (e.g. on theme reload).
+    private static final java.util.Map<String, String> cssDataURICache = new java.util.concurrent.ConcurrentHashMap<>();
+
     // basic css settings for good svg rendering quality, other default settings can be defined by additional param
     private static final String CSS_BASE_SETTINGS = ""
             + "shape-rendering: geometricPrecision;"
@@ -72,11 +76,12 @@ public class SvgUtils {
                 cssFile.createNewFile();
                 w = new FileWriter(cssFile);
                 w.write(css);
-            } catch (Throwable e) {
+             } catch (Throwable e) {
                 logger.error("Can't create css file for svg: " + cssFile.toPath().toAbsolutePath().toString(), e);
             } finally {
                 StreamUtils.closeQuietly(w);
             }
+            cssDataURICache.remove(cssFileName); // v33: file content changed (or was just created), refresh the cached data URI
         }
     }
 
@@ -112,9 +117,14 @@ public class SvgUtils {
 
         // css settings for svg
         SvgUtils.prepareCss(cssFileName, cssAdditionalSettings, false);
-        File cssFile = new File(SvgUtils.getSvgTempFile(cssFileName));
-        byte[] cssFileContent = Files.readAllBytes(cssFile.toPath());
-        String cssDataURI = "data:text/css;base64," + Base64.getEncoder().encodeToString(cssFileContent);
+        String cssDataURI = cssDataURICache.get(cssFileName);
+        if (cssDataURI == null) {
+            // v33: read + base64 encode only once per css file (it used to hit disk on every svg load)
+            File cssFile = new File(SvgUtils.getSvgTempFile(cssFileName));
+            byte[] cssFileContent = Files.readAllBytes(cssFile.toPath());
+            cssDataURI = "data:text/css;base64," + Base64.getEncoder().encodeToString(cssFileContent);
+            cssDataURICache.put(cssFileName, cssDataURI);
+        }
         TranscodingHints transcoderHints = new TranscodingHints();
 
         // resize

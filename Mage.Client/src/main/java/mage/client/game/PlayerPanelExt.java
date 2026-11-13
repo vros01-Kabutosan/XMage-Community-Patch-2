@@ -94,6 +94,15 @@ public class PlayerPanelExt extends javax.swing.JPanel {
     private Color lastPanelBackgroundColor;
     private static final Map<UUID, Integer> playerLives = new HashMap<>();
 
+    /**
+     * v33: playerLives was a session-growth leak (entries were only ever added, per game player id).
+     * GamePanel.cleanUp calls this when a game window closes; the map is animation baseline data only,
+     * so dropping it between games is safe.
+     */
+    public static void clearLifeCache() {
+        playerLives.clear();
+    }
+
     private final Font defaultFont;
 
     private PriorityTimer timer;

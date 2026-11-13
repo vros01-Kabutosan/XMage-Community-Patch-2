@@ -21,22 +21,19 @@ import java.util.UUID;
  */
 public class DialogManager extends JComponent implements MouseListener, MouseMotionListener {
 
-    private static final Map<UUID, DialogManager> dialogManagers = new HashMap<>();
+    // v33: ConcurrentHashMap + computeIfAbsent (stock used a non thread-safe HashMap with a broken
+    // double-checked locking pattern: two racing threads could create two managers for one game)
+    private static final Map<UUID, DialogManager> dialogManagers = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static DialogManager getManager(UUID gameId) {
-        if (!dialogManagers.containsKey(gameId)) {
-            synchronized (dialogManagers) {
-                if (!dialogManagers.containsKey(gameId)) {
-                    DialogManager dialogManager = new DialogManager();
-                    dialogManager.screen_width = 768;
-                    dialogManager.screen_height = 1024;
-                    dialogManager.setBounds(0, 0, 768, 1024);
-                    dialogManager.setVisible(false);
-                    dialogManagers.put(gameId, dialogManager);
-                }
-            }
-        }
-        return dialogManagers.get(gameId);
+        return dialogManagers.computeIfAbsent(gameId, id -> {
+            DialogManager dialogManager = new DialogManager();
+            dialogManager.screen_width = 768;
+            dialogManager.screen_height = 1024;
+            dialogManager.setBounds(0, 0, 768, 1024);
+            dialogManager.setVisible(false);
+            return dialogManager;
+        });
     }
 
     public enum MTGDialogs {
@@ -50,12 +47,10 @@ public class DialogManager extends JComponent implements MouseListener, MouseMot
      * @param gameId 
      */
     public static void removeGame(UUID gameId) {
-        if (dialogManagers.containsKey(gameId)) {
-            synchronized (dialogManagers) {
-                DialogManager dialogManager = dialogManagers.get(gameId);
-                dialogManager.cleanUp();
-                dialogManagers.remove(gameId);
-            }
+        // v33: atomic removal from the shared map, then cleanup of the detached manager
+        DialogManager dialogManager = dialogManagers.remove(gameId);
+        if (dialogManager != null) {
+            dialogManager.cleanUp();
         }
     }
 

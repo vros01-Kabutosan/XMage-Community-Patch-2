@@ -572,6 +572,12 @@ extends JPanel {
         this.removeListener();
         this.pendingCardInfoWindowClosures.values().forEach(Timer::stop);
         this.pendingCardInfoWindowClosures.clear();
+        // v33: stop the deferred resize timer and drop the per-player life animation cache
+        // (stock left both alive for the whole session; see PlayerPanelExt.clearLifeCache)
+        if (this.resizeTimer != null) {
+            this.resizeTimer.stop();
+        }
+        PlayerPanelExt.clearLifeCache();
         this.retainedReveals.clear();
         this.graveyardWindowFingerprints.clear();
         this.activeSpellRevealName = null;

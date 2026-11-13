@@ -3,11 +3,15 @@ package mage.client.components.ability;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.ImageIcon;
 import javax.swing.plaf.basic.BasicArrowButton;
 import javax.swing.plaf.metal.MetalScrollButton;
 
+import mage.client.util.TransformedImageCache;
 
 /**
  * Buttons for scroll bar.
@@ -20,6 +24,10 @@ public class MageScrollButton extends MetalScrollButton {
     private static final ImageIcon buttonRight;
     private static final ImageIcon buttonUp;
     private static final ImageIcon buttonDown;
+
+    // v33: scaled icons per size instead of mutating the shared static icons in the constructor
+    // (different scrollbars used to overwrite each other's image and used the old getScaledInstance API)
+    private static final Map<Integer, ImageIcon[]> scaledIconsBySize = new ConcurrentHashMap<>();
 
     private int width;
 
@@ -34,10 +42,21 @@ public class MageScrollButton extends MetalScrollButton {
         super(direction, width, freeStanding);
         setOpaque(false);
         this.width = width;
-        buttonUp.setImage(buttonUp.getImage().getScaledInstance(width, width, Image.SCALE_SMOOTH));
-        buttonDown.setImage(buttonDown.getImage().getScaledInstance(width, width, Image.SCALE_SMOOTH));
-        buttonLeft.setImage(buttonLeft.getImage().getScaledInstance(width, width, Image.SCALE_SMOOTH));
-        buttonRight.setImage(buttonRight.getImage().getScaledInstance(width, width, Image.SCALE_SMOOTH));
+    }
+
+    private static ImageIcon scaledIcon(int slot, ImageIcon base, int size) {
+        ImageIcon[] icons = scaledIconsBySize.computeIfAbsent(size, s -> new ImageIcon[4]);
+        synchronized (icons) {
+            if (icons[slot] == null) {
+                Image img = base.getImage();
+                if (img instanceof BufferedImage) {
+                    icons[slot] = new ImageIcon(TransformedImageCache.getResizedImage((BufferedImage) img, size, size));
+                } else {
+                    icons[slot] = new ImageIcon(img.getScaledInstance(size, size, Image.SCALE_SMOOTH));
+                }
+            }
+            return icons[slot];
+        }
     }
 
     @Override
@@ -59,16 +78,16 @@ public class MageScrollButton extends MetalScrollButton {
     public void paint(Graphics g) {
         switch (getDirection()) {
         case BasicArrowButton.WEST:
-            buttonLeft.paintIcon(null, g, 0, 0);
+            scaledIcon(0, buttonLeft, width).paintIcon(null, g, 0, 0);
             break;
         case BasicArrowButton.EAST:
-            buttonRight.paintIcon(null, g, 0, 0);
+            scaledIcon(1, buttonRight, width).paintIcon(null, g, 0, 0);
             break;
         case BasicArrowButton.NORTH:
-            buttonUp.paintIcon(null, g, 0, 0);
+            scaledIcon(2, buttonUp, width).paintIcon(null, g, 0, 0);
             break;
         case BasicArrowButton.SOUTH:
-            buttonDown.paintIcon(null, g, 0, 0);
+            scaledIcon(3, buttonDown, width).paintIcon(null, g, 0, 0);
             break;
         }
     }

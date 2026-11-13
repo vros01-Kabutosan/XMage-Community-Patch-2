@@ -32,6 +32,8 @@ import org.apache.log4j.Logger;
 import org.mage.card.arcane.ManaSymbolsCellRenderer;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 import java.awt.event.*;
@@ -62,6 +64,11 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
 
     private final ActionListener searchAction = evt -> jButtonSearchActionPerformed(evt);
 
+    // v33: search-as-you-type. Stock filtered the card list only when pressing ENTER or the
+    // Search button; this debounce timer re-runs the same filter after a short typing pause.
+    private javax.swing.Timer liveSearchTimer;
+    private static final int LIVE_SEARCH_DELAY_MS = 250;
+
     /**
      * Creates new form CardSelector
      */
@@ -71,6 +78,7 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
         cardGrid = new CardGrid();
         makeTransparent();
         initListViewComponents();
+        initLiveSearch();
         setGUISize();
         currentView = mainModel; // by default we use List View
 
@@ -164,6 +172,9 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
     public void cleanUp() {
         this.cardGrid.clear();
         this.mainModel.clear();
+        if (liveSearchTimer != null) {
+            liveSearchTimer.stop();
+        }
         MageFrame.getPreferences().put(KEY_DECK_EDITOR_SEARCH_NAMES, Boolean.toString(chkNames.isSelected()));
         MageFrame.getPreferences().put(KEY_DECK_EDITOR_SEARCH_RULES, Boolean.toString(chkRules.isSelected()));
         MageFrame.getPreferences().put(KEY_DECK_EDITOR_SEARCH_TYPES, Boolean.toString(chkTypes.isSelected()));
@@ -184,6 +195,36 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
         mainTable.setFont(GUISizeHelper.tableFont);
         mainTable.setRowHeight(GUISizeHelper.tableRowHeight);
 
+    }
+
+    // v33: re-run the stock filter after a short typing pause so results appear while writing
+    private String lastAppliedSearchQuery = null;
+
+    private void initLiveSearch() {
+        liveSearchTimer = new javax.swing.Timer(LIVE_SEARCH_DELAY_MS, evt -> {
+            // skip when an ENTER/button click already applied this exact query
+            if (!Objects.equals(lastAppliedSearchQuery, jTextFieldSearch.getText())) {
+                lastAppliedSearchQuery = jTextFieldSearch.getText();
+                filterCards();
+            }
+        });
+        liveSearchTimer.setRepeats(false);
+        jTextFieldSearch.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                liveSearchTimer.restart();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                liveSearchTimer.restart();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                liveSearchTimer.restart();
+            }
+        });
     }
 
     public void switchToGrid() {
@@ -1395,11 +1436,19 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
     }//GEN-LAST:event_jButtonRemoveFromSideboardActionPerformed
 
     private void jButtonSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSearchActionPerformed
+        if (liveSearchTimer != null) {
+            liveSearchTimer.stop();
+        }
+        lastAppliedSearchQuery = jTextFieldSearch.getText();
         filterCards();
     }//GEN-LAST:event_jButtonSearchActionPerformed
 
     private void jButtonCleanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonCleanActionPerformed
         jTextFieldSearch.setText("");
+        if (liveSearchTimer != null) {
+            liveSearchTimer.stop();
+        }
+        lastAppliedSearchQuery = jTextFieldSearch.getText();
         filterCards();
     }//GEN-LAST:event_jButtonCleanActionPerformed
 

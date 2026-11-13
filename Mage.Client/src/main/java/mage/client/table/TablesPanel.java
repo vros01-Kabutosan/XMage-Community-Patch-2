@@ -10,6 +10,7 @@ import mage.client.dialog.*;
 import mage.client.util.GUISizeHelper;
 import mage.client.util.IgnoreList;
 import mage.client.util.MageTableRowSorter;
+import mage.client.util.TransformedImageCache;
 import mage.client.util.URLHandler;
 import mage.client.util.gui.GuiDisplayUtil;
 import mage.client.util.gui.TableUtil;
@@ -44,6 +45,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.beans.PropertyVetoException;
 import java.io.File;
 import java.text.DateFormat;
@@ -598,6 +600,17 @@ public class TablesPanel extends javax.swing.JPanel {
         setGUISize();
     }
 
+    /**
+     * v33: high quality icon scaling through the shared resized-image cache
+     * (replaces Image.getScaledInstance, an old lazy AWT API with mid quality).
+     */
+    private static Image scaledIconImage(Image img, int size) {
+        if (img instanceof BufferedImage) {
+            return TransformedImageCache.getResizedImage((BufferedImage) img, size, size);
+        }
+        return img.getScaledInstance(size, size, java.awt.Image.SCALE_SMOOTH);
+    }
+
     private void setGUISize() {
         tableTables.getTableHeader().setFont(GUISizeHelper.tableFont);
         tableTables.setFont(GUISizeHelper.tableFont);
@@ -614,28 +627,28 @@ public class TablesPanel extends javax.swing.JPanel {
 
         ImageIcon icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/state_waiting.png"));
         Image img = icon.getImage();
-        Image newimg = img.getScaledInstance(GUISizeHelper.dialogFont.getSize(), GUISizeHelper.dialogFont.getSize(), java.awt.Image.SCALE_SMOOTH);
+        Image newimg = scaledIconImage(img, GUISizeHelper.dialogFont.getSize());
         btnStateWaiting.setIcon(new ImageIcon(newimg));
 
         icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/state_active.png"));
         img = icon.getImage();
-        newimg = img.getScaledInstance(GUISizeHelper.dialogFont.getSize(), GUISizeHelper.dialogFont.getSize(), java.awt.Image.SCALE_SMOOTH);
+        newimg = scaledIconImage(img, GUISizeHelper.dialogFont.getSize());
         btnStateActive.setIcon(new ImageIcon(newimg));
 
         icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/state_finished.png"));
         img = icon.getImage();
-        newimg = img.getScaledInstance(GUISizeHelper.dialogFont.getSize(), GUISizeHelper.dialogFont.getSize(), java.awt.Image.SCALE_SMOOTH);
+        newimg = scaledIconImage(img, GUISizeHelper.dialogFont.getSize());
         btnStateFinished.setIcon(new ImageIcon(newimg));
 
         int iconSize = 48 + GUISizeHelper.dialogFont.getSize() * 2 - 15;
         icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/match_new.png"));
         img = icon.getImage();
-        newimg = img.getScaledInstance(iconSize, iconSize, java.awt.Image.SCALE_SMOOTH);
+        newimg = scaledIconImage(img, iconSize);
         btnNewTable.setIcon(new ImageIcon(newimg));
 
         icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/tourney_new.png"));
         img = icon.getImage();
-        newimg = img.getScaledInstance(iconSize, iconSize, java.awt.Image.SCALE_SMOOTH);
+        newimg = scaledIconImage(img, iconSize);
         btnNewTournament.setIcon(new ImageIcon(newimg));
 
         for (JToggleButton component : filterButtons) {

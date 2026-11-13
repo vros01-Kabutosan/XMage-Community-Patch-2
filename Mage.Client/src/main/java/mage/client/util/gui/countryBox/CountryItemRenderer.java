@@ -6,6 +6,9 @@ import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -21,6 +24,16 @@ import javax.swing.ListCellRenderer;
 
 public class CountryItemRenderer extends JPanel implements ListCellRenderer {
     private final JLabel labelItem = new JLabel();
+
+    // v33: flags were re-read from disk on every repaint of the combo popup
+    private static final Map<String, Icon> flagIcons = new ConcurrentHashMap<>();
+
+    private static Icon flagIcon(String path) {
+        if (path == null || path.isEmpty()) {
+            return null;
+        }
+        return flagIcons.computeIfAbsent(path, p -> new ImageIcon(p));
+    }
      
     public CountryItemRenderer() {
         setLayout(new GridBagLayout());
@@ -33,27 +46,35 @@ public class CountryItemRenderer extends JPanel implements ListCellRenderer {
         labelItem.setHorizontalAlignment(JLabel.LEFT);
          
         add(labelItem, constraints);
-        setBackground(Color.LIGHT_GRAY);
     }
      
     @Override
     public Component getListCellRendererComponent(JList list, Object value,
             int index, boolean isSelected, boolean cellHasFocus) {
-        String[] countryItem = (String[]) value;
- 
-        // set country name
-        labelItem.setText(countryItem[0]);
-         
-        // set country flag
-        labelItem.setIcon(new ImageIcon(countryItem[1]));
-         
-        if (isSelected) {
-            labelItem.setBackground(Color.BLUE);
-            labelItem.setForeground(Color.YELLOW);
+        if (!(value instanceof String[])) {
+            // v33: defensive, e.g. editable combo rendering a plain string
+            labelItem.setText(value == null ? "" : value.toString());
+            labelItem.setIcon(null);
         } else {
-            labelItem.setForeground(Color.BLACK);
-            labelItem.setBackground(Color.LIGHT_GRAY);
+            String[] countryItem = (String[]) value;
+
+            // set country name
+            labelItem.setText(countryItem[0]);
+
+            // set country flag (cached)
+            labelItem.setIcon(flagIcon(countryItem[1]));
         }
+
+        // v33: follow the list / current look&feel selection colors instead of hard-coded blue/yellow
+        Color bg = list != null ? list.getBackground() : Color.WHITE;
+        Color fg = list != null ? list.getForeground() : Color.BLACK;
+        if (isSelected) {
+            bg = list.getSelectionBackground();
+            fg = list.getSelectionForeground();
+        }
+        labelItem.setBackground(bg);
+        labelItem.setForeground(fg);
+        setBackground(bg);
          
         return this;
     }

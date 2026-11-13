@@ -28,7 +28,9 @@ public class ChatPanelBasic extends javax.swing.JPanel {
     /**
      * Time formatter
      */
-    protected final DateFormat timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT);
+    // v33: fixed 24 h format (DateFormat.getTimeInstance made the timestamp look
+    // different on every machine depending on the OS locale, e.g. 1:30 PM vs 13:30)
+    protected final DateFormat timeFormatter = new java.text.SimpleDateFormat("HH:mm:ss");
 
     protected UUID chatId;
     /**

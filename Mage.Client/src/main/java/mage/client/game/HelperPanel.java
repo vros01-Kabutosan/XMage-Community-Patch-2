@@ -9,6 +9,7 @@ import mage.client.game.FeedbackPanel.FeedbackMode;
 import mage.client.util.AppUtil;
 import mage.client.util.GUISizeHelper;
 import mage.client.util.audio.AudioManager;
+import mage.client.components.tray.MageTray;
 import mage.constants.TurnPhase;
 
 import javax.swing.*;
@@ -106,9 +107,11 @@ public class HelperPanel extends JPanel {
             if (!AppUtil.isAppActive() || !AppUtil.isGameActive(this.gameId)) {
                 // sound notification
                 AudioManager.playFeedbackNeeded();
-                // tray notification (baloon + icon blinking)
-                //MageTray.instance.displayMessage("Game needs your action.");
-                //MageTray.instance.blink();
+                // tray notification (baloon + icon blinking) - v33: re-enabled (it was disabled
+                // in stock XMage, so a waiting player with the window in background only heard a sound;
+                // both calls are safe no-ops when the system tray is unavailable)
+                MageTray.instance.displayMessage("Game needs your action.");
+                MageTray.instance.blink();
             }
         }));
     }
@@ -255,10 +258,10 @@ public class HelperPanel extends JPanel {
 
         btnUndo.addActionListener(evt -> {
             if (linkUndo != null) {
-                {
-                    Thread worker = new Thread(() -> SwingUtilities.invokeLater(() -> linkUndo.doClick()));
-                    worker.start();
-                }
+                // v33: invokeLater already runs the click outside this listener; the old
+                // "new Thread(() -> SwingUtilities.invokeLater(...))" wrapper added nothing
+                JButton undoButton = linkUndo;
+                SwingUtilities.invokeLater(undoButton::doClick);
             }
         });
 
@@ -291,12 +294,12 @@ public class HelperPanel extends JPanel {
     }
 
     private void clickButton(final JButton button) {
-        Thread worker = new Thread(() -> SwingUtilities.invokeLater(() -> {
+        // v33: direct EDT hop (the extra worker thread around invokeLater added nothing)
+        SwingUtilities.invokeLater(() -> {
             setState("", false, "", false, null);
             setSpecial("", false);
             button.doClick();
-        }));
-        worker.start();
+        });
     }
 
     public void setState(String txtLeft, boolean leftVisible, String txtRight, boolean rightVisible, FeedbackMode mode) {
@@ -363,6 +366,8 @@ public class HelperPanel extends JPanel {
         } else {
             // stop notification sound timer
             this.needFeedbackTimer.stop();
+            // v33: the player answered, stop the tray blinking from the notification (if any)
+            MageTray.instance.stopBlink();
         }
     }
 

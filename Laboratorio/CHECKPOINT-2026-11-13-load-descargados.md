@@ -83,8 +83,31 @@ Solo se modificó Mage.Client, así que el resto de jars mage no se recompilaron
 - El laboratorio quedó **parado** y la preferencia `lastDeckFolder` del nodo `XMageLabUIv2`
   restaurada a su valor original. No se tocó el servidor oficial (17171) ni su base de datos.
 
-## Pendiente
+## Despliegue en la instalación oficial (2026-11-13, autorizado por Kabutosan)
 
-- **Despliegue en `Instalacion-XMage`**: requiere cerrar el cliente oficial (está abierto) y copiar
-  `mage-client-1.4.63.jar` con backup previo en `xmage\backup-jars-<version>-<fecha>\`.
-  Queda a la espera de confirmación de Kabutosan.
+Opción elegida: **solo el jar del cliente** (el cambio no introduce dependencias nuevas fuera de
+`mage-client`; el resto de jars sigue con el build limpio del 09/11).
+
+1. Cerrado el cliente oficial que estaba abierto (PID 36908) — el servidor oficial (17171) y su
+   base de datos **no se tocaron**.
+2. Backup: `Instalacion-XMage\xmage\backup-jars-1.4.63-20261113-load-descargados\mage-client-1.4.63.jar`
+   (02/11/2026, 22.570.356 bytes).
+3. Copiado `Mage.Client\target\mage-client-1.4.63.jar` (13/11/2026 21:56, 22.565.021 bytes) a
+   `Instalacion-XMage\xmage\mage-client\lib\`.
+4. `javap` sobre el jar desplegado: `public static Path downloadedDeckRoot()` presente.
+5. Smoke del oficial con el harness del handler real, usando un **nodo de prefs de prueba**
+   (`XMageV32Smoke/mage/client`, borrado después) para no alterar las preferencias reales:
+
+   ```
+   EXPECTED ROOT = J:\MTG\Instalacion-XMage\xmage\mage-client\sample-decks\Descargados (exists=true)
+   CHOOSER DIR   = J:\MTG\Instalacion-XMage\xmage\mage-client\sample-decks\Descargados
+   DIALOG        = "Abrir"
+   DIR CHILDREN  = Modern, Pioneer, Standard, test
+   MATCHES ROOT  = true
+   ```
+
+   Log: `parches\evidencia-20261113-v32\smoke-oficial-v32-load-descargados.log`.
+6. Cliente oficial relanzado con sus parámetros habituales (`startClient.bat`: `-Xms1g -Xmx3g`,
+   G1GC, IPv4) y verificado en el lobby como `Kabutosan@localhost:17171` con la build nueva
+   (captura `parches\evidencia-20261113-v32\127-oficial-conectado-tras-v32.png`).
+

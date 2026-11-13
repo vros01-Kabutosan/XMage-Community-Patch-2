@@ -77,13 +77,19 @@ El combo de bandera del Connect/Preferences debe usar los colores de selección 
 
 `Laboratorio\parches\2026-11-13-ui-serie-v33.patch` (11 ficheros; +~120 / -~70 líneas).
 
+## Despliegue (2026-11-13 — confirmado por Kabutosan)
+
+- Cliente oficial (PID 11352) cerrado: WM_CLOSE no fue atendido (diálogo de cierre pendiente) y se
+  forzó con `taskkill /F` dentro de la acción autorizada. Servidor 17171 **intacto** (sigue
+  escuchando; no se reinició ni se tocó su base de datos).
+- Backup del jar saliente: `Instalacion-XMage\xmage\backup-jars-1.4.63-v33-20261113\cliente\mage-client-1.4.63.jar` (22.565.021 bytes).
+- Desplegado `mage-client-1.4.63.jar` v33 en `Instalacion-XMage\xmage\mage-client\lib\`:
+  SHA256 `B7235FCAA91B19A9F21F25AC66ECD150B3F109CE1739B1D72C45527F10D86C7C` (idéntico al target;
+  solo se movió el jar de cliente, mismo criterio que v32/v14-v16 sobre jars 1.4.63 coherentes).
+- Pendiente para el usuario: reabrir el cliente oficial y pasar las 4 pruebas manuales de arriba.
+
 ## Rollback
 
-`git apply -R Laboratorio\parches\2026-11-13-ui-serie-v33.patch` en la fuente, rebuild, y reinstalar
-el jar anterior desde `Instalacion-XMage\xmage\backup-jars-*` si ya estuviera desplegado.
-
-## Despliegue
-
-**Pendiente de confirmación**: el cliente oficial está abierto (jars bloqueados). Al confirmar,
-cerrar solo el cliente oficial, backup en `xmage\backup-jars-1.4.63-v33-<fecha>\cliente\` y copiar
-`mage-client-1.4.63.jar` nuevo. Servidor 17171 y su base de datos: no se tocan.
+`git apply -R Laboratorio\parches\2026-11-13-ui-serie-v33.patch` en la fuente + rebuild; para la
+instalación, copiar el jar desde `Instalacion-XMage\xmage\backup-jars-1.4.63-v33-20261113\cliente\`
+(con el cliente oficial cerrado).

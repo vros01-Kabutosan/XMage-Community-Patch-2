@@ -109,6 +109,7 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - `util/gui/countryBox/CountryItemRenderer.java`: colores de selección del L&F + caché de banderas. `chat/ChatPanelBasic.java`: hora fija `HH:mm:ss` (antes dependía del locale del SO).
     - Reescopado tras verificar (NO se tocaron): el F2 con textos traducidos (los roles los fija el cliente; sobrescribirlos sería incorrecto en diálogos de elección) y el "connect en EDT" (el log del smoke muestra que el handshake ya corre en `SwingWorker`).
     - Parche: `parches\2026-11-13-ui-serie-v33.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\127c-v33-lobby-lab.png` + `CHECKPOINT-2026-11-13-ui-serie-v33.md`.
+    - Desplegado en la instalación el 2026-11-13 (cliente `mage-client-1.4.63.jar` SHA256 `B7235FCA…86C7C`; backup en `xmage\backup-jars-1.4.63-v33-20261113\cliente\`; servidor 17171 sin tocar).
 
 ## Disciplina de build y despliegue (2026-11-09)
 

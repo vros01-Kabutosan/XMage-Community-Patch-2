@@ -99,6 +99,17 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - Fallback conservado: si `Descargados` no existe, se vuelve al comportamiento anterior (`lastDeckFolder`). SAVE, Import/Export, el selector de mazo de la mesa y los torneos quedan **sin cambios** (mismo criterio pedido por Kabutosan: solo LOAD del editor).
     - Parche: `parches\2026-11-13-load-folder-descargados-v32.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\126-prueba-load-descargados.log`.
 
+22. UI de serie v33 (2026-11-13) — Fase 0 del `INFORME-MODERNIZACION-UI-2026-11-13.md` (11 ficheros, todos con el código afectado verificado contra el tag oficial `xmage_1.4.63V1`):
+    - `util/TransformedImageCache.java`: resampling moderno (`Graphics2D` + halving bilinear + bicubic final) en vez de `getScaledInstance(SCALE_SMOOTH)` → nitidez de zoom en toda la app.
+    - `table/TablesPanel.java`: iconos del lobby escalados por la caché nueva. `components/ability/MageScrollButton.java`: **fix bug de serie** (los iconos estáticos compartidos se mutaban por cada scrollbar de distinto tamaño) + caché por tamaño.
+    - `org/mage/card/arcane/SvgUtils.java`: caché del `data:URI` del CSS invalidada en `prepareCss` → sin disco por cada rasterizado SVG.
+    - `deckeditor/CardSelector.java`: búsqueda mientras se escribe (debounce 250 ms; ENTER/Clear siguen inmediatos y sin doble filtro).
+    - `game/HelperPanel.java`: reactivada la burbuja + parpadeo de bandeja al pedir feedback con el cliente de fondo (venía comentada de serie) y `stopBlink()` al contestar; limpiados 2 wrappers `new Thread` sobre `invokeLater`.
+    - `game/PlayerPanelExt.java` + `game/GamePanel.java`: `clearLifeCache()` llamado en `cleanUp()` (fuga de sesión `playerLives`) y stop de `resizeTimer`. `components/ext/dlg/DialogManager.java`: `ConcurrentHashMap` (DCL roto sobre `HashMap`).
+    - `util/gui/countryBox/CountryItemRenderer.java`: colores de selección del L&F + caché de banderas. `chat/ChatPanelBasic.java`: hora fija `HH:mm:ss` (antes dependía del locale del SO).
+    - Reescopado tras verificar (NO se tocaron): el F2 con textos traducidos (los roles los fija el cliente; sobrescribirlos sería incorrecto en diálogos de elección) y el "connect en EDT" (el log del smoke muestra que el handshake ya corre en `SwingWorker`).
+    - Parche: `parches\2026-11-13-ui-serie-v33.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\127c-v33-lobby-lab.png` + `CHECKPOINT-2026-11-13-ui-serie-v33.md`.
+
 ## Disciplina de build y despliegue (2026-11-09)
 
 Aprendido a la dura con el bug `NoSuchMethodError: Token.putOntoBattlefield` (detalle completo

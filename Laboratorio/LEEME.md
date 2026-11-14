@@ -133,6 +133,14 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - Parche: `parches\2026-11-14-ui-serie-v35.patch`. Evidencia: capturas 129/130 + `CHECKPOINT-2026-11-14-ui-serie-v35.md`.
     - Desplegado en la instalación el 2026-11-14 (cliente `mage-client-1.4.63.jar` con FlatLaf dentro, SHA256 `B2517155…04E85`; backup en `xmage\backup-jars-1.4.63-v35-20261114\cliente\`; sin jars nuevos en la instalación; servidor 17171 sin tocar).
 
+25. Import de .dck v36 (2026-11-14) — cartas que faltaban al cargar los mazos descargados (2 ficheros, +5/−2):
+    - **Causa raíz 1**: `PlainTextDeckImporter` usaba `new Scanner(f)`, que toma el charset por defecto de la JVM (`windows-1252` en Windows) mientras los .dck son UTF-8. Cualquier nombre con acento llegaba corrupto. Corregido a `new Scanner(f, "UTF-8")`.
+    - **Causa raíz 2**: `CardNameUtil` mapeaba el mojibake `Ã¶` a `"A"` en vez de `"o"`, convirtiendo `Mjölnir` en `MjAlnir` (carta inexistente). Corregido.
+    - Evidencia: `BulkTest` sobre los 2811 .dck de `Descargados` → **2519 completos 60+15**; el mazo Amulet Titan pasa de `main=0 side=0` a `main=60 side=15`.
+    - Las 28 cartas que siguen sin resolver **no existen en XMage** (sets `SOS` con lista `unfinished`, `FRA`, `TRK`, `HOC`, `MSH`): es cobertura de sets, no un bug de importación.
+    - Parche: `parches\2026-11-14-import-dck-utf8-v36.patch`. Evidencia: `CHECKPOINT-2026-11-14-import-dck-utf8-v36.md` + `LAB-UI-1.4.62-V2\tools\importtest\`.
+    - **Pendiente de despliegue** en la instalación oficial (servidor 17171 sin tocar).
+
 ## Disciplina de build y despliegue (2026-11-09)
 
 Aprendido a la dura con el bug `NoSuchMethodError: Token.putOntoBattlefield` (detalle completo

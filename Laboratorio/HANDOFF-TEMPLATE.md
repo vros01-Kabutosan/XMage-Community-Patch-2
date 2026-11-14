@@ -56,4 +56,4 @@
 
 | Handoff | Tarea | Estado |
 |---|---|---|
-| `HANDOFF-2026-11-14-v36-despliegue.md` | Desplegar el fix v36 (import .dck UTF-8) en la instalación oficial | ver ficha |
+| `HANDOFF-2026-11-14-v36-despliegue.md` | v36 (import .dck UTF-8) + base del cliente + v37 (5 lecciones SOS) | DESPLEGADO |

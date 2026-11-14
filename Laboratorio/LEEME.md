@@ -154,8 +154,18 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - Backup: `xmage\backup-jars-1.4.63-v36-20261114\cliente\mage-1.4.63.jar` (`f5d9cd7d…106eb9`, v35).
     - Servidor 17171 **intacto** (PID 25548, su core sigue siendo `f5d9cd7d…`).
     - Verificación con `tools\importtest\ImportTest` (JRE del cliente): mazo Amulet Titan → `main=60 side=15`; antes del despliegue daba `main=0 side=0` y `MjAlnir`.
-    - **Pendiente:** la base de cartas activa del cliente (`mage-client\db\cards.h2.mv.db`) pesa 135 KB (vacía); hay que rearrancar el cliente para que la reconstruya (~94787 cartas). Paso a paso en `HANDOFF-2026-11-14-v36-despliegue.md`.
+    - **Resuelto (2026-11-14):** la base activa del cliente estaba vacía (135 KB); se reconstruyo sola
+      al rearrancar (318 MB, 94797 cartas). Ver punto 27.
     - Parche: `parches\2026-11-14-import-dck-utf8-v36.patch`. Evidencia: `CHECKPOINT-2026-11-14-despliegue-v36.md` + `HANDOFF-2026-11-14-v36-despliegue.md`.
+
+27. Sets v37 — 5 lecciones de SecretsOfStrixhaven (2026-11-14):
+    - `SecretsOfStrixhaven.java`: la lista `unfinished` queda vacia (las 5 estaban implementadas, solo excluidas).
+    - Artefacto: solo `mage-client\lib\mage-sets-1.4.63.jar` → SHA256 `342f137130d16608d5c5e1b9bbca03ef80b7197cb4dda0d07c752c48266148fb`.
+    - Backup: `xmage\backup-jars-1.4.63-v37-20261114\cliente\mage-sets-1.4.63.jar` (`481114db…46b7`).
+    - Servidor 17171 **intacto** (sus jars de sets/core no se tocan).
+    - Verificacion: base del lab reconstruida (94797 cartas) → BulkTest 2811 `.dck`: **2648 completos 60+15** (antes 2519, +129); nombres no encontrados 28 → 24.
+    - Instalacion oficial: `sos5b main=8` y Amulet Titan `main=60 side=15`.
+    - Parche: `parches\2026-11-14-habilitar-sos-v37.patch`. Evidencia: `CHECKPOINT-2026-11-14-despliegue-v37.md` + `capturas\20261114-v37-sos\`.
 
 ## Disciplina de build y despliegue (2026-11-09)
 

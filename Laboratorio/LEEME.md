@@ -111,6 +111,17 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - Parche: `parches\2026-11-13-ui-serie-v33.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\127c-v33-lobby-lab.png` + `CHECKPOINT-2026-11-13-ui-serie-v33.md`.
     - Desplegado en la instalación el 2026-11-13 (cliente `mage-client-1.4.63.jar` SHA256 `B7235FCA…86C7C`; backup en `xmage\backup-jars-1.4.63-v33-20261113\cliente\`; servidor 17171 sin tocar).
 
+23. UI de serie v34 (2026-11-14) — Fase 1 del informe (8 ficheros, todos verificados de serie):
+    - `themes/ThemeType.java`: tokens semánticos derivados (oscuro/claro) sin tocar los presets; temas claros = valores históricos exactos (cero cambio visual).
+    - `table/TablesPanel.java` + `table/PlayersChatPanel.java`: asientos, viewport, tinta de filtros, overlay de usuarios y fuente del banner pasan a tokens/`dialogFont`/`chatFont`.
+    - `tournament/TournamentPanel.java`: clasificación y partidas ordenables (`MageTableRowSorter`, con fix view↔model en Watch), fuentes escalables, refresco 2-3 s aleatorio.
+    - `draft/DraftPanel.java`: 17 Tahoma fijos → `dialogFont`, timer escalable y por tokens de tema.
+    - `dialog/ConnectDialog.java`: servidores recientes (MRU 8 en prefs `recentServers`, popup con click-derecho en el campo, guardado al conectar con éxito) + botón Connect con fuente escalable.
+    - `components/KeyBindButton.java`: los conflictos de atajo se preguntan en vez de borrar en silencio.
+    - `org/mage/plugins/card/images/DownloadPicturesService.java`: aviso de bandeja al terminar descargas largas.
+    - Corregido en el informe tras verificar: el Stop de descargas y el progreso YA eran correctos de serie (el TODO del diálogo es código GEN muerto); B2 (mutación ImageCache) era falso positivo.
+    - Parche: `parches\2026-11-14-ui-serie-v34.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\128-v34-lobby-lab.png` + `CHECKPOINT-2026-11-14-ui-serie-v34.md`.
+
 ## Disciplina de build y despliegue (2026-11-09)
 
 Aprendido a la dura con el bug `NoSuchMethodError: Token.putOntoBattlefield` (detalle completo

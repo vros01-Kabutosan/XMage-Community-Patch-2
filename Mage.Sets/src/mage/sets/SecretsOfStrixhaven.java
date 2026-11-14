@@ -12,7 +12,10 @@ import java.util.List;
  */
 public final class SecretsOfStrixhaven extends ExpansionSet {
 
-    private static final List<String> unfinished = Arrays.asList("Decorum Dissertation", "Echocasting Symposium", "Germination Practicum", "Improvisation Capstone", "Restoration Seminar");
+    // v37: las 5 lecciones estaban excluidas como "unfinished", pero están implementadas
+    // (Decorum Dissertation, Echocasting Symposium, Germination Practicum, Improvisation
+    // Capstone y Restoration Seminar). Se habilitan para que los mazos descargados las resuelvan.
+    private static final List<String> unfinished = Arrays.asList();
     private static final SecretsOfStrixhaven instance = new SecretsOfStrixhaven();
 
     public static SecretsOfStrixhaven getInstance() {

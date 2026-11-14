@@ -54,7 +54,8 @@ y re-verificado (log `Look and feel applied: FlatLaf Dark`).
 `Laboratorio\parches\2026-11-14-ui-serie-v35.patch` (7 ficheros, +218/−16); rollback = apply -R + rebuild.
 El pom añade shade: si algún día se quisiera deshacer FlatLaf del todo, basta con el revert del parche.
 
-## Despliegue
+## Despliegue (2026-11-14 — cliente oficial cerrado, no hubo nada que cerrar)
 
-Pendiente de confirmación (mismo procedimiento v33/v34; el jar v35 lleva FlatLaf dentro, no se
-añaden jars a la instalación).
+- Backup del jar saliente: `Instalacion-XMage\xmage\backup-jars-1.4.63-v35-20261114\cliente\mage-client-1.4.63.jar` (22.572.170 bytes).
+- Desplegado `mage-client-1.4.63.jar` v35 (con FlatLaf sombreado dentro): SHA256 `B2517155FF708DA9999F24987E3D5749B33CAC7870C1AE7FE1BBB02F3FD04E85` (MATCH).
+- Servidor 17171 y su base de datos: sin tocar. No se añadió ningún jar nuevo a la instalación.

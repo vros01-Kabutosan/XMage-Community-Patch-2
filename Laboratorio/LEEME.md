@@ -131,6 +131,7 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - Bug cazado y corregido en el propio smoke: `FlatLaf dark` se comparaba con `contains("Dark")` (mayúscula) y caía a Light.
     - Smoke doble: ruta Nimbus idéntica a v34 (captura 129) + ruta FlatLaf dark arranca, conecta y pinta oscuro (captura 130; L&F y tema de colores son independientes — para todo oscuro usar FlatLaf dark + Carbon Fiber).
     - Parche: `parches\2026-11-14-ui-serie-v35.patch`. Evidencia: capturas 129/130 + `CHECKPOINT-2026-11-14-ui-serie-v35.md`.
+    - Desplegado en la instalación el 2026-11-14 (cliente `mage-client-1.4.63.jar` con FlatLaf dentro, SHA256 `B2517155…04E85`; backup en `xmage\backup-jars-1.4.63-v35-20261114\cliente\`; sin jars nuevos en la instalación; servidor 17171 sin tocar).
 
 ## Disciplina de build y despliegue (2026-11-09)
 

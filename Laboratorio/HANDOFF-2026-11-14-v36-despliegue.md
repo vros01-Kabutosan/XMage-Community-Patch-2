@@ -2,8 +2,7 @@
 
 **Tarea:** implementar en `J:\MTG\Instalacion-XMage` lo que faltaba (cartas que el cliente no veía
 al importar los mazos descargados, 60/15) y dejar el punto exacto para el siguiente worker.
-**Estado:** v36+v37 DESPLEGADOS; **v38 desplegado y verificado en laboratorio, PENDIENTE reconstruir
-la base del cliente** para que la carta nueva se vea (la confirmación expiró; el cliente no se tocó).
+**Estado:** DESPLIEGUE Y VERIFICADO (v36 + v37 + v38; base reconstruida con 94799 cartas y el mazo UW Control a 60/15 en la instalación oficial).
 **Workers:** Perch (fix v36) → Hermes (despliegue, base, v37, v38) · **Fecha:** 2026-11-14
 
 ## Contexto mínimo
@@ -35,17 +34,11 @@ Commits: `e642db13bd6` (v36), `dc5abcb7c2f` (v37), `e418d5e4fcf` (v38), rama
 
 ## Punto exacto de continuación
 
-1. **Pendiente inmediato (requiere confirmación de Kabutosan):** reconstruir la base del cliente
-   para que `Jace's Machinations` se vea. Con el cliente cerrado:
-   ```bash
-   cd "J:/MTG/Instalacion-XMage/xmage/mage-client"
-   mkdir -p db/backup-v38-20261114
-   mv db/cards.h2.mv.db db/cards.h2.lock.db db/cards.h2.trace.db db/backup-v38-20261114/
-   # arrancar el cliente; reconstruye solo y el log muestra "need to add N new cards"
-   ```
-2. Comprobar que el mazo UW Control carga 60/15 y que `Jace's Machinations` aparece en el editor.
-3. (Opcional) Regenerar los `.dck` con `MjAlnir` residual.
-4. (Opcional) Las 23 cartas que siguen sin existir (TRK/HOC/MSH y el resto de FRA) son cobertura del upstream.
+No queda trabajo obligatorio. La base se reconstruyó (94799 cartas) y el mazo UW Control carga
+60/15 en la instalación oficial. Pendientes opcionales:
+
+1. (Opcional) Regenerar los `.dck` con `MjAlnir` residual.
+2. (Opcional) Las 23 cartas que siguen sin existir (TRK/HOC/MSH y el resto de FRA) son cobertura del upstream.
 
 ## Riesgos / prohibido
 
@@ -58,17 +51,17 @@ Commits: `e642db13bd6` (v36), `dc5abcb7c2f` (v37), `e418d5e4fcf` (v38), rama
 - v38: `cp backup-jars-1.4.63-v38-20261114\cliente\mage-1.4.63.jar mage-client\lib\` (`2975b2af…`)
   y `cp backup-jars-1.4.63-v38-20261114\cliente\mage-sets-1.4.63.jar mage-client\lib\` (`342f1371…`).
 - v36/v37: sus propias carpetas `backup-jars-1.4.63-v36-...` y `...-v37-...`.
-- Base: `db\backup-20261114\` (vacía previa) y `db\backup-v38-20261114\` (si se reconstruye).
+- Base: `db\backup-20261114\` (vacía previa) y `db\backup-v38-20261114\` (base previa a v38, ya reconstruida a 94799 cartas).
 
 ## Prompt listo para el siguiente worker
 
 > Retoma el handoff `J:\MTG\Laboratorio\HANDOFF-2026-11-14-v36-despliegue.md` del proyecto XMage.
-> Estado: v36 (UTF-8) y v37 (5 lecciones SOS) desplegados; **v38 (Jace's Machinations, FRA 32)
-> desplegado y verificado en laboratorio, pendiente reconstruir la base del cliente oficial**.
+> Estado: v36 (UTF-8), v37 (5 lecciones SOS) y **v38 (Jace's Machinations, FRA 32)** desplegados y
+> verificados; la base oficial se reconstruyó (94799 cartas) y el mazo UW Control carga 60/15.
 > Artefactos v38: `mage-client\lib\mage-1.4.63.jar` SHA256
 > `df3ee87255c7446ff7afea8ec4f082670b8cff92ada368c24859dfbdf143fb0f` y `mage-sets-1.4.63.jar` SHA256
 > `01bdcb3f6aba07f9621b76b1ff42ed9a81fd9b20ca084b83bad132f71afb8ef8`; backup en
-> `backup-jars-1.4.63-v38-20261114\cliente\`. El servidor 17171 no se toca. Primer paso: pedir
-> confirmación, cerrar el cliente, mover `db\cards.h2.mv.db` a `db\backup-v38-20261114\` y rearrancar
-> para reconstruir la base; luego comprobar que el mazo UW Control carga 60/15. Reglas: responde en
-> español, no toques el servidor 17171 ni su base, y deja parche + CHECKPOINT + LEEME + handoff.
+> `backup-jars-1.4.63-v38-20261114\cliente\`. El servidor 17171 no se toca. No queda trabajo
+> obligatorio: solo opcional (regenerar el `.dck` con `MjAlnir`, o implementar las 23 cartas que
+> faltan). Reglas: responde en español, no toques el servidor 17171 ni su base, y deja parche +
+> CHECKPOINT + LEEME + handoff.

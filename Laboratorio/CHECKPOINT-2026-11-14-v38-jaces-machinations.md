@@ -41,11 +41,12 @@ que ya saltaba la comprobación de turno (`canPlaySorcery`), por lo que «en cua
 
 Servidor: core `f5d9cd7d…`, sets `481114db…` (sin tocar).
 
-## Pendiente (requiere confirmación de Kabutosan)
+## Resuelto: base reconstruida y verificación final
 
-El escáner no reescanea la base si no cambia la versión, así que el cliente sigue sin ver la carta
-hasta reconstruir `mage-client\db\cards.h2.mv.db` (mover a `db\backup-v38-20261114\` y rearrancar).
-La confirmación expiró; el cliente no se tocó.
+Con el cliente cerrado, la base se movió a `db\backup-v38-20261114\` y el cliente la reconstruyó
+solo: log `need to add 94799 new cards` (94797 + las 2 versiones de la carta), `Client start up
+time: 42 seconds`, `Connect: DONE`. Verificado en la instalación oficial: `FindTest` → FRA 32 y
+FRA 337; el mazo UW Control → **`main=60 side=15`**.
 
 ## Rollback
 

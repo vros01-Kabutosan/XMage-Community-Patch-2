@@ -385,7 +385,10 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
 
     @Override
     public boolean isOptimizedDrawingEnabled() {
-        return false;
+        // v35: opt-in experiment to cut repaint cost on big battlefields (fewer CPU on EDH/token tables).
+        // Default keeps the historic stock behavior (false); enable with -Dxmage.battlefield.optimized=true
+        // after checking that layered icons/arrows z-order looks fine in a real game.
+        return Boolean.parseBoolean(System.getProperty("xmage.battlefield.optimized", "false"));
     }
 
     public Map<UUID, MageCard> getPermanentPanels() {

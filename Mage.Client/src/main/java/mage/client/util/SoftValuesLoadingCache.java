@@ -18,8 +18,10 @@ public class SoftValuesLoadingCache<K, V> extends ForwardingLoadingCache<K, Opti
     private static final Logger logger = Logger.getLogger(SoftValuesLoadingCache.class);
 
     public SoftValuesLoadingCache(CacheLoader<K, Optional<V>> loader) {
+        // v35: entries cap became configurable for low-ram machines (default keeps the historic 3000;
+        // softValues still lets the GC reclaim images first, so -Xmx remains the real limit)
         cache = newBuilder()
-                .maximumSize(3000)
+                .maximumSize(Integer.getInteger("xmage.cache.maxEntries", 3000))
                 .expireAfterAccess(60, TimeUnit.MINUTES)
                 .softValues()
                 .build(loader);

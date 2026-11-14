@@ -107,6 +107,14 @@
             <version>1.2.1</version>
         </dependency>
 
+        <dependency>
+            <!-- v35: optional modern look&feel (opt-in in Preferences -> GUI Theme;
+                 loaded by reflection with Nimbus fallback, shaded into the client jar below) -->
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>3.5.4</version>
+        </dependency>
+
         <!-- music player START -->
         <!-- TODO: no needs anymore? There are music player by java standard lib -->
         <dependency>
@@ -206,6 +214,30 @@
                         </manifestEntries>
                     </archive>
                 </configuration>
+            </plugin>
+            <plugin>
+                <!-- v35: bundle flatlaf inside mage-client jar so no extra lib jar is needed
+                     in lab/install; if the class is missing at runtime the code falls back to Nimbus -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <artifactSet>
+                                <includes>
+                                    <include>com.formdev:flatlaf</include>
+                                </includes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>

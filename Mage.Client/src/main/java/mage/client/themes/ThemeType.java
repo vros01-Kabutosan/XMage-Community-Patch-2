@@ -445,6 +445,8 @@ public enum ThemeType {
      * Prepare theme settings and files before using. Call it on app loading or after theme changed
      */
     public void reload() {
+        // v35: re-read the optional user theme overrides file before applying colors
+        mage.client.util.gui.GuiDisplayUtil.reloadThemeOverrides();
         // reload card icons css file (run it all the time, even on svg unsupport mode)
         for (CardIconColor cardIconColor : CardIconColor.values()) {
             SvgUtils.prepareCss(this.getCardIconsCssFile(cardIconColor), this.getCardIconsCssSettings(cardIconColor), true);

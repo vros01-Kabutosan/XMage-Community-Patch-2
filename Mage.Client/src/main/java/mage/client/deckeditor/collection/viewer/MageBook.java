@@ -146,14 +146,15 @@ public class MageBook extends JComponent {
         // set's caption
         setCaption = new JLabel();
         setCaption.setHorizontalAlignment(SwingConstants.CENTER);
-        setCaption.setFont(jLayeredPane.getFont().deriveFont(25f));
+        // v35: caption/info follow the configured GUI size (were fixed 25f/17f regardless of scale)
+        setCaption.setFont(mage.client.util.GUISizeHelper.dialogFont.deriveFont(Math.max(18f, mage.client.util.GUISizeHelper.dialogFont.getSize2D() * 1.6f)));
         setCaption.setText("EMPTY CAPTION");
         jPanelCaption.add(setCaption, BorderLayout.NORTH);
 
         // set's info
         setInfo = new JLabel();
         setInfo.setHorizontalAlignment(SwingConstants.CENTER);
-        setInfo.setFont(jLayeredPane.getFont().deriveFont(17f));
+        setInfo.setFont(mage.client.util.GUISizeHelper.dialogFont.deriveFont(Math.max(13f, mage.client.util.GUISizeHelper.dialogFont.getSize2D() * 1.15f)));
         setInfo.setText("EMPTY STATS");
         jPanelCaption.add(setInfo, BorderLayout.SOUTH);
 

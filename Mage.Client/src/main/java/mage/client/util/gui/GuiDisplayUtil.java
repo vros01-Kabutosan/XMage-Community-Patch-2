@@ -23,6 +23,7 @@ import java.util.regex.Matcher;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.LookAndFeel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
@@ -32,6 +33,7 @@ import mage.client.MageFrame;
 import mage.client.components.MageComponents;
 import mage.client.dialog.PreferencesDialog;
 import mage.client.table.PlayersChatPanel;
+import mage.client.themes.ThemeType;
 import mage.client.util.GUISizeHelper;
 import mage.constants.CardType;
 import mage.constants.MageObjectType;
@@ -428,18 +430,31 @@ public final class GuiDisplayUtil {
     }
 
     public static void refreshThemeSettings() {
-        try {
-            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        // v35: optional modern look&feel (Preferences -> GUI Theme -> "Look and feel").
+        // Default and fallback stay Nimbus, so nothing changes unless the user opts in.
+        String lafChoice = PreferencesDialog.getCachedValue(PreferencesDialog.KEY_LAF_SELECTION, "Nimbus");
+        boolean flatLafApplied = false;
+        if (lafChoice.startsWith("FlatLaf")) {
+            flatLafApplied = tryApplyFlatLaf(lafChoice.toLowerCase(Locale.ROOT).contains("dark"));
         }
-        catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
-            logger.error((Object)("Can't apply current theme: " + (Object)((Object)PreferencesDialog.getCurrentTheme()) + " - " + e), (Throwable)e);
+        if (!flatLafApplied) {
+            try {
+                UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+            }
+            catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
+                logger.error((Object)("Can't apply current theme: " + (Object)((Object)PreferencesDialog.getCurrentTheme()) + " - " + e), (Throwable)e);
+            }
         }
-        UIManager.put("nimbusBlueGrey", PreferencesDialog.getCurrentTheme().getNimbusBlueGrey());
-        UIManager.put("control", PreferencesDialog.getCurrentTheme().getControl());
-        UIManager.put("nimbusLightBackground", PreferencesDialog.getCurrentTheme().getNimbusLightBackground());
-        UIManager.put("info", PreferencesDialog.getCurrentTheme().getInfo());
-        UIManager.put("nimbusBase", PreferencesDialog.getCurrentTheme().getNimbusBase());
-        UIManager.put("text", PreferencesDialog.getCurrentTheme().getTextColor());
+        ThemeType theme = PreferencesDialog.getCurrentTheme();
+        UIManager.put("nimbusBlueGrey", themeColorOverride(theme, "nimbusBlueGrey", theme.getNimbusBlueGrey()));
+        UIManager.put("control", themeColorOverride(theme, "control", theme.getControl()));
+        UIManager.put("nimbusLightBackground", themeColorOverride(theme, "nimbusLightBackground", theme.getNimbusLightBackground()));
+        UIManager.put("info", themeColorOverride(theme, "info", theme.getInfo()));
+        UIManager.put("nimbusBase", themeColorOverride(theme, "nimbusBase", theme.getNimbusBase()));
+        UIManager.put("text", themeColorOverride(theme, "textColor", theme.getTextColor()));
+        if (flatLafApplied) {
+            applyFlatLafThemeColors(theme);
+        }
         for (Frame frame : Frame.getFrames()) {
             GuiDisplayUtil.refreshLookAndFeel(frame);
         }
@@ -454,6 +469,100 @@ public final class GuiDisplayUtil {
                 // empty catch block
             }
         });
+    }
+
+    /**
+     * v35: loads FlatLaf by reflection (the lib is shaded into the client jar; if the classes
+     * are missing for any reason the client keeps working with Nimbus).
+     */
+    private static boolean tryApplyFlatLaf(boolean dark) {
+        try {
+            Class<?> lafClass = Class.forName(dark ? "com.formdev.flatlaf.FlatDarkLaf" : "com.formdev.flatlaf.FlatLightLaf");
+            LookAndFeel laf = (LookAndFeel) lafClass.getDeclaredConstructor().newInstance();
+            UIManager.setLookAndFeel(laf);
+            logger.info("Look and feel applied: " + laf.getName());
+            return true;
+        } catch (Throwable t) {
+            logger.warn("FlatLaf selected but not available, falling back to Nimbus: " + t);
+            return false;
+        }
+    }
+
+    /**
+     * v35: maps the current ThemeType colors to FlatLaf keys (equivalent of the nimbus* puts above).
+     */
+    private static void applyFlatLafThemeColors(ThemeType theme) {
+        Color control = themeColorOverride(theme, "control", theme.getControl());
+        Color inputs = themeColorOverride(theme, "nimbusLightBackground", theme.getNimbusLightBackground());
+        Color buttons = themeColorOverride(theme, "nimbusBlueGrey", theme.getNimbusBlueGrey());
+        Color tooltips = themeColorOverride(theme, "info", theme.getInfo());
+        Color accent = themeColorOverride(theme, "nimbusBase", theme.getNimbusBase());
+        Color text = themeColorOverride(theme, "textColor", theme.getTextColor());
+        UIManager.put("Panel.background", control);
+        UIManager.put("OptionPane.background", control);
+        UIManager.put("MenuBar.background", control);
+        UIManager.put("ToolBar.background", control);
+        UIManager.put("TextField.background", inputs);
+        UIManager.put("FormattedTextField.background", inputs);
+        UIManager.put("TextArea.background", inputs);
+        UIManager.put("Table.background", inputs);
+        UIManager.put("List.background", inputs);
+        UIManager.put("Tree.background", inputs);
+        UIManager.put("Button.background", buttons);
+        UIManager.put("ToolTip.background", tooltips);
+        UIManager.put("Component.focusColor", accent);
+        UIManager.put("Component.accentColor", accent);
+        UIManager.put("Table.selectionBackground", accent);
+        UIManager.put("List.selectionBackground", accent);
+        UIManager.put("Label.foreground", text);
+        UIManager.put("Panel.foreground", text);
+    }
+
+    /**
+     * v35: theme overrides file (stock TODO: themes were compiled-only). Optional properties file
+     * at ~/.xmage/theme-overrides.properties with keys like "Coffee.control=182,157,135" or
+     * "Coffee.nimbusBase=97,27,0,255". Missing file or keys keep the built-in preset values.
+     */
+    private static java.util.Properties themeOverrides = null;
+
+    private static java.util.Properties loadThemeOverrides() {
+        if (themeOverrides == null) {
+            themeOverrides = new java.util.Properties();
+            try {
+                java.io.File f = new java.io.File(System.getProperty("user.home"), ".xmage" + java.io.File.separator + "theme-overrides.properties");
+                if (f.isFile()) {
+                    try (java.io.InputStream in = new java.io.FileInputStream(f)) {
+                        themeOverrides.load(in);
+                    }
+                    logger.info("Theme overrides loaded from " + f.getPath());
+                }
+            } catch (Throwable t) {
+                logger.warn("Can't load theme overrides file: " + t);
+            }
+        }
+        return themeOverrides;
+    }
+
+    public static void reloadThemeOverrides() {
+        themeOverrides = null; // v35: called on theme reload so file edits apply after restart/reload
+    }
+
+    private static Color themeColorOverride(ThemeType theme, String field, Color base) {
+        String value = loadThemeOverrides().getProperty(theme.getName() + '.' + field);
+        if (value == null || value.trim().isEmpty()) {
+            return base;
+        }
+        try {
+            String[] parts = value.trim().split(",");
+            int r = Integer.parseInt(parts[0].trim());
+            int g = Integer.parseInt(parts[1].trim());
+            int b = Integer.parseInt(parts[2].trim());
+            int a = parts.length > 3 ? Integer.parseInt(parts[3].trim()) : 255;
+            return new Color(r, g, b, a);
+        } catch (Throwable t) {
+            logger.warn("Bad theme override " + theme.getName() + '.' + field + " = " + value + ", using preset");
+            return base;
+        }
     }
 
     private static void refreshLookAndFeel(Window window) {

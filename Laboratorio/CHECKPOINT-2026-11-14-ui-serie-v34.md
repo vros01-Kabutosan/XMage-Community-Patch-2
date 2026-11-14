@@ -62,10 +62,11 @@ falta (`PreferencesDialog` en PlayersChatPanel). Solo cliente (ningún fichero d
 
 `Laboratorio\parches\2026-11-14-ui-serie-v34.patch` (8 ficheros, +210/−55).
 
-## Despliegue
+## Despliegue (2026-11-14 — el cliente oficial ya estaba cerrado; no hubo nada que cerrar)
 
-Pendiente de confirmación (mismo procedimiento que v33: cerrar cliente oficial, backup
-`backup-jars-1.4.63-v34-<fecha>\cliente\`, copiar jar, servidor intacto).
+- Backup del jar saliente: `Instalacion-XMage\xmage\backup-jars-1.4.63-v34-20261114\cliente\mage-client-1.4.63.jar` (22.568.701 bytes).
+- Desplegado `mage-client-1.4.63.jar` v34: SHA256 `E87A1223CFC1D9A027E2356C531BF4B68D96F7535B3F8DBCE502B8258C47EAC7` (MATCH con el target).
+- Servidor 17171 y su base de datos: sin tocar.
 
 ## Rollback
 

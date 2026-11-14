@@ -121,6 +121,7 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - `org/mage/plugins/card/images/DownloadPicturesService.java`: aviso de bandeja al terminar descargas largas.
     - Corregido en el informe tras verificar: el Stop de descargas y el progreso YA eran correctos de serie (el TODO del diálogo es código GEN muerto); B2 (mutación ImageCache) era falso positivo.
     - Parche: `parches\2026-11-14-ui-serie-v34.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\128-v34-lobby-lab.png` + `CHECKPOINT-2026-11-14-ui-serie-v34.md`.
+    - Desplegado en la instalación el 2026-11-14 (cliente `mage-client-1.4.63.jar` SHA256 `E87A1223…47EAC7`; backup en `xmage\backup-jars-1.4.63-v34-20261114\cliente\`; servidor 17171 sin tocar).
 
 ## Disciplina de build y despliegue (2026-11-09)
 

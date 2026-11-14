@@ -41,7 +41,10 @@ public abstract class PlainTextDeckImporter extends DeckImporter {
 
         sbMessage.setLength(0);
         try {
-            try (Scanner scanner = new Scanner(f)) {
+            // v36: leer siempre en UTF-8. new Scanner(f) usa el charset por defecto de la JVM
+            // (CP1252 en Windows), asi que un .dck UTF-8 con acentos llegaba corrupto al
+            // normalizador ("Mjölnir" -> "MjÃ¶lnir" -> "MjAlnir") y la carta no se encontraba.
+            try (Scanner scanner = new Scanner(f, "UTF-8")) {
                 boolean canFix = true;
                 while (scanner.hasNextLine()) {
                     String line = scanner.nextLine().trim();

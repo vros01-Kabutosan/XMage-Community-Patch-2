@@ -19,7 +19,7 @@ public class CardNameUtil {
                 .replace("’", "'")
                 .replace("“", "\"")
                 .replace("”", "\"")
-                .replace("Ã¶", "A")
+                .replace("Ã¶", "o") // v36: era "A" -- mojibake de ö en UTF-8 leido como CP1252 (Mjölnir -> MjAlnir)
                 .replace("ö", "o")
                 .replace("û", "u")
                 .replace("í", "i")

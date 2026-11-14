@@ -90,6 +90,67 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
       - Tema oscuro Obsidian (#161A23 / 
 ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y su Viewport, eliminando el fondo gris claro desfasado y unificando el estilo con la mesa de juego.
 
+20. `Mage.Common/src/main/java/mage/db/**` (v31, 2026-11-09)
+    - Restauración del paquete fuente `mage.db` (EntityManager + EntityManagerTest + model/Feedback + model/Log) verbatim del delta oficial upstream (`79aec614fc2`). El upgrade 1.4.63 lo dejó fuera y la regla global `**/db` del `.gitignore` lo tenía ignorado, con lo que `Mage.Server` no compilaba desde source (`package mage.db does not exist` en FeedbackServiceImpl) y los jars desplegados dependían de clases recicladas de builds viejos. Aditivo: negación en `.gitignore` + 4 ficheros upstream, sin tocar código existente. Sin él, el feedback del servidor daría ClassNotFoundException en runtime.
+
+21. `Mage.Client/src/main/java/mage/client/deckeditor/DeckEditorPanel.java` y `mage/client/util/AiDeckLibrary.java` (v32, 2026-11-13)
+    - El botón **LOAD** del Deck Editor abre siempre `sample-decks\Descargados` (la carpeta de los mazos descargados por el descargador: Modern / Pioneer / Standard), en lugar de la última ruta recordada en la preferencia `lastDeckFolder`.
+    - Reutiliza `AiDeckLibrary.downloadedDeckRoot()` (antes `private`, ahora `public`) para que el editor y el pool de mazos de la IA resuelvan la misma carpeta: una única fuente de verdad, sin rutas hardcodeadas.
+    - Fallback conservado: si `Descargados` no existe, se vuelve al comportamiento anterior (`lastDeckFolder`). SAVE, Import/Export, el selector de mazo de la mesa y los torneos quedan **sin cambios** (mismo criterio pedido por Kabutosan: solo LOAD del editor).
+    - Parche: `parches\2026-11-13-load-folder-descargados-v32.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\126-prueba-load-descargados.log`.
+
+22. UI de serie v33 (2026-11-13) — Fase 0 del `INFORME-MODERNIZACION-UI-2026-11-13.md` (11 ficheros, todos con el código afectado verificado contra el tag oficial `xmage_1.4.63V1`):
+    - `util/TransformedImageCache.java`: resampling moderno (`Graphics2D` + halving bilinear + bicubic final) en vez de `getScaledInstance(SCALE_SMOOTH)` → nitidez de zoom en toda la app.
+    - `table/TablesPanel.java`: iconos del lobby escalados por la caché nueva. `components/ability/MageScrollButton.java`: **fix bug de serie** (los iconos estáticos compartidos se mutaban por cada scrollbar de distinto tamaño) + caché por tamaño.
+    - `org/mage/card/arcane/SvgUtils.java`: caché del `data:URI` del CSS invalidada en `prepareCss` → sin disco por cada rasterizado SVG.
+    - `deckeditor/CardSelector.java`: búsqueda mientras se escribe (debounce 250 ms; ENTER/Clear siguen inmediatos y sin doble filtro).
+    - `game/HelperPanel.java`: reactivada la burbuja + parpadeo de bandeja al pedir feedback con el cliente de fondo (venía comentada de serie) y `stopBlink()` al contestar; limpiados 2 wrappers `new Thread` sobre `invokeLater`.
+    - `game/PlayerPanelExt.java` + `game/GamePanel.java`: `clearLifeCache()` llamado en `cleanUp()` (fuga de sesión `playerLives`) y stop de `resizeTimer`. `components/ext/dlg/DialogManager.java`: `ConcurrentHashMap` (DCL roto sobre `HashMap`).
+    - `util/gui/countryBox/CountryItemRenderer.java`: colores de selección del L&F + caché de banderas. `chat/ChatPanelBasic.java`: hora fija `HH:mm:ss` (antes dependía del locale del SO).
+    - Reescopado tras verificar (NO se tocaron): el F2 con textos traducidos (los roles los fija el cliente; sobrescribirlos sería incorrecto en diálogos de elección) y el "connect en EDT" (el log del smoke muestra que el handshake ya corre en `SwingWorker`).
+    - Parche: `parches\2026-11-13-ui-serie-v33.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\127c-v33-lobby-lab.png` + `CHECKPOINT-2026-11-13-ui-serie-v33.md`.
+    - Desplegado en la instalación el 2026-11-13 (cliente `mage-client-1.4.63.jar` SHA256 `B7235FCA…86C7C`; backup en `xmage\backup-jars-1.4.63-v33-20261113\cliente\`; servidor 17171 sin tocar).
+
+23. UI de serie v34 (2026-11-14) — Fase 1 del informe (8 ficheros, todos verificados de serie):
+    - `themes/ThemeType.java`: tokens semánticos derivados (oscuro/claro) sin tocar los presets; temas claros = valores históricos exactos (cero cambio visual).
+    - `table/TablesPanel.java` + `table/PlayersChatPanel.java`: asientos, viewport, tinta de filtros, overlay de usuarios y fuente del banner pasan a tokens/`dialogFont`/`chatFont`.
+    - `tournament/TournamentPanel.java`: clasificación y partidas ordenables (`MageTableRowSorter`, con fix view↔model en Watch), fuentes escalables, refresco 2-3 s aleatorio.
+    - `draft/DraftPanel.java`: 17 Tahoma fijos → `dialogFont`, timer escalable y por tokens de tema.
+    - `dialog/ConnectDialog.java`: servidores recientes (MRU 8 en prefs `recentServers`, popup con click-derecho en el campo, guardado al conectar con éxito) + botón Connect con fuente escalable.
+    - `components/KeyBindButton.java`: los conflictos de atajo se preguntan en vez de borrar en silencio.
+    - `org/mage/plugins/card/images/DownloadPicturesService.java`: aviso de bandeja al terminar descargas largas.
+    - Corregido en el informe tras verificar: el Stop de descargas y el progreso YA eran correctos de serie (el TODO del diálogo es código GEN muerto); B2 (mutación ImageCache) era falso positivo.
+    - Parche: `parches\2026-11-14-ui-serie-v34.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\128-v34-lobby-lab.png` + `CHECKPOINT-2026-11-14-ui-serie-v34.md`.
+    - Desplegado en la instalación el 2026-11-14 (cliente `mage-client-1.4.63.jar` SHA256 `E87A1223…47EAC7`; backup en `xmage\backup-jars-1.4.63-v34-20261114\cliente\`; servidor 17171 sin tocar).
+
+24. UI de serie v35 (2026-11-14) — Fase 2 del informe (7 ficheros, +218/−16):
+    - **FlatLaf opcional** (`pom.xml` con shade + `GuiDisplayUtil` por reflexión + selector en Preferencias→GUI Theme con Nimbus de default y fallback). FlatLaf va DENTRO del jar cliente (no hay jars nuevos en instalación).
+    - **Temas por fichero**: `~/.xmage/theme-overrides.properties` opcional fusionado en `refreshThemeSettings()` (recargado en cada `ThemeType.reload()`).
+    - **Opt-ins por flag** sin cambio de default: `-Dxmage.battlefield.optimized=true` (optimized drawing condicional) y `-Dxmage.cache.maxEntries=N` (tope de cachés, default 3000).
+    - `MageBook`: caption/info escalan con `dialogFont` (geometría del lienzo intacta a propósito: ligada a los artwork fijos).
+    - Bug cazado y corregido en el propio smoke: `FlatLaf dark` se comparaba con `contains("Dark")` (mayúscula) y caía a Light.
+    - Smoke doble: ruta Nimbus idéntica a v34 (captura 129) + ruta FlatLaf dark arranca, conecta y pinta oscuro (captura 130; L&F y tema de colores son independientes — para todo oscuro usar FlatLaf dark + Carbon Fiber).
+    - Parche: `parches\2026-11-14-ui-serie-v35.patch`. Evidencia: capturas 129/130 + `CHECKPOINT-2026-11-14-ui-serie-v35.md`.
+    - Desplegado en la instalación el 2026-11-14 (cliente `mage-client-1.4.63.jar` con FlatLaf dentro, SHA256 `B2517155…04E85`; backup en `xmage\backup-jars-1.4.63-v35-20261114\cliente\`; sin jars nuevos en la instalación; servidor 17171 sin tocar).
+
+## Disciplina de build y despliegue (2026-11-09)
+
+Aprendido a la dura con el bug `NoSuchMethodError: Token.putOntoBattlefield` (detalle completo
+en `CHECKPOINT-2026-11-09-fix-token-api.md`):
+
+- **Para desplegar, SIEMPRE `mvn clean package`** (nunca incremental): el compilador
+  incremental recicla `target/classes` viejos cuando los mtimes del delta oficial no están
+  alineados y produce jars mixtos (interfaz `Token` API nueva + `CreateTokenEffect`/`Embalm`
+  /`Eternalize`/`RoleType` API vieja = crash de partida al crear cualquier token). El comando
+  histórico sin `clean` queda PROHIBIDO para despliegues.
+- **Los jars mage se despliegan SIEMPRE juntos y del mismo build** (core, common, sets,
+  server, player-ai y plugins): nunca un subset. Script oficial:
+  `Laboratorio\desplegar-oficial.ps1` (exige servidor parado, crea
+  `backup-jars-<version>-<fecha>_<tag>\`, copia 5 lib + 27 plugins).
+- Verificación de coherencia post-build y post-despliegue: escáner de constant-pool
+  `LAB-UI-1.4.62-V2/capturas/20261109-fix-token-api/scan_putob.py` (compara todas las
+  referencias a `Token.putOntoBattlefield` contra los descriptores que declara el core).
+
 ## Estado git y sincronización (2026-11-09)
 
 - El remoto `vros01-Kabutosan/XMage-Community-Patch-2` recibe dos repos locales:

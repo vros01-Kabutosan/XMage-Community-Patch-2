@@ -1,0 +1,39 @@
+diff --git a/Mage.Client/src/main/java/mage/client/deckeditor/DeckEditorPanel.java b/Mage.Client/src/main/java/mage/client/deckeditor/DeckEditorPanel.java
+index 18a186f7136..121d1db67b8 100644
+--- a/Mage.Client/src/main/java/mage/client/deckeditor/DeckEditorPanel.java
++++ b/Mage.Client/src/main/java/mage/client/deckeditor/DeckEditorPanel.java
+@@ -41,6 +41,7 @@ import mage.client.deck.generator.DeckGenerator.DeckGeneratorException;
+ import mage.client.dialog.AddLandDialog;
+ import mage.client.dialog.PreferencesDialog;
+ import mage.client.plugins.impl.Plugins;
++import mage.client.util.AiDeckLibrary;
+ import mage.client.util.Event;
+ import mage.client.util.Listener;
+ import mage.client.util.audio.AudioManager;
+@@ -1519,7 +1520,11 @@ public class DeckEditorPanel extends javax.swing.JPanel {
+ 
+     private void btnLoadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLoadActionPerformed
+         String lastFolder = MageFrame.getPreferences().get(LAST_DECK_FOLDER, "");
+-        if (!lastFolder.isEmpty()) {
++        // LOAD always opens on the downloaded decks folder (sample-decks/Descargados)
++        File downloadedFolder = AiDeckLibrary.downloadedDeckRoot().toFile();
++        if (downloadedFolder.isDirectory()) {
++            fcSelectDeck.setCurrentDirectory(downloadedFolder);
++        } else if (!lastFolder.isEmpty()) {
+             fcSelectDeck.setCurrentDirectory(new File(lastFolder));
+         }
+         int ret = fcSelectDeck.showOpenDialog(this);
+diff --git a/Mage.Client/src/main/java/mage/client/util/AiDeckLibrary.java b/Mage.Client/src/main/java/mage/client/util/AiDeckLibrary.java
+index cbce091d41a..d23c47d4ee3 100644
+--- a/Mage.Client/src/main/java/mage/client/util/AiDeckLibrary.java
++++ b/Mage.Client/src/main/java/mage/client/util/AiDeckLibrary.java
+@@ -69,7 +69,8 @@ public final class AiDeckLibrary {
+         }
+     }
+ 
+-    private static Path downloadedDeckRoot() {
++    /** Root folder of the decks downloaded by the deck downloader (shared with the deck editor's LOAD dialog). */
++    public static Path downloadedDeckRoot() {
+         Path current = Paths.get(System.getProperty("user.dir", ".")).toAbsolutePath();
+         Path direct = current.resolve("config").resolve("deck-downloader");
+         if (Files.isDirectory(direct)) {

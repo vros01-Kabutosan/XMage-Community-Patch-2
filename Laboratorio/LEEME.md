@@ -167,6 +167,14 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - Instalacion oficial: `sos5b main=8` y Amulet Titan `main=60 side=15`.
     - Parche: `parches\2026-11-14-habilitar-sos-v37.patch`. Evidencia: `CHECKPOINT-2026-11-14-despliegue-v37.md` + `capturas\20261114-v37-sos\`.
 
+28. v38 — se implementa `Jace's Machinations` (FRA 32) (2026-11-14):
+    - Un mazo (UW Control 907434) estaba 57/15 por las 3 copias de esta carta, no implementada en el fork.
+    - Nueva carta `JacesMachinations` + declaración en FRA 32/337; `ActivateAbilitiesAnyTimeYouCouldCastInstantEffect` ampliado con duración y filtro del permanente origen (aditivo); tests JUnit (activación de lealtad en turno rival + Empower Jace 8).
+    - Artefactos: core `mage-1.4.63.jar` `df3ee872…fb0f` y sets `mage-sets-1.4.63.jar` `01bdcb3f…b8ef8`; backup `backup-jars-1.4.63-v38-20261114\cliente\`; servidor 17171 intacto.
+    - Verificación: el mazo UW Control pasa a `main=60 side=15`; BulkTest 2667/2811 completos (antes 2648).
+    - **Pendiente (requiere confirmación):** reconstruir la base de cartas del cliente para que la carta se vea (el escáner no reescanea si no cambia la versión).
+    - Parche: `parches\2026-11-14-jaces-machinations-v38.patch`. Evidencia: `CHECKPOINT-2026-11-14-v38-jaces-machinations.md` + `capturas\20261114-v38-jaces\`.
+
 ## Disciplina de build y despliegue (2026-11-09)
 
 Aprendido a la dura con el bug `NoSuchMethodError: Token.putOntoBattlefield` (detalle completo

@@ -19,6 +19,14 @@ modificado de XMage 1.4.63V1 de Kabutosan. La instalación oficial vive aparte, 
 | `_archivo/20261025/` | Material antiguo retirado del flujo activo (logs viejos, labs anteriores, restos de recuperación) y limpieza autorizada del 2026-10-25. Detalle exacto en `_archivo/20261025/INVENTARIO-LIMPIEZA-2026-10-25.md`. |
 | `_archivo/20261101/` | Reorganización del 2026-11-01 (script `reorganizar-2026-11-01.ps1`): legado `Proyecto-XMage/`, config del repo raíz, caches de herramientas y worktrees huérfanos. No se versiona. |
 
+## Handoff entre workers (2026-11-14)
+
+Cualquier tarea que quede a medias deja un `HANDOFF-<fecha>-<slug>.md` en este directorio con el
+**punto exacto** de continuación (fichero:línea, comando, SHA256, PID, puerto), para que el siguiente
+worker / harness / modelo (Perch, Hermes, DSH, CommandCode, …) lo retome sin rehacer trabajo ni
+re-descubrir el contexto. Plantilla: `HANDOFF-TEMPLATE.md`. Cada handoff incluye un **prompt listo**
+para pegar en cualquier harness.
+
 ## Mods activos (todos aditivos)
 
 Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
@@ -140,6 +148,14 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - Las 28 cartas que siguen sin resolver **no existen en XMage** (sets `SOS` con lista `unfinished`, `FRA`, `TRK`, `HOC`, `MSH`): es cobertura de sets, no un bug de importación.
     - Parche: `parches\2026-11-14-import-dck-utf8-v36.patch`. Evidencia: `CHECKPOINT-2026-11-14-import-dck-utf8-v36.md` + `LAB-UI-1.4.62-V2\tools\importtest\`.
     - **Pendiente de despliegue** en la instalación oficial (servidor 17171 sin tocar).
+
+26. Import de .dck v36 — **despliegue oficial** (2026-11-14):
+    - Artefacto: solo `mage-client\lib\mage-1.4.63.jar` → SHA256 `2975b2af5116df09e18db3b036dbec15447882cb5faf0e43c2da191c38042d6b`.
+    - Backup: `xmage\backup-jars-1.4.63-v36-20261114\cliente\mage-1.4.63.jar` (`f5d9cd7d…106eb9`, v35).
+    - Servidor 17171 **intacto** (PID 25548, su core sigue siendo `f5d9cd7d…`).
+    - Verificación con `tools\importtest\ImportTest` (JRE del cliente): mazo Amulet Titan → `main=60 side=15`; antes del despliegue daba `main=0 side=0` y `MjAlnir`.
+    - **Pendiente:** la base de cartas activa del cliente (`mage-client\db\cards.h2.mv.db`) pesa 135 KB (vacía); hay que rearrancar el cliente para que la reconstruya (~94787 cartas). Paso a paso en `HANDOFF-2026-11-14-v36-despliegue.md`.
+    - Parche: `parches\2026-11-14-import-dck-utf8-v36.patch`. Evidencia: `CHECKPOINT-2026-11-14-despliegue-v36.md` + `HANDOFF-2026-11-14-v36-despliegue.md`.
 
 ## Disciplina de build y despliegue (2026-11-09)
 

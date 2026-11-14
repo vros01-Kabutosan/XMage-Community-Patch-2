@@ -9,9 +9,11 @@ import mage.client.table.TablesUtil;
 import mage.client.table.TournamentMatchesTableModel;
 import mage.client.util.Format;
 import mage.client.util.GUISizeHelper;
+import mage.client.util.MageTableRowSorter;
 import mage.client.util.gui.TableUtil;
 import mage.client.util.gui.countryBox.CountryCellRenderer;
 import mage.constants.PlayerAction;
+import mage.util.RandomUtil;
 import mage.view.TournamentPlayerView;
 import mage.view.TournamentView;
 import mage.view.UserRequestMessage;
@@ -67,9 +69,12 @@ public class TournamentPanel extends javax.swing.JPanel {
         tablePlayers.createDefaultColumnsFromModel();
         TableUtil.setColumnWidthAndOrder(tablePlayers, DEFAULT_COLUMNS_WIDTH_PLAYERS, KEY_TOURNAMENT_PLAYER_COLUMNS_WIDTH, KEY_TOURNAMENT_PLAYER_COLUMNS_ORDER);
         tablePlayers.setDefaultRenderer(Icon.class, new CountryCellRenderer());
+        // v34: standings and matches were not sortable in stock (the lobby tables already use this sorter)
+        tablePlayers.setRowSorter(new MageTableRowSorter(playersModel));
 
         tableMatches.createDefaultColumnsFromModel();
         TableUtil.setColumnWidthAndOrder(tableMatches, DEFAULT_COLUMNS_WIDTH_MATCHES, KEY_TOURNAMENT_MATCH_COLUMNS_WIDTH, KEY_TOURNAMENT_MATCH_COLUMNS_ORDER);
+        tableMatches.setRowSorter(new MageTableRowSorter(matchesModel));
 
         chatPanel1.useExtendedView(ChatPanelBasic.VIEW_MODE.NONE);
         chatPanel1.setChatType(ChatPanelBasic.ChatType.TOURNAMENT);
@@ -83,8 +88,13 @@ public class TournamentPanel extends javax.swing.JPanel {
                     return;
                 }
 
-                String state = (String) tableMatches.getValueAt(modelRow, tableMatches.convertColumnIndexToView(2));
-                String actionText = (String) tableMatches.getValueAt(modelRow, tableMatches.convertColumnIndexToView(TournamentMatchesTableModel.ACTION_COLUMN));
+                // v34: the table is sortable now, so the model row must be mapped to the view row
+                int viewRow = tableMatches.convertRowIndexToView(modelRow);
+                if (viewRow < 0) {
+                    return;
+                }
+                String state = (String) tableMatches.getValueAt(viewRow, tableMatches.convertColumnIndexToView(2));
+                String actionText = (String) tableMatches.getValueAt(viewRow, tableMatches.convertColumnIndexToView(TournamentMatchesTableModel.ACTION_COLUMN));
                 UUID tableId = UUID.fromString((String) matchesModel.getValueAt(modelRow, TournamentMatchesTableModel.ACTION_COLUMN + 1));
                 UUID gameId = UUID.fromString((String) matchesModel.getValueAt(modelRow, TournamentMatchesTableModel.ACTION_COLUMN + 3));
 
@@ -318,7 +328,7 @@ public class TournamentPanel extends javax.swing.JPanel {
 
         setPreferredSize(new java.awt.Dimension(908, 580));
 
-        actionPanel.setFont(new java.awt.Font("Arial", 0, 10)); // NOI18N
+        actionPanel.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Arial 10
 
         txtName.setEditable(false);
         txtName.setHorizontalAlignment(javax.swing.JTextField.LEFT);
@@ -365,19 +375,19 @@ public class TournamentPanel extends javax.swing.JPanel {
         btnCloseWindow.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         btnCloseWindow.addActionListener(evt -> btnCloseWindowActionPerformed(evt));
 
-        lblName.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        lblName.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         lblName.setText("Name:");
 
-        lblType.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        lblType.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font
         lblType.setText("Type:");
 
-        lblState.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        lblState.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font
         lblState.setText("State:");
 
-        lblStartTime.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        lblStartTime.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font
         lblStartTime.setText("Start time:");
 
-        lblEndTime.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        lblEndTime.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font
         lblEndTime.setText("End time:");
 
         javax.swing.GroupLayout actionPanelLayout = new javax.swing.GroupLayout(actionPanel);
@@ -613,7 +623,8 @@ class UpdateTournamentTask extends SwingWorker<Void, TournamentView> {
     protected Void doInBackground() throws Exception {
         while (!isCancelled()) {
             this.publish(SessionHandler.getTournament(tournamentId));
-            TimeUnit.SECONDS.sleep(2);
+            // v34: randomized delay like the lobby tasks (fixed 2 s made every client hit all servers at once)
+            TimeUnit.SECONDS.sleep(2 + RandomUtil.nextInt(2));
         }
         return null;
     }

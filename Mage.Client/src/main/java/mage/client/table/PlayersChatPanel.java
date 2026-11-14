@@ -2,6 +2,7 @@ package mage.client.table;
 
 import mage.client.cards.BigCard;
 import mage.client.chat.ChatPanelBasic;
+import mage.client.dialog.PreferencesDialog;
 import mage.client.util.GUISizeHelper;
 import mage.client.util.MageTableRowSorter;
 import mage.client.util.gui.TableUtil;
@@ -71,10 +72,10 @@ public class PlayersChatPanel extends javax.swing.JPanel {
         userTableModel = new UserTableModel(); // needs to be set before initComponents();
 
         initComponents();
-        setBackground(new Color(0, 0, 0, CHAT_ALPHA));
-
-        jTablePlayers.setBackground(new Color(0, 0, 0, CHAT_ALPHA));
-        jTablePlayers.setForeground(Color.white);
+        // v34: theme tokens for the users overlay (light themes keep the historic black/white look)
+        setBackground(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA));
+        jTablePlayers.setBackground(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA));
+        jTablePlayers.setForeground(PreferencesDialog.getCurrentTheme().getOverlayForeground());
         jTablePlayers.setRowSorter(new MageTableRowSorter(userTableModel));
         setGUISize();
 
@@ -88,11 +89,11 @@ public class PlayersChatPanel extends javax.swing.JPanel {
         jScrollPaneSystem.getViewport().setOpaque(false);
         jScrollPaneSystem.setViewportBorder(null);
 
-        colorPaneSystem.setExtBackgroundColor(new Color(0, 0, 0, CHAT_ALPHA)); // Alpha = 255 not transparent
+        colorPaneSystem.setExtBackgroundColor(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA)); // v34: theme token
         colorPaneSystem.setBorder(new EmptyBorder(5, 5, 5, 5));
         if (jScrollPanePlayers != null) {
-            jScrollPanePlayers.setBackground(new Color(0, 0, 0, CHAT_ALPHA));
-            jScrollPanePlayers.getViewport().setBackground(new Color(0, 0, 0, CHAT_ALPHA));
+            jScrollPanePlayers.setBackground(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA)); // v34: theme token
+            jScrollPanePlayers.getViewport().setBackground(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA)); // v34: theme token
             jScrollPanePlayers.setViewportBorder(null);
         }
     }
@@ -271,7 +272,7 @@ public class PlayersChatPanel extends javax.swing.JPanel {
         colorPaneSystem.setEditable(false);
         colorPaneSystem.setBackground(new java.awt.Color(0, 0, 0));
         colorPaneSystem.setBorder(null);
-        colorPaneSystem.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
+        colorPaneSystem.setFont(GUISizeHelper.chatFont); // v34: scaled chat font instead of fixed Arial 14
         colorPaneSystem.setMargin(new java.awt.Insets(0, 0, 0, 0));
         colorPaneSystem.setOpaque(false);
         jScrollPaneSystem.setViewportView(colorPaneSystem);

@@ -39,16 +39,28 @@ public class KeyBindButton extends JButton implements ActionListener {
     }
 
     private void applyNewKeycode(int code, int modifier) {
-        // clear used keys
-        preferences.getKeybindButtons().stream()
-                .filter(b -> b != KeyBindButton.this)
-                .filter(b -> {
-                    return b.keyCode == code && b.modifierCode == modifier;
-                })
-                .forEach(b -> {
-                    b.setKeyCode(0);
-                    b.setModifierCode(0);
-                });
+        // v34: stock silently cleared the conflicting action; ask the user first instead
+        KeyBindButton conflict = null;
+        for (KeyBindButton b : preferences.getKeybindButtons()) {
+            if (b != KeyBindButton.this && b.keyCode == code && b.modifierCode == modifier) {
+                conflict = b;
+                break;
+            }
+        }
+        if (conflict != null) {
+            String modStr = KeyEvent.getKeyModifiersText(modifier);
+            String combo = (modStr.isEmpty() ? "" : modStr + " + ") + KeyEvent.getKeyText(code);
+            int answer = JOptionPane.showConfirmDialog(this,
+                    combo + " is already assigned to another action (" + conflict.getKey() + ").\n"
+                    + "Remove it from that action and assign it here?",
+                    "Shortcut conflict", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (answer != JOptionPane.YES_OPTION) {
+                menu.setVisible(false);
+                return;
+            }
+            conflict.setKeyCode(0);
+            conflict.setModifierCode(0);
+        }
 
         // set new
         setKeyCode(code);

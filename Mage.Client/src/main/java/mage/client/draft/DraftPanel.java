@@ -495,9 +495,9 @@
          // red color for small time
          Color timerColor;
          if (s <= 10) {
-             timerColor = Color.RED;
+             timerColor = PreferencesDialog.getCurrentTheme().getTimerDangerColor(); // v34: theme token
          } else if (s <= 30) {
-             timerColor = new Color(255, 160, 60); // orange
+             timerColor = PreferencesDialog.getCurrentTheme().getTimerWarningColor(); // v34: theme token
          } else {
              timerColor = PreferencesDialog.getCurrentTheme().getTextColor();
          }
@@ -725,7 +725,7 @@
         panelInfo.setLayout(new java.awt.BorderLayout());
 
         editTimeRemaining.setEditable(false);
-        editTimeRemaining.setFont(new java.awt.Font("Tahoma", 0, 36)); // NOI18N
+        editTimeRemaining.setFont(GUISizeHelper.dialogFont.deriveFont(Math.max(24f, GUISizeHelper.dialogFont.getSize2D() * 2.2f))); // v34: scalable big timer instead of fixed Tahoma 36
         editTimeRemaining.setForeground(java.awt.Color.red);
         editTimeRemaining.setHorizontalAlignment(javax.swing.JTextField.CENTER);
         editTimeRemaining.setText("WAITING");
@@ -821,7 +821,7 @@
         panelPlayersLeft.setVerifyInputWhenFocusTarget(false);
         panelPlayersLeft.setLayout(new java.awt.GridLayout(8, 1));
 
-        labelPlayer01.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer01.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer01.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelPlayer01.setText("player 1");
         labelPlayer01.setAlignmentX(1.0F);
@@ -831,7 +831,7 @@
         labelPlayer01.setVerifyInputWhenFocusTarget(false);
         panelPlayersLeft.add(labelPlayer01);
 
-        labelPlayer02.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer02.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer02.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelPlayer02.setText("player 2");
         labelPlayer02.setAlignmentX(1.0F);
@@ -841,7 +841,7 @@
         labelPlayer02.setVerifyInputWhenFocusTarget(false);
         panelPlayersLeft.add(labelPlayer02);
 
-        labelPlayer03.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer03.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer03.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelPlayer03.setText("player 3");
         labelPlayer03.setAlignmentX(1.0F);
@@ -851,7 +851,7 @@
         labelPlayer03.setVerifyInputWhenFocusTarget(false);
         panelPlayersLeft.add(labelPlayer03);
 
-        labelPlayer04.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer04.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer04.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelPlayer04.setText("player 4");
         labelPlayer04.setAlignmentX(1.0F);
@@ -861,7 +861,7 @@
         labelPlayer04.setVerifyInputWhenFocusTarget(false);
         panelPlayersLeft.add(labelPlayer04);
 
-        labelPlayer05.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer05.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer05.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelPlayer05.setText("player 5");
         labelPlayer05.setAlignmentX(1.0F);
@@ -871,7 +871,7 @@
         labelPlayer05.setVerifyInputWhenFocusTarget(false);
         panelPlayersLeft.add(labelPlayer05);
 
-        labelPlayer06.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer06.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer06.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelPlayer06.setText("player 6");
         labelPlayer06.setAlignmentX(1.0F);
@@ -881,7 +881,7 @@
         labelPlayer06.setVerifyInputWhenFocusTarget(false);
         panelPlayersLeft.add(labelPlayer06);
 
-        labelPlayer07.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer07.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer07.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelPlayer07.setText("player 7");
         labelPlayer07.setAlignmentX(1.0F);
@@ -891,7 +891,7 @@
         labelPlayer07.setVerifyInputWhenFocusTarget(false);
         panelPlayersLeft.add(labelPlayer07);
 
-        labelPlayer08.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer08.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer08.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelPlayer08.setText("player 8");
         labelPlayer08.setAlignmentX(1.0F);
@@ -911,7 +911,7 @@
         labelTableImage.setVerifyInputWhenFocusTarget(false);
 
         panelPlayersRight.setFocusable(false);
-        panelPlayersRight.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        panelPlayersRight.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         panelPlayersRight.setMaximumSize(new java.awt.Dimension(80, 132));
         panelPlayersRight.setMinimumSize(new java.awt.Dimension(80, 132));
         panelPlayersRight.setOpaque(false);
@@ -920,7 +920,7 @@
         panelPlayersRight.setVerifyInputWhenFocusTarget(false);
         panelPlayersRight.setLayout(new java.awt.GridLayout(8, 1));
 
-        labelPlayer09.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer09.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer09.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         labelPlayer09.setText("player 9");
         labelPlayer09.setFocusable(false);
@@ -928,7 +928,7 @@
         labelPlayer09.setVerifyInputWhenFocusTarget(false);
         panelPlayersRight.add(labelPlayer09);
 
-        labelPlayer10.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer10.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer10.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         labelPlayer10.setText("player 10");
         labelPlayer10.setFocusable(false);
@@ -936,7 +936,7 @@
         labelPlayer10.setVerifyInputWhenFocusTarget(false);
         panelPlayersRight.add(labelPlayer10);
 
-        labelPlayer11.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer11.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer11.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         labelPlayer11.setText("player 11");
         labelPlayer11.setFocusable(false);
@@ -944,7 +944,7 @@
         labelPlayer11.setVerifyInputWhenFocusTarget(false);
         panelPlayersRight.add(labelPlayer11);
 
-        labelPlayer12.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer12.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer12.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         labelPlayer12.setText("player 12");
         labelPlayer12.setFocusable(false);
@@ -952,7 +952,7 @@
         labelPlayer12.setVerifyInputWhenFocusTarget(false);
         panelPlayersRight.add(labelPlayer12);
 
-        labelPlayer13.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer13.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer13.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         labelPlayer13.setText("player 13");
         labelPlayer13.setFocusable(false);
@@ -960,7 +960,7 @@
         labelPlayer13.setVerifyInputWhenFocusTarget(false);
         panelPlayersRight.add(labelPlayer13);
 
-        labelPlayer14.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer14.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer14.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         labelPlayer14.setText("player 14");
         labelPlayer14.setFocusable(false);
@@ -968,7 +968,7 @@
         labelPlayer14.setVerifyInputWhenFocusTarget(false);
         panelPlayersRight.add(labelPlayer14);
 
-        labelPlayer15.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer15.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer15.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         labelPlayer15.setText("player 15");
         labelPlayer15.setFocusable(false);
@@ -976,7 +976,7 @@
         labelPlayer15.setVerifyInputWhenFocusTarget(false);
         panelPlayersRight.add(labelPlayer15);
 
-        labelPlayer16.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
+        labelPlayer16.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
         labelPlayer16.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         labelPlayer16.setText("player 16");
         labelPlayer16.setFocusable(false);

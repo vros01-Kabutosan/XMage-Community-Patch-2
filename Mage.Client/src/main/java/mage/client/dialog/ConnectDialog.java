@@ -7,6 +7,7 @@ import mage.client.SessionHandler;
 import mage.client.preference.MagePreferences;
 import mage.client.util.AppUtil;
 import mage.client.util.ClientDefaultSettings;
+import mage.client.util.GUISizeHelper;
 import mage.client.util.gui.countryBox.CountryItemEditor;
 import mage.remote.Connection;
 import mage.utils.StreamUtils;
@@ -15,6 +16,8 @@ import org.apache.log4j.Logger;
 import javax.swing.*;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.*;
 import java.net.*;
 import java.util.List;
@@ -51,6 +54,8 @@ public class ConnectDialog extends MageDialog {
         this.txtUserName.addActionListener(connectAction);
         this.txtPassword.addActionListener(connectAction);
 
+        initRecentServersPopup(); // v34: right click on the server field to pick a recent server
+
         registerUserDialog = new RegisterUserDialog();
         MageFrame.getDesktop().add(registerUserDialog, registerUserDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
 
@@ -60,6 +65,70 @@ public class ConnectDialog extends MageDialog {
 
     public interface ConnectCallback {
         void onConnectClosed();
+    }
+
+    // v34: recent servers list (the stock TODO) - saved on every successful connect,
+    // offered as a right click popup on the server field (no layout changes needed)
+    private static final String KEY_RECENT_SERVERS = "recentServers";
+    private static final int MAX_RECENT_SERVERS = 8;
+
+    private List<String> readRecentServers() {
+        List<String> res = new ArrayList<>();
+        for (String s : MageFrame.getPreferences().get(KEY_RECENT_SERVERS, "").split(",")) {
+            if (!s.trim().isEmpty()) {
+                res.add(s.trim());
+            }
+        }
+        return res;
+    }
+
+    private void rememberRecentServer(String host, int port) {
+        String entry = host + ':' + port;
+        List<String> recent = readRecentServers();
+        recent.remove(entry);
+        recent.add(0, entry);
+        while (recent.size() > MAX_RECENT_SERVERS) {
+            recent.remove(recent.size() - 1);
+        }
+        MageFrame.getPreferences().put(KEY_RECENT_SERVERS, String.join(",", recent));
+    }
+
+    private void initRecentServersPopup() {
+        txtServer.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                maybeShowRecent(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                maybeShowRecent(e);
+            }
+
+            private void maybeShowRecent(MouseEvent e) {
+                if (!e.isPopupTrigger()) {
+                    return;
+                }
+                List<String> recent = readRecentServers();
+                if (recent.isEmpty()) {
+                    return;
+                }
+                JPopupMenu menu = new JPopupMenu();
+                for (String entry : recent) {
+                    JMenuItem item = new JMenuItem(entry);
+                    item.addActionListener(ev -> {
+                        int i = entry.lastIndexOf(':');
+                        if (i > 0) {
+                            txtServer.setText(entry.substring(0, i));
+                            txtPort.setText(entry.substring(i + 1));
+                        }
+                    });
+                    menu.add(item);
+                }
+                menu.show(txtServer, e.getX(), e.getY());
+                e.consume();
+            }
+        });
     }
 
     public void showDialog(ConnectCallback callback) {
@@ -238,7 +307,7 @@ public class ConnectDialog extends MageDialog {
             }
         });
 
-        btnConnect.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
+        btnConnect.setFont(GUISizeHelper.dialogFont.deriveFont(java.awt.Font.BOLD)); // v34: scaled dialog font instead of fixed Tahoma bold
         btnConnect.setText("Connect to server");
         btnConnect.setMargin(new java.awt.Insets(2, 2, 2, 2));
         btnConnect.addActionListener(new java.awt.event.ActionListener() {
@@ -676,6 +745,9 @@ public class ConnectDialog extends MageDialog {
     }
 
     private void doAfterConnected() {
+        if (this.connection != null) {
+            this.rememberRecentServer(this.connection.getHost(), this.connection.getPort()); // v34
+        }
         this.saveSettings();
         this.hideDialog();
         if (this.callback != null) {

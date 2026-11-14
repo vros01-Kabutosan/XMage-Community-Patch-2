@@ -253,9 +253,9 @@ public class TablesPanel extends javax.swing.JPanel {
                 greenLabel.setText(val);
                 greenLabel.setHorizontalAlignment(JLabel.CENTER);
                 greenLabel.setFont(defaultLabel.getFont());
-                greenLabel.setForeground(Color.black);
+                greenLabel.setForeground(PreferencesDialog.getCurrentTheme().getSeatAvailableForeground()); // v34: theme token
                 greenLabel.setOpaque(true);
-                greenLabel.setBackground(new Color(156, 240, 146));
+                greenLabel.setBackground(PreferencesDialog.getCurrentTheme().getSeatAvailableBackground()); // v34: theme token
                 greenLabel.setBorder(new LineBorder(defaultBack, 1));
                 return greenLabel;
             } else {
@@ -400,8 +400,8 @@ public class TablesPanel extends javax.swing.JPanel {
             component.setOpaque(false);
         }
 
-        jScrollPaneTablesActive.getViewport().setBackground(new Color(255, 255, 255, 50));
-        jScrollPaneTablesFinished.getViewport().setBackground(new Color(255, 255, 255, 50));
+        jScrollPaneTablesActive.getViewport().setBackground(PreferencesDialog.getCurrentTheme().getLobbyViewportTint()); // v34: theme token
+        jScrollPaneTablesFinished.getViewport().setBackground(PreferencesDialog.getCurrentTheme().getLobbyViewportTint()); // v34: theme token
 
         restoreFilters();
         setGUISize();
@@ -1086,7 +1086,7 @@ public class TablesPanel extends javax.swing.JPanel {
 
         setLayout(new java.awt.GridBagLayout());
 
-        jPanelTop.setBackground(java.awt.Color.white);
+        jPanelTop.setBackground(PreferencesDialog.getCurrentTheme().getControl()); // v34: theme token
         jPanelTop.setOpaque(false);
 
         btnNewTable.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/match_new.png"))); // NOI18N
@@ -1108,7 +1108,7 @@ public class TablesPanel extends javax.swing.JPanel {
         });
 
         filterBar1.setFloatable(false);
-        filterBar1.setForeground(new java.awt.Color(102, 102, 255));
+        filterBar1.setForeground(PreferencesDialog.getCurrentTheme().getFilterBarInk()); // v34: theme token
         filterBar1.setFocusable(false);
         filterBar1.setOpaque(false);
 
@@ -1672,7 +1672,7 @@ public class TablesPanel extends javax.swing.JPanel {
         });
         jPanelBottom.add(buttonNextMessage);
 
-        labelMessageHeader.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
+        labelMessageHeader.setFont(GUISizeHelper.dialogFont.deriveFont(java.awt.Font.BOLD)); // v34: scaled dialog font instead of fixed Tahoma 11
         labelMessageHeader.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         labelMessageHeader.setText("Message of the Day:");
         labelMessageHeader.setAlignmentY(0.3F);

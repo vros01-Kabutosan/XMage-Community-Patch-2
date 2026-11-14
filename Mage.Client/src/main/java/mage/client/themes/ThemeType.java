@@ -288,6 +288,57 @@ public enum ThemeType {
         return textColor;
     }
 
+    // v34: semantic tokens for the remaining stock custom painting (lobby, users list, draft).
+    // Light themes keep the historic hard-coded values (zero visual change); dark themes get
+    // readable equivalents. New painting code should ask these tokens instead of new Color(...).
+
+    public boolean isDarkTheme() {
+        Color c = control != null ? control : Color.white;
+        return (c.getRed() * 299 + c.getGreen() * 587 + c.getBlue() * 114) / 1000 < 128;
+    }
+
+    /** Free-seats highlight in the lobby tables (historic light value: 156,240,146 with black text). */
+    public Color getSeatAvailableBackground() {
+        return isDarkTheme() ? new Color(46, 110, 60) : new Color(156, 240, 146);
+    }
+
+    public Color getSeatAvailableForeground() {
+        return isDarkTheme() ? new Color(220, 240, 220) : Color.black;
+    }
+
+    /** Translucent viewport tint used over the desktop background in the lobby. */
+    public Color getLobbyViewportTint() {
+        return isDarkTheme() ? new Color(0, 0, 0, 90) : new Color(255, 255, 255, 50);
+    }
+
+    /** Ink color of the lobby filter toolbar labels (historic light value: 102,102,255). */
+    public Color getFilterBarInk() {
+        return isDarkTheme() ? new Color(150, 170, 220) : new Color(102, 102, 255);
+    }
+
+    /** Translucent panel overlay (users list, chats): dark themes follow the control color. */
+    public Color getOverlayBackground(int alpha) {
+        if (isDarkTheme()) {
+            Color c = control;
+            return new Color(c.getRed() / 2, c.getGreen() / 2, c.getBlue() / 2, alpha);
+        }
+        return new Color(0, 0, 0, alpha);
+    }
+
+    /** Text color over getOverlayBackground (historic stock value: pure white). */
+    public Color getOverlayForeground() {
+        return isDarkTheme() ? textColor : Color.white;
+    }
+
+    /** Draft timer warning colors (historic light values: RED and 255,160,60). */
+    public Color getTimerDangerColor() {
+        return isDarkTheme() ? new Color(255, 90, 90) : Color.RED;
+    }
+
+    public Color getTimerWarningColor() {
+        return isDarkTheme() ? new Color(255, 170, 80) : new Color(255, 160, 60);
+    }
+
     public Color getPlayerPanel_inactiveBackgroundColor() {
         return playerPanel_inactiveBackgroundColor;
     }

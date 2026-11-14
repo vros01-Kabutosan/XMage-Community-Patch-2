@@ -7,6 +7,7 @@ import mage.cards.repository.CardInfo;
 import mage.cards.repository.CardRepository;
 import mage.cards.repository.TokenRepository;
 import mage.client.MageFrame;
+import mage.client.components.tray.MageTray;
 import mage.client.dialog.DownloadImagesDialog;
 import mage.client.dialog.PreferencesDialog;
 import mage.client.remote.XmageURLConnection;
@@ -921,6 +922,13 @@ public class DownloadPicturesService extends DefaultBoundedRangeModel implements
         } finally {
             enableDialogButtons();
             this.downloadRunning = false;
+
+            // v34: inform the user when a long images download finishes (the stock TODO) -
+            // safe no-op when the system tray is unavailable
+            if (this.cardIndex > 0) {
+                MageTray.instance.displayMessage("Card images download finished (" + this.cardIndex + " images processed)");
+                MageTray.instance.blink();
+            }
 
             // dialog was opened again while the download was finishing - now it can load missing cards
             if (this.reloadAfterDownload) {

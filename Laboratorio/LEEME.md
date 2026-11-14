@@ -123,6 +123,15 @@ ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y s
     - Parche: `parches\2026-11-14-ui-serie-v34.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\128-v34-lobby-lab.png` + `CHECKPOINT-2026-11-14-ui-serie-v34.md`.
     - Desplegado en la instalación el 2026-11-14 (cliente `mage-client-1.4.63.jar` SHA256 `E87A1223…47EAC7`; backup en `xmage\backup-jars-1.4.63-v34-20261114\cliente\`; servidor 17171 sin tocar).
 
+24. UI de serie v35 (2026-11-14) — Fase 2 del informe (7 ficheros, +218/−16):
+    - **FlatLaf opcional** (`pom.xml` con shade + `GuiDisplayUtil` por reflexión + selector en Preferencias→GUI Theme con Nimbus de default y fallback). FlatLaf va DENTRO del jar cliente (no hay jars nuevos en instalación).
+    - **Temas por fichero**: `~/.xmage/theme-overrides.properties` opcional fusionado en `refreshThemeSettings()` (recargado en cada `ThemeType.reload()`).
+    - **Opt-ins por flag** sin cambio de default: `-Dxmage.battlefield.optimized=true` (optimized drawing condicional) y `-Dxmage.cache.maxEntries=N` (tope de cachés, default 3000).
+    - `MageBook`: caption/info escalan con `dialogFont` (geometría del lienzo intacta a propósito: ligada a los artwork fijos).
+    - Bug cazado y corregido en el propio smoke: `FlatLaf dark` se comparaba con `contains("Dark")` (mayúscula) y caía a Light.
+    - Smoke doble: ruta Nimbus idéntica a v34 (captura 129) + ruta FlatLaf dark arranca, conecta y pinta oscuro (captura 130; L&F y tema de colores son independientes — para todo oscuro usar FlatLaf dark + Carbon Fiber).
+    - Parche: `parches\2026-11-14-ui-serie-v35.patch`. Evidencia: capturas 129/130 + `CHECKPOINT-2026-11-14-ui-serie-v35.md`.
+
 ## Disciplina de build y despliegue (2026-11-09)
 
 Aprendido a la dura con el bug `NoSuchMethodError: Token.putOntoBattlefield` (detalle completo

@@ -1,0 +1,413 @@
+diff --git a/Mage.Client/pom.xml b/Mage.Client/pom.xml
+index 94d1a5414db..ccf983c7e74 100644
+--- a/Mage.Client/pom.xml
++++ b/Mage.Client/pom.xml
+@@ -107,6 +107,14 @@
+             <version>1.2.1</version>
+         </dependency>
+ 
++        <dependency>
++            <!-- v35: optional modern look&feel (opt-in in Preferences -> GUI Theme;
++                 loaded by reflection with Nimbus fallback, shaded into the client jar below) -->
++            <groupId>com.formdev</groupId>
++            <artifactId>flatlaf</artifactId>
++            <version>3.5.4</version>
++        </dependency>
++
+         <!-- music player START -->
+         <!-- TODO: no needs anymore? There are music player by java standard lib -->
+         <dependency>
+@@ -207,6 +215,30 @@
+                     </archive>
+                 </configuration>
+             </plugin>
++            <plugin>
++                <!-- v35: bundle flatlaf inside mage-client jar so no extra lib jar is needed
++                     in lab/install; if the class is missing at runtime the code falls back to Nimbus -->
++                <groupId>org.apache.maven.plugins</groupId>
++                <artifactId>maven-shade-plugin</artifactId>
++                <version>3.5.1</version>
++                <executions>
++                    <execution>
++                        <phase>package</phase>
++                        <goals>
++                            <goal>shade</goal>
++                        </goals>
++                        <configuration>
++                            <createDependencyReducedPom>false</createDependencyReducedPom>
++                            <shadedArtifactAttached>false</shadedArtifactAttached>
++                            <artifactSet>
++                                <includes>
++                                    <include>com.formdev:flatlaf</include>
++                                </includes>
++                            </artifactSet>
++                        </configuration>
++                    </execution>
++                </executions>
++            </plugin>
+             <plugin>
+                 <artifactId>maven-assembly-plugin</artifactId>
+                 <configuration>
+diff --git a/Mage.Client/src/main/java/mage/client/deckeditor/collection/viewer/MageBook.java b/Mage.Client/src/main/java/mage/client/deckeditor/collection/viewer/MageBook.java
+index 6d31994c416..f2b21111bf6 100644
+--- a/Mage.Client/src/main/java/mage/client/deckeditor/collection/viewer/MageBook.java
++++ b/Mage.Client/src/main/java/mage/client/deckeditor/collection/viewer/MageBook.java
+@@ -146,14 +146,15 @@ public class MageBook extends JComponent {
+         // set's caption
+         setCaption = new JLabel();
+         setCaption.setHorizontalAlignment(SwingConstants.CENTER);
+-        setCaption.setFont(jLayeredPane.getFont().deriveFont(25f));
++        // v35: caption/info follow the configured GUI size (were fixed 25f/17f regardless of scale)
++        setCaption.setFont(mage.client.util.GUISizeHelper.dialogFont.deriveFont(Math.max(18f, mage.client.util.GUISizeHelper.dialogFont.getSize2D() * 1.6f)));
+         setCaption.setText("EMPTY CAPTION");
+         jPanelCaption.add(setCaption, BorderLayout.NORTH);
+ 
+         // set's info
+         setInfo = new JLabel();
+         setInfo.setHorizontalAlignment(SwingConstants.CENTER);
+-        setInfo.setFont(jLayeredPane.getFont().deriveFont(17f));
++        setInfo.setFont(mage.client.util.GUISizeHelper.dialogFont.deriveFont(Math.max(13f, mage.client.util.GUISizeHelper.dialogFont.getSize2D() * 1.15f)));
+         setInfo.setText("EMPTY STATS");
+         jPanelCaption.add(setInfo, BorderLayout.SOUTH);
+ 
+diff --git a/Mage.Client/src/main/java/mage/client/dialog/PreferencesDialog.java b/Mage.Client/src/main/java/mage/client/dialog/PreferencesDialog.java
+index c682c74fc22..abcd03c793a 100644
+--- a/Mage.Client/src/main/java/mage/client/dialog/PreferencesDialog.java
++++ b/Mage.Client/src/main/java/mage/client/dialog/PreferencesDialog.java
+@@ -108,6 +108,8 @@ public class PreferencesDialog extends javax.swing.JDialog {
+ 
+     // Themes
+     public static final String KEY_THEME = "themeSelection";
++    // v35: optional look and feel (Nimbus default, FlatLaf opt-in)
++    public static final String KEY_LAF_SELECTION = "lafSelection";
+ 
+     // Phases
+     public static final String UPKEEP_YOU = "upkeepYou";
+@@ -691,6 +693,9 @@ public class PreferencesDialog extends javax.swing.JDialog {
+         txtImageFolderPath.setEditable(false);
+         cbProxyType.setModel(new DefaultComboBoxModel<>(Connection.ProxyType.values()));
+         cbTheme.setModel(new DefaultComboBoxModel<>(ThemeType.values()));
++        // v35: look and feel selector (applies on save; Nimbus stays the default and the fallback)
++        cbLaf.setModel(new DefaultComboBoxModel<>(new String[]{"Nimbus (default)", "FlatLaf modern", "FlatLaf dark"}));
++        loadLafSelection();
+         addAvatars();
+ 
+         // prepare size table (you can change settings order by new position index)
+@@ -943,6 +948,8 @@ public class PreferencesDialog extends javax.swing.JDialog {
+         lbSelectLabel = new javax.swing.JLabel();
+         cbTheme = new javax.swing.JComboBox<>();
+         lbThemeHint = new javax.swing.JLabel();
++        lbLafLabel = new javax.swing.JLabel(); // v35
++        cbLaf = new javax.swing.JComboBox<>(); // v35
+         panelBackgroundImages = new javax.swing.JPanel();
+         cbUseDefaultBackground = new javax.swing.JCheckBox();
+         txtBackgroundImagePath = new javax.swing.JTextField();
+@@ -2122,17 +2129,32 @@ public class PreferencesDialog extends javax.swing.JDialog {
+ 
+         lbThemeHint.setText("<html><b>WARNING</b>, some color settings and images will be applied after app RESTART");
+ 
++        // v35: look and feel selector row
++        lbLafLabel.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
++        lbLafLabel.setText("Look and feel:");
++        lbLafLabel.setHorizontalTextPosition(javax.swing.SwingConstants.LEADING);
++        lbLafLabel.setPreferredSize(new java.awt.Dimension(110, 16));
++        lbLafLabel.setVerticalTextPosition(javax.swing.SwingConstants.TOP);
++        cbLaf.addActionListener(new java.awt.event.ActionListener() {
++            public void actionPerformed(java.awt.event.ActionEvent evt) {
++                cbLafActionPerformed(evt);
++            }
++        });
++
+         org.jdesktop.layout.GroupLayout themesCategoryLayout = new org.jdesktop.layout.GroupLayout(themesCategory);
+         themesCategory.setLayout(themesCategoryLayout);
+         themesCategoryLayout.setHorizontalGroup(
+             themesCategoryLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+             .add(themesCategoryLayout.createSequentialGroup()
+                 .addContainerGap()
+-                .add(lbSelectLabel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 96, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
++                .add(themesCategoryLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
++                    .add(lbSelectLabel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 96, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
++                    .add(lbLafLabel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 96, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
+                 .add(themesCategoryLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                     .add(lbThemeHint, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+-                    .add(cbTheme, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 313, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
++                    .add(cbTheme, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 313, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
++                    .add(cbLaf, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 313, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                 .addContainerGap())
+         );
+         themesCategoryLayout.setVerticalGroup(
+@@ -2143,6 +2165,10 @@ public class PreferencesDialog extends javax.swing.JDialog {
+                     .add(cbTheme, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                     .add(lbSelectLabel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 22, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
++                .add(themesCategoryLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
++                    .add(cbLaf, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
++                    .add(lbLafLabel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 22, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
++                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
+                 .add(lbThemeHint, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+         );
+ 
+@@ -3141,6 +3167,7 @@ public class PreferencesDialog extends javax.swing.JDialog {
+     private void saveTheme(boolean refreshTheme) {
+         Preferences prefs = MageFrame.getPreferences();
+         save(prefs, getInstance().cbTheme, KEY_THEME);
++        save(prefs, getInstance().cbLaf, KEY_LAF_SELECTION); // v35
+ 
+         if (refreshTheme) {
+             loadTheme();
+@@ -3336,6 +3363,30 @@ public class PreferencesDialog extends javax.swing.JDialog {
+         }
+     }//GEN-LAST:event_cbThemeActionPerformed
+ 
++    // v35: look and feel selection (applies immediately through saveTheme -> loadTheme -> reload)
++    private void cbLafActionPerformed(java.awt.event.ActionEvent evt) {
++        if (!isLoadingTheme) {
++            saveTheme(true);
++        }
++    }
++
++    private void loadLafSelection() {
++        String selected = getCachedValue(KEY_LAF_SELECTION, "Nimbus");
++        String[] known = {"Nimbus (default)", "FlatLaf modern", "FlatLaf dark"};
++        isLoadingTheme = true;
++        try {
++            for (int i = 0; i < known.length; i++) {
++                if (known[i].startsWith(selected)) {
++                    cbLaf.setSelectedIndex(i);
++                    return;
++                }
++            }
++            cbLaf.setSelectedIndex(0);
++        } finally {
++            isLoadingTheme = false;
++        }
++    }
++
+     private void showProxySettings() {
+         Connection.ProxyType proxyType = (Connection.ProxyType) cbProxyType.getSelectedItem();
+         switch (proxyType) {
+@@ -4105,6 +4156,7 @@ public class PreferencesDialog extends javax.swing.JDialog {
+     private javax.swing.JCheckBox cbStopOnNewStackObjects;
+     private javax.swing.JComboBox<String> cbTargetAutoChooseLevel;
+     private javax.swing.JComboBox<ThemeType> cbTheme;
++    private javax.swing.JComboBox<String> cbLaf; // v35
+     private javax.swing.JCheckBox cbUseDefaultBackground;
+     private javax.swing.JCheckBox cbUseDefaultBattleImage;
+     private javax.swing.JCheckBox cbUseDefaultImageFolder;
+@@ -4219,6 +4271,7 @@ public class PreferencesDialog extends javax.swing.JDialog {
+     private javax.swing.JLabel labelToggleRecordMacro;
+     private javax.swing.JLabel labelYourTurn;
+     private javax.swing.JLabel lbSelectLabel;
++    private javax.swing.JLabel lbLafLabel; // v35
+     private javax.swing.JLabel lbThemeHint;
+     private javax.swing.JLabel lblProxyPassword;
+     private javax.swing.JLabel lblProxyPort;
+diff --git a/Mage.Client/src/main/java/mage/client/game/BattlefieldPanel.java b/Mage.Client/src/main/java/mage/client/game/BattlefieldPanel.java
+index 6a60a6f2656..f24b9356e67 100644
+--- a/Mage.Client/src/main/java/mage/client/game/BattlefieldPanel.java
++++ b/Mage.Client/src/main/java/mage/client/game/BattlefieldPanel.java
+@@ -385,7 +385,10 @@ public class BattlefieldPanel extends javax.swing.JLayeredPane {
+ 
+     @Override
+     public boolean isOptimizedDrawingEnabled() {
+-        return false;
++        // v35: opt-in experiment to cut repaint cost on big battlefields (fewer CPU on EDH/token tables).
++        // Default keeps the historic stock behavior (false); enable with -Dxmage.battlefield.optimized=true
++        // after checking that layered icons/arrows z-order looks fine in a real game.
++        return Boolean.parseBoolean(System.getProperty("xmage.battlefield.optimized", "false"));
+     }
+ 
+     public Map<UUID, MageCard> getPermanentPanels() {
+diff --git a/Mage.Client/src/main/java/mage/client/themes/ThemeType.java b/Mage.Client/src/main/java/mage/client/themes/ThemeType.java
+index 87bf0b95172..fcf61346d1b 100644
+--- a/Mage.Client/src/main/java/mage/client/themes/ThemeType.java
++++ b/Mage.Client/src/main/java/mage/client/themes/ThemeType.java
+@@ -445,6 +445,8 @@ public enum ThemeType {
+      * Prepare theme settings and files before using. Call it on app loading or after theme changed
+      */
+     public void reload() {
++        // v35: re-read the optional user theme overrides file before applying colors
++        mage.client.util.gui.GuiDisplayUtil.reloadThemeOverrides();
+         // reload card icons css file (run it all the time, even on svg unsupport mode)
+         for (CardIconColor cardIconColor : CardIconColor.values()) {
+             SvgUtils.prepareCss(this.getCardIconsCssFile(cardIconColor), this.getCardIconsCssSettings(cardIconColor), true);
+diff --git a/Mage.Client/src/main/java/mage/client/util/SoftValuesLoadingCache.java b/Mage.Client/src/main/java/mage/client/util/SoftValuesLoadingCache.java
+index 0341405dc81..78fd9a663dc 100644
+--- a/Mage.Client/src/main/java/mage/client/util/SoftValuesLoadingCache.java
++++ b/Mage.Client/src/main/java/mage/client/util/SoftValuesLoadingCache.java
+@@ -18,8 +18,10 @@ public class SoftValuesLoadingCache<K, V> extends ForwardingLoadingCache<K, Opti
+     private static final Logger logger = Logger.getLogger(SoftValuesLoadingCache.class);
+ 
+     public SoftValuesLoadingCache(CacheLoader<K, Optional<V>> loader) {
++        // v35: entries cap became configurable for low-ram machines (default keeps the historic 3000;
++        // softValues still lets the GC reclaim images first, so -Xmx remains the real limit)
+         cache = newBuilder()
+-                .maximumSize(3000)
++                .maximumSize(Integer.getInteger("xmage.cache.maxEntries", 3000))
+                 .expireAfterAccess(60, TimeUnit.MINUTES)
+                 .softValues()
+                 .build(loader);
+diff --git a/Mage.Client/src/main/java/mage/client/util/gui/GuiDisplayUtil.java b/Mage.Client/src/main/java/mage/client/util/gui/GuiDisplayUtil.java
+index 33092524ad6..580b210083d 100644
+--- a/Mage.Client/src/main/java/mage/client/util/gui/GuiDisplayUtil.java
++++ b/Mage.Client/src/main/java/mage/client/util/gui/GuiDisplayUtil.java
+@@ -23,6 +23,7 @@ import java.util.regex.Matcher;
+ import javax.swing.JButton;
+ import javax.swing.JComponent;
+ import javax.swing.JLabel;
++import javax.swing.LookAndFeel;
+ import javax.swing.JPanel;
+ import javax.swing.JSplitPane;
+ import javax.swing.SwingUtilities;
+@@ -32,6 +33,7 @@ import mage.client.MageFrame;
+ import mage.client.components.MageComponents;
+ import mage.client.dialog.PreferencesDialog;
+ import mage.client.table.PlayersChatPanel;
++import mage.client.themes.ThemeType;
+ import mage.client.util.GUISizeHelper;
+ import mage.constants.CardType;
+ import mage.constants.MageObjectType;
+@@ -428,18 +430,31 @@ public final class GuiDisplayUtil {
+     }
+ 
+     public static void refreshThemeSettings() {
+-        try {
+-            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
++        // v35: optional modern look&feel (Preferences -> GUI Theme -> "Look and feel").
++        // Default and fallback stay Nimbus, so nothing changes unless the user opts in.
++        String lafChoice = PreferencesDialog.getCachedValue(PreferencesDialog.KEY_LAF_SELECTION, "Nimbus");
++        boolean flatLafApplied = false;
++        if (lafChoice.startsWith("FlatLaf")) {
++            flatLafApplied = tryApplyFlatLaf(lafChoice.toLowerCase(Locale.ROOT).contains("dark"));
++        }
++        if (!flatLafApplied) {
++            try {
++                UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
++            }
++            catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
++                logger.error((Object)("Can't apply current theme: " + (Object)((Object)PreferencesDialog.getCurrentTheme()) + " - " + e), (Throwable)e);
++            }
+         }
+-        catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
+-            logger.error((Object)("Can't apply current theme: " + (Object)((Object)PreferencesDialog.getCurrentTheme()) + " - " + e), (Throwable)e);
++        ThemeType theme = PreferencesDialog.getCurrentTheme();
++        UIManager.put("nimbusBlueGrey", themeColorOverride(theme, "nimbusBlueGrey", theme.getNimbusBlueGrey()));
++        UIManager.put("control", themeColorOverride(theme, "control", theme.getControl()));
++        UIManager.put("nimbusLightBackground", themeColorOverride(theme, "nimbusLightBackground", theme.getNimbusLightBackground()));
++        UIManager.put("info", themeColorOverride(theme, "info", theme.getInfo()));
++        UIManager.put("nimbusBase", themeColorOverride(theme, "nimbusBase", theme.getNimbusBase()));
++        UIManager.put("text", themeColorOverride(theme, "textColor", theme.getTextColor()));
++        if (flatLafApplied) {
++            applyFlatLafThemeColors(theme);
+         }
+-        UIManager.put("nimbusBlueGrey", PreferencesDialog.getCurrentTheme().getNimbusBlueGrey());
+-        UIManager.put("control", PreferencesDialog.getCurrentTheme().getControl());
+-        UIManager.put("nimbusLightBackground", PreferencesDialog.getCurrentTheme().getNimbusLightBackground());
+-        UIManager.put("info", PreferencesDialog.getCurrentTheme().getInfo());
+-        UIManager.put("nimbusBase", PreferencesDialog.getCurrentTheme().getNimbusBase());
+-        UIManager.put("text", PreferencesDialog.getCurrentTheme().getTextColor());
+         for (Frame frame : Frame.getFrames()) {
+             GuiDisplayUtil.refreshLookAndFeel(frame);
+         }
+@@ -456,6 +471,100 @@ public final class GuiDisplayUtil {
+         });
+     }
+ 
++    /**
++     * v35: loads FlatLaf by reflection (the lib is shaded into the client jar; if the classes
++     * are missing for any reason the client keeps working with Nimbus).
++     */
++    private static boolean tryApplyFlatLaf(boolean dark) {
++        try {
++            Class<?> lafClass = Class.forName(dark ? "com.formdev.flatlaf.FlatDarkLaf" : "com.formdev.flatlaf.FlatLightLaf");
++            LookAndFeel laf = (LookAndFeel) lafClass.getDeclaredConstructor().newInstance();
++            UIManager.setLookAndFeel(laf);
++            logger.info("Look and feel applied: " + laf.getName());
++            return true;
++        } catch (Throwable t) {
++            logger.warn("FlatLaf selected but not available, falling back to Nimbus: " + t);
++            return false;
++        }
++    }
++
++    /**
++     * v35: maps the current ThemeType colors to FlatLaf keys (equivalent of the nimbus* puts above).
++     */
++    private static void applyFlatLafThemeColors(ThemeType theme) {
++        Color control = themeColorOverride(theme, "control", theme.getControl());
++        Color inputs = themeColorOverride(theme, "nimbusLightBackground", theme.getNimbusLightBackground());
++        Color buttons = themeColorOverride(theme, "nimbusBlueGrey", theme.getNimbusBlueGrey());
++        Color tooltips = themeColorOverride(theme, "info", theme.getInfo());
++        Color accent = themeColorOverride(theme, "nimbusBase", theme.getNimbusBase());
++        Color text = themeColorOverride(theme, "textColor", theme.getTextColor());
++        UIManager.put("Panel.background", control);
++        UIManager.put("OptionPane.background", control);
++        UIManager.put("MenuBar.background", control);
++        UIManager.put("ToolBar.background", control);
++        UIManager.put("TextField.background", inputs);
++        UIManager.put("FormattedTextField.background", inputs);
++        UIManager.put("TextArea.background", inputs);
++        UIManager.put("Table.background", inputs);
++        UIManager.put("List.background", inputs);
++        UIManager.put("Tree.background", inputs);
++        UIManager.put("Button.background", buttons);
++        UIManager.put("ToolTip.background", tooltips);
++        UIManager.put("Component.focusColor", accent);
++        UIManager.put("Component.accentColor", accent);
++        UIManager.put("Table.selectionBackground", accent);
++        UIManager.put("List.selectionBackground", accent);
++        UIManager.put("Label.foreground", text);
++        UIManager.put("Panel.foreground", text);
++    }
++
++    /**
++     * v35: theme overrides file (stock TODO: themes were compiled-only). Optional properties file
++     * at ~/.xmage/theme-overrides.properties with keys like "Coffee.control=182,157,135" or
++     * "Coffee.nimbusBase=97,27,0,255". Missing file or keys keep the built-in preset values.
++     */
++    private static java.util.Properties themeOverrides = null;
++
++    private static java.util.Properties loadThemeOverrides() {
++        if (themeOverrides == null) {
++            themeOverrides = new java.util.Properties();
++            try {
++                java.io.File f = new java.io.File(System.getProperty("user.home"), ".xmage" + java.io.File.separator + "theme-overrides.properties");
++                if (f.isFile()) {
++                    try (java.io.InputStream in = new java.io.FileInputStream(f)) {
++                        themeOverrides.load(in);
++                    }
++                    logger.info("Theme overrides loaded from " + f.getPath());
++                }
++            } catch (Throwable t) {
++                logger.warn("Can't load theme overrides file: " + t);
++            }
++        }
++        return themeOverrides;
++    }
++
++    public static void reloadThemeOverrides() {
++        themeOverrides = null; // v35: called on theme reload so file edits apply after restart/reload
++    }
++
++    private static Color themeColorOverride(ThemeType theme, String field, Color base) {
++        String value = loadThemeOverrides().getProperty(theme.getName() + '.' + field);
++        if (value == null || value.trim().isEmpty()) {
++            return base;
++        }
++        try {
++            String[] parts = value.trim().split(",");
++            int r = Integer.parseInt(parts[0].trim());
++            int g = Integer.parseInt(parts[1].trim());
++            int b = Integer.parseInt(parts[2].trim());
++            int a = parts.length > 3 ? Integer.parseInt(parts[3].trim()) : 255;
++            return new Color(r, g, b, a);
++        } catch (Throwable t) {
++            logger.warn("Bad theme override " + theme.getName() + '.' + field + " = " + value + ", using preset");
++            return base;
++        }
++    }
++
+     private static void refreshLookAndFeel(Window window) {
+         for (Window childWindow : window.getOwnedWindows()) {
+             GuiDisplayUtil.refreshLookAndFeel(childWindow);

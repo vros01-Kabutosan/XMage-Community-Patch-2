@@ -1,0 +1,29 @@
+diff --git a/Mage/src/main/java/mage/cards/decks/CardNameUtil.java b/Mage/src/main/java/mage/cards/decks/CardNameUtil.java
+index 04e19be8dd2..6b79114e631 100644
+--- a/Mage/src/main/java/mage/cards/decks/CardNameUtil.java
++++ b/Mage/src/main/java/mage/cards/decks/CardNameUtil.java
+@@ -19,7 +19,7 @@ public class CardNameUtil {
+                 .replace("’", "'")
+                 .replace("“", "\"")
+                 .replace("”", "\"")
+-                .replace("Ã¶", "A")
++                .replace("Ã¶", "o") // v36: era "A" -- mojibake de ö en UTF-8 leido como CP1252 (Mjölnir -> MjAlnir)
+                 .replace("ö", "o")
+                 .replace("û", "u")
+                 .replace("í", "i")
+diff --git a/Mage/src/main/java/mage/cards/decks/importer/PlainTextDeckImporter.java b/Mage/src/main/java/mage/cards/decks/importer/PlainTextDeckImporter.java
+index ee5d71ebac3..5e23e566ca2 100644
+--- a/Mage/src/main/java/mage/cards/decks/importer/PlainTextDeckImporter.java
++++ b/Mage/src/main/java/mage/cards/decks/importer/PlainTextDeckImporter.java
+@@ -41,7 +41,10 @@ public abstract class PlainTextDeckImporter extends DeckImporter {
+ 
+         sbMessage.setLength(0);
+         try {
+-            try (Scanner scanner = new Scanner(f)) {
++            // v36: leer siempre en UTF-8. new Scanner(f) usa el charset por defecto de la JVM
++            // (CP1252 en Windows), asi que un .dck UTF-8 con acentos llegaba corrupto al
++            // normalizador ("Mjölnir" -> "MjÃ¶lnir" -> "MjAlnir") y la carta no se encontraba.
++            try (Scanner scanner = new Scanner(f, "UTF-8")) {
+                 boolean canFix = true;
+                 while (scanner.hasNextLine()) {
+                     String line = scanner.nextLine().trim();

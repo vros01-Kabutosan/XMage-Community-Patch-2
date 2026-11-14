@@ -18,7 +18,10 @@ No hace falta repetirlas en cada prompt: están aquí de forma permanente.
 6. **Documentar y sincronizar**: dejar evidencia (capturas/logs) en
    `Laboratorio\LAB-UI-1.4.62-V2\capturas`, actualizar `LEEME.md` y
    `CHECKPOINT-<fecha>.md`, regenerar `Laboratorio\parches\` y hacer commit/push en la
-   rama de trabajo del fork.
+   rama de trabajo del fork. Toda tarea que quede a medias deja además un
+   `HANDOFF-<fecha>-<slug>.md` en `Laboratorio\` (plantilla `HANDOFF-TEMPLATE.md`) con el
+   **punto exacto** de continuación y un **prompt listo** para que el siguiente worker,
+   harness o modelo lo retome sin rehacer trabajo.
 
 ## Entorno
 

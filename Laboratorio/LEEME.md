@@ -19,6 +19,14 @@ modificado de XMage 1.4.63V1 de Kabutosan. La instalación oficial vive aparte, 
 | `_archivo/20261025/` | Material antiguo retirado del flujo activo (logs viejos, labs anteriores, restos de recuperación) y limpieza autorizada del 2026-10-25. Detalle exacto en `_archivo/20261025/INVENTARIO-LIMPIEZA-2026-10-25.md`. |
 | `_archivo/20261101/` | Reorganización del 2026-11-01 (script `reorganizar-2026-11-01.ps1`): legado `Proyecto-XMage/`, config del repo raíz, caches de herramientas y worktrees huérfanos. No se versiona. |
 
+## Handoff entre workers (2026-11-14)
+
+Cualquier tarea que quede a medias deja un `HANDOFF-<fecha>-<slug>.md` en este directorio con el
+**punto exacto** de continuación (fichero:línea, comando, SHA256, PID, puerto), para que el siguiente
+worker / harness / modelo (Perch, Hermes, DSH, CommandCode, …) lo retome sin rehacer trabajo ni
+re-descubrir el contexto. Plantilla: `HANDOFF-TEMPLATE.md`. Cada handoff incluye un **prompt listo**
+para pegar en cualquier harness.
+
 ## Mods activos (todos aditivos)
 
 Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
@@ -89,6 +97,101 @@ Fuente: `XMage-1.4.62V1-src`. Parches en `parches/`.
       - Ajuste adaptativo y proporcional de la ventana según el número de columnas (	itleMinW = 280), evitando marcos gigantes innecesarios.
       - Tema oscuro Obsidian (#161A23 / 
 ew Color(22, 26, 35)) aplicado al fondo de la ventana, CardArea, JScrollPane y su Viewport, eliminando el fondo gris claro desfasado y unificando el estilo con la mesa de juego.
+
+20. `Mage.Common/src/main/java/mage/db/**` (v31, 2026-11-09)
+    - Restauración del paquete fuente `mage.db` (EntityManager + EntityManagerTest + model/Feedback + model/Log) verbatim del delta oficial upstream (`79aec614fc2`). El upgrade 1.4.63 lo dejó fuera y la regla global `**/db` del `.gitignore` lo tenía ignorado, con lo que `Mage.Server` no compilaba desde source (`package mage.db does not exist` en FeedbackServiceImpl) y los jars desplegados dependían de clases recicladas de builds viejos. Aditivo: negación en `.gitignore` + 4 ficheros upstream, sin tocar código existente. Sin él, el feedback del servidor daría ClassNotFoundException en runtime.
+
+21. `Mage.Client/src/main/java/mage/client/deckeditor/DeckEditorPanel.java` y `mage/client/util/AiDeckLibrary.java` (v32, 2026-11-13)
+    - El botón **LOAD** del Deck Editor abre siempre `sample-decks\Descargados` (la carpeta de los mazos descargados por el descargador: Modern / Pioneer / Standard), en lugar de la última ruta recordada en la preferencia `lastDeckFolder`.
+    - Reutiliza `AiDeckLibrary.downloadedDeckRoot()` (antes `private`, ahora `public`) para que el editor y el pool de mazos de la IA resuelvan la misma carpeta: una única fuente de verdad, sin rutas hardcodeadas.
+    - Fallback conservado: si `Descargados` no existe, se vuelve al comportamiento anterior (`lastDeckFolder`). SAVE, Import/Export, el selector de mazo de la mesa y los torneos quedan **sin cambios** (mismo criterio pedido por Kabutosan: solo LOAD del editor).
+    - Parche: `parches\2026-11-13-load-folder-descargados-v32.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\126-prueba-load-descargados.log`.
+
+22. UI de serie v33 (2026-11-13) — Fase 0 del `INFORME-MODERNIZACION-UI-2026-11-13.md` (11 ficheros, todos con el código afectado verificado contra el tag oficial `xmage_1.4.63V1`):
+    - `util/TransformedImageCache.java`: resampling moderno (`Graphics2D` + halving bilinear + bicubic final) en vez de `getScaledInstance(SCALE_SMOOTH)` → nitidez de zoom en toda la app.
+    - `table/TablesPanel.java`: iconos del lobby escalados por la caché nueva. `components/ability/MageScrollButton.java`: **fix bug de serie** (los iconos estáticos compartidos se mutaban por cada scrollbar de distinto tamaño) + caché por tamaño.
+    - `org/mage/card/arcane/SvgUtils.java`: caché del `data:URI` del CSS invalidada en `prepareCss` → sin disco por cada rasterizado SVG.
+    - `deckeditor/CardSelector.java`: búsqueda mientras se escribe (debounce 250 ms; ENTER/Clear siguen inmediatos y sin doble filtro).
+    - `game/HelperPanel.java`: reactivada la burbuja + parpadeo de bandeja al pedir feedback con el cliente de fondo (venía comentada de serie) y `stopBlink()` al contestar; limpiados 2 wrappers `new Thread` sobre `invokeLater`.
+    - `game/PlayerPanelExt.java` + `game/GamePanel.java`: `clearLifeCache()` llamado en `cleanUp()` (fuga de sesión `playerLives`) y stop de `resizeTimer`. `components/ext/dlg/DialogManager.java`: `ConcurrentHashMap` (DCL roto sobre `HashMap`).
+    - `util/gui/countryBox/CountryItemRenderer.java`: colores de selección del L&F + caché de banderas. `chat/ChatPanelBasic.java`: hora fija `HH:mm:ss` (antes dependía del locale del SO).
+    - Reescopado tras verificar (NO se tocaron): el F2 con textos traducidos (los roles los fija el cliente; sobrescribirlos sería incorrecto en diálogos de elección) y el "connect en EDT" (el log del smoke muestra que el handshake ya corre en `SwingWorker`).
+    - Parche: `parches\2026-11-13-ui-serie-v33.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\127c-v33-lobby-lab.png` + `CHECKPOINT-2026-11-13-ui-serie-v33.md`.
+    - Desplegado en la instalación el 2026-11-13 (cliente `mage-client-1.4.63.jar` SHA256 `B7235FCA…86C7C`; backup en `xmage\backup-jars-1.4.63-v33-20261113\cliente\`; servidor 17171 sin tocar).
+
+23. UI de serie v34 (2026-11-14) — Fase 1 del informe (8 ficheros, todos verificados de serie):
+    - `themes/ThemeType.java`: tokens semánticos derivados (oscuro/claro) sin tocar los presets; temas claros = valores históricos exactos (cero cambio visual).
+    - `table/TablesPanel.java` + `table/PlayersChatPanel.java`: asientos, viewport, tinta de filtros, overlay de usuarios y fuente del banner pasan a tokens/`dialogFont`/`chatFont`.
+    - `tournament/TournamentPanel.java`: clasificación y partidas ordenables (`MageTableRowSorter`, con fix view↔model en Watch), fuentes escalables, refresco 2-3 s aleatorio.
+    - `draft/DraftPanel.java`: 17 Tahoma fijos → `dialogFont`, timer escalable y por tokens de tema.
+    - `dialog/ConnectDialog.java`: servidores recientes (MRU 8 en prefs `recentServers`, popup con click-derecho en el campo, guardado al conectar con éxito) + botón Connect con fuente escalable.
+    - `components/KeyBindButton.java`: los conflictos de atajo se preguntan en vez de borrar en silencio.
+    - `org/mage/plugins/card/images/DownloadPicturesService.java`: aviso de bandeja al terminar descargas largas.
+    - Corregido en el informe tras verificar: el Stop de descargas y el progreso YA eran correctos de serie (el TODO del diálogo es código GEN muerto); B2 (mutación ImageCache) era falso positivo.
+    - Parche: `parches\2026-11-14-ui-serie-v34.patch`. Evidencia: `LAB-UI-1.4.62-V2\capturas\128-v34-lobby-lab.png` + `CHECKPOINT-2026-11-14-ui-serie-v34.md`.
+    - Desplegado en la instalación el 2026-11-14 (cliente `mage-client-1.4.63.jar` SHA256 `E87A1223…47EAC7`; backup en `xmage\backup-jars-1.4.63-v34-20261114\cliente\`; servidor 17171 sin tocar).
+
+24. UI de serie v35 (2026-11-14) — Fase 2 del informe (7 ficheros, +218/−16):
+    - **FlatLaf opcional** (`pom.xml` con shade + `GuiDisplayUtil` por reflexión + selector en Preferencias→GUI Theme con Nimbus de default y fallback). FlatLaf va DENTRO del jar cliente (no hay jars nuevos en instalación).
+    - **Temas por fichero**: `~/.xmage/theme-overrides.properties` opcional fusionado en `refreshThemeSettings()` (recargado en cada `ThemeType.reload()`).
+    - **Opt-ins por flag** sin cambio de default: `-Dxmage.battlefield.optimized=true` (optimized drawing condicional) y `-Dxmage.cache.maxEntries=N` (tope de cachés, default 3000).
+    - `MageBook`: caption/info escalan con `dialogFont` (geometría del lienzo intacta a propósito: ligada a los artwork fijos).
+    - Bug cazado y corregido en el propio smoke: `FlatLaf dark` se comparaba con `contains("Dark")` (mayúscula) y caía a Light.
+    - Smoke doble: ruta Nimbus idéntica a v34 (captura 129) + ruta FlatLaf dark arranca, conecta y pinta oscuro (captura 130; L&F y tema de colores son independientes — para todo oscuro usar FlatLaf dark + Carbon Fiber).
+    - Parche: `parches\2026-11-14-ui-serie-v35.patch`. Evidencia: capturas 129/130 + `CHECKPOINT-2026-11-14-ui-serie-v35.md`.
+    - Desplegado en la instalación el 2026-11-14 (cliente `mage-client-1.4.63.jar` con FlatLaf dentro, SHA256 `B2517155…04E85`; backup en `xmage\backup-jars-1.4.63-v35-20261114\cliente\`; sin jars nuevos en la instalación; servidor 17171 sin tocar).
+
+25. Import de .dck v36 (2026-11-14) — cartas que faltaban al cargar los mazos descargados (2 ficheros, +5/−2):
+    - **Causa raíz 1**: `PlainTextDeckImporter` usaba `new Scanner(f)`, que toma el charset por defecto de la JVM (`windows-1252` en Windows) mientras los .dck son UTF-8. Cualquier nombre con acento llegaba corrupto. Corregido a `new Scanner(f, "UTF-8")`.
+    - **Causa raíz 2**: `CardNameUtil` mapeaba el mojibake `Ã¶` a `"A"` en vez de `"o"`, convirtiendo `Mjölnir` en `MjAlnir` (carta inexistente). Corregido.
+    - Evidencia: `BulkTest` sobre los 2811 .dck de `Descargados` → **2519 completos 60+15**; el mazo Amulet Titan pasa de `main=0 side=0` a `main=60 side=15`.
+    - Las 28 cartas que siguen sin resolver **no existen en XMage** (sets `SOS` con lista `unfinished`, `FRA`, `TRK`, `HOC`, `MSH`): es cobertura de sets, no un bug de importación.
+    - Parche: `parches\2026-11-14-import-dck-utf8-v36.patch`. Evidencia: `CHECKPOINT-2026-11-14-import-dck-utf8-v36.md` + `LAB-UI-1.4.62-V2\tools\importtest\`.
+    - **Pendiente de despliegue** en la instalación oficial (servidor 17171 sin tocar).
+
+26. Import de .dck v36 — **despliegue oficial** (2026-11-14):
+    - Artefacto: solo `mage-client\lib\mage-1.4.63.jar` → SHA256 `2975b2af5116df09e18db3b036dbec15447882cb5faf0e43c2da191c38042d6b`.
+    - Backup: `xmage\backup-jars-1.4.63-v36-20261114\cliente\mage-1.4.63.jar` (`f5d9cd7d…106eb9`, v35).
+    - Servidor 17171 **intacto** (PID 25548, su core sigue siendo `f5d9cd7d…`).
+    - Verificación con `tools\importtest\ImportTest` (JRE del cliente): mazo Amulet Titan → `main=60 side=15`; antes del despliegue daba `main=0 side=0` y `MjAlnir`.
+    - **Resuelto (2026-11-14):** la base activa del cliente estaba vacía (135 KB); se reconstruyo sola
+      al rearrancar (318 MB, 94797 cartas). Ver punto 27.
+    - Parche: `parches\2026-11-14-import-dck-utf8-v36.patch`. Evidencia: `CHECKPOINT-2026-11-14-despliegue-v36.md` + `HANDOFF-2026-11-14-v36-despliegue.md`.
+
+27. Sets v37 — 5 lecciones de SecretsOfStrixhaven (2026-11-14):
+    - `SecretsOfStrixhaven.java`: la lista `unfinished` queda vacia (las 5 estaban implementadas, solo excluidas).
+    - Artefacto: solo `mage-client\lib\mage-sets-1.4.63.jar` → SHA256 `342f137130d16608d5c5e1b9bbca03ef80b7197cb4dda0d07c752c48266148fb`.
+    - Backup: `xmage\backup-jars-1.4.63-v37-20261114\cliente\mage-sets-1.4.63.jar` (`481114db…46b7`).
+    - Servidor 17171 **intacto** (sus jars de sets/core no se tocan).
+    - Verificacion: base del lab reconstruida (94797 cartas) → BulkTest 2811 `.dck`: **2648 completos 60+15** (antes 2519, +129); nombres no encontrados 28 → 24.
+    - Instalacion oficial: `sos5b main=8` y Amulet Titan `main=60 side=15`.
+    - Parche: `parches\2026-11-14-habilitar-sos-v37.patch`. Evidencia: `CHECKPOINT-2026-11-14-despliegue-v37.md` + `capturas\20261114-v37-sos\`.
+
+28. v38 — se implementa `Jace's Machinations` (FRA 32) (2026-11-14):
+    - Un mazo (UW Control 907434) estaba 57/15 por las 3 copias de esta carta, no implementada en el fork.
+    - Nueva carta `JacesMachinations` + declaración en FRA 32/337; `ActivateAbilitiesAnyTimeYouCouldCastInstantEffect` ampliado con duración y filtro del permanente origen (aditivo); tests JUnit (activación de lealtad en turno rival + Empower Jace 8).
+    - Artefactos: core `mage-1.4.63.jar` `df3ee872…fb0f` y sets `mage-sets-1.4.63.jar` `01bdcb3f…b8ef8`; backup `backup-jars-1.4.63-v38-20261114\cliente\`; servidor 17171 intacto.
+    - Verificación: el mazo UW Control pasa a `main=60 side=15`; BulkTest 2667/2811 completos (antes 2648).
+    - **Resuelto (2026-11-14):** base reconstruida por el cliente (94799 cartas) y verificado en la instalacion oficial: el mazo UW Control carga `main=60 side=15`.
+    - Parche: `parches\2026-11-14-jaces-machinations-v38.patch`. Evidencia: `CHECKPOINT-2026-11-14-v38-jaces-machinations.md` + `capturas\20261114-v38-jaces\`.
+
+## Disciplina de build y despliegue (2026-11-09)
+
+Aprendido a la dura con el bug `NoSuchMethodError: Token.putOntoBattlefield` (detalle completo
+en `CHECKPOINT-2026-11-09-fix-token-api.md`):
+
+- **Para desplegar, SIEMPRE `mvn clean package`** (nunca incremental): el compilador
+  incremental recicla `target/classes` viejos cuando los mtimes del delta oficial no están
+  alineados y produce jars mixtos (interfaz `Token` API nueva + `CreateTokenEffect`/`Embalm`
+  /`Eternalize`/`RoleType` API vieja = crash de partida al crear cualquier token). El comando
+  histórico sin `clean` queda PROHIBIDO para despliegues.
+- **Los jars mage se despliegan SIEMPRE juntos y del mismo build** (core, common, sets,
+  server, player-ai y plugins): nunca un subset. Script oficial:
+  `Laboratorio\desplegar-oficial.ps1` (exige servidor parado, crea
+  `backup-jars-<version>-<fecha>_<tag>\`, copia 5 lib + 27 plugins).
+- Verificación de coherencia post-build y post-despliegue: escáner de constant-pool
+  `LAB-UI-1.4.62-V2/capturas/20261109-fix-token-api/scan_putob.py` (compara todas las
+  referencias a `Token.putOntoBattlefield` contra los descriptores que declara el core).
 
 ## Estado git y sincronización (2026-11-09)
 

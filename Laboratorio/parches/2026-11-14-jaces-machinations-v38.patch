@@ -1,0 +1,216 @@
+From e418d5e4fcfff08972d2ca088764f52ba9d0eb12 Mon Sep 17 00:00:00 2001
+From: v r <vros01-Kabutosan@users.noreply.github.com>
+Date: Sat, 14 Nov 2026 18:57:43 +0100
+Subject: [PATCH] v38: implementar Jace's Machinations (FRA 32) + tests
+
+- Carta Jace's Machinations: instant {2}{U}; permite activar habilidades de
+  lealtad de planeswalkers Jace controlados en cualquier turno a instant-speed,
+  y Empower Jace 8 (efecto ya existente en el set).
+- ActivateAbilitiesAnyTimeYouCouldCastInstantEffect: nuevo constructor con
+  duracion y filtro opcional del permanente origen (aditivo, sin romper usos
+  actuales de equipo/meditar).
+- Tests JacesMachinationsTest: activacion en turno rival y Empower 8.
+- Verificado: mazo UW Control 907434 pasa de 57/15 a 60/15; BulkTest 2667/2811.
+---
+ .../src/mage/cards/j/JacesMachinations.java   | 52 +++++++++++++++++++
+ Mage.Sets/src/mage/sets/RealityFracture.java  |  2 +
+ .../planeswalker/JacesMachinationsTest.java   | 49 +++++++++++++++++
+ ...itiesAnyTimeYouCouldCastInstantEffect.java | 30 +++++++++--
+ 4 files changed, 130 insertions(+), 3 deletions(-)
+ create mode 100644 Mage.Sets/src/mage/cards/j/JacesMachinations.java
+ create mode 100644 Mage.Tests/src/test/java/org/mage/test/cards/planeswalker/JacesMachinationsTest.java
+
+diff --git a/Mage.Sets/src/mage/cards/j/JacesMachinations.java b/Mage.Sets/src/mage/cards/j/JacesMachinations.java
+new file mode 100644
+index 00000000000..08d5a9829e2
+--- /dev/null
++++ b/Mage.Sets/src/mage/cards/j/JacesMachinations.java
+@@ -0,0 +1,52 @@
++package mage.cards.j;
++
++import java.util.UUID;
++
++import mage.abilities.LoyaltyAbility;
++import mage.abilities.effects.common.continuous.ActivateAbilitiesAnyTimeYouCouldCastInstantEffect;
++import mage.abilities.effects.keyword.EmpowerJaceEffect;
++import mage.cards.CardImpl;
++import mage.cards.CardSetInfo;
++import mage.constants.CardType;
++import mage.constants.Duration;
++import mage.constants.SubType;
++import mage.filter.common.FilterControlledPermanent;
++
++/**
++ * @author Hermes Agent
++ */
++public final class JacesMachinations extends CardImpl {
++
++    private static final FilterControlledPermanent JACE_PLANESWALKER =
++            new FilterControlledPermanent(SubType.JACE, "Jace planeswalker you control");
++
++    static {
++        JACE_PLANESWALKER.add(CardType.PLANESWALKER.getPredicate());
++    }
++
++    public JacesMachinations(UUID ownerId, CardSetInfo setInfo) {
++        super(ownerId, setInfo, new CardType[]{CardType.INSTANT}, "{2}{U}");
++
++        // Until end of turn, you may activate loyalty abilities of Jace planeswalkers you control
++        // on any player's turn any time you could cast an instant.
++        ActivateAbilitiesAnyTimeYouCouldCastInstantEffect activateEffect =
++                new ActivateAbilitiesAnyTimeYouCouldCastInstantEffect(
++                        LoyaltyAbility.class, "loyalty abilities of Jace planeswalkers you control",
++                        Duration.EndOfTurn, JACE_PLANESWALKER);
++        activateEffect.setText("Until end of turn, you may activate loyalty abilities of Jace planeswalkers "
++                + "you control on any player's turn any time you could cast an instant");
++        this.getSpellAbility().addEffect(activateEffect);
++
++        // Empower Jace 8.
++        this.getSpellAbility().addEffect(new EmpowerJaceEffect(8).concatBy("<br>"));
++    }
++
++    private JacesMachinations(final JacesMachinations card) {
++        super(card);
++    }
++
++    @Override
++    public JacesMachinations copy() {
++        return new JacesMachinations(this);
++    }
++}
+diff --git a/Mage.Sets/src/mage/sets/RealityFracture.java b/Mage.Sets/src/mage/sets/RealityFracture.java
+index 72374f27fda..318cbd42251 100644
+--- a/Mage.Sets/src/mage/sets/RealityFracture.java
++++ b/Mage.Sets/src/mage/sets/RealityFracture.java
+@@ -209,6 +209,8 @@ public final class RealityFracture extends ExpansionSet {
+         cards.add(new SetCardInfo("Island", 387, Rarity.LAND, mage.cards.basiclands.Island.class, FULL_ART_BFZ_VARIOUS));
+         cards.add(new SetCardInfo("Jace, Reality Sculptor", 216, Rarity.RARE, mage.cards.j.JaceRealitySculptor.class, NON_FULL_USE_VARIOUS));
+         cards.add(new SetCardInfo("Jace, Reality Sculptor", 300, Rarity.RARE, mage.cards.j.JaceRealitySculptor.class, NON_FULL_USE_VARIOUS));
++        cards.add(new SetCardInfo("Jace's Machinations", 32, Rarity.RARE, mage.cards.j.JacesMachinations.class, NON_FULL_USE_VARIOUS));
++        cards.add(new SetCardInfo("Jace's Machinations", 337, Rarity.RARE, mage.cards.j.JacesMachinations.class, NON_FULL_USE_VARIOUS));
+         cards.add(new SetCardInfo("Jiang Yanggu, Alone", 246, Rarity.UNCOMMON, mage.cards.j.JiangYangguAlone.class));
+         cards.add(new SetCardInfo("Jiang Yanggu, Never Alone", 261, Rarity.UNCOMMON, mage.cards.j.JiangYangguNeverAlone.class));
+         cards.add(new SetCardInfo("Karn, Argent Defender", 279, Rarity.RARE, mage.cards.k.KarnArgentDefender.class, NON_FULL_USE_VARIOUS));
+diff --git a/Mage.Tests/src/test/java/org/mage/test/cards/planeswalker/JacesMachinationsTest.java b/Mage.Tests/src/test/java/org/mage/test/cards/planeswalker/JacesMachinationsTest.java
+new file mode 100644
+index 00000000000..f75b97b1e81
+--- /dev/null
++++ b/Mage.Tests/src/test/java/org/mage/test/cards/planeswalker/JacesMachinationsTest.java
+@@ -0,0 +1,49 @@
++package org.mage.test.cards.planeswalker;
++
++import mage.constants.PhaseStep;
++import mage.constants.Zone;
++import mage.counters.CounterType;
++import org.junit.Test;
++import org.mage.test.serverside.base.CardTestPlayerBase;
++
++/**
++ * Jace's Machinations (FRA 32): Instant {2}{U}
++ * "Until end of turn, you may activate loyalty abilities of Jace planeswalkers you control
++ * on any player's turn any time you could cast an instant. Empower Jace 8."
++ */
++public class JacesMachinationsTest extends CardTestPlayerBase {
++
++    @Test
++    public void canActivateJaceLoyaltyAbilityOnOpponentsTurn() {
++        addCard(Zone.BATTLEFIELD, playerA, "Jace Beleren");
++        addCard(Zone.BATTLEFIELD, playerA, "Island", 3);
++        addCard(Zone.HAND, playerA, "Jace's Machinations");
++
++        // Turn 2 belongs to playerB: playerA casts the instant and then activates the loyalty
++        // ability of their Jace during the opponent's turn.
++        castSpell(2, PhaseStep.PRECOMBAT_MAIN, playerA, "Jace's Machinations");
++        activateAbility(2, PhaseStep.POSTCOMBAT_MAIN, playerA, "+2: Each player draws a card");
++
++        setStopAt(2, PhaseStep.END_TURN);
++        setStrictChooseMode(true);
++        execute();
++
++        // +2 adds two loyalty counters (Jace Beleren starts with 3)
++        assertCounterCount(playerA, "Jace Beleren", CounterType.LOYALTY, 5);
++    }
++
++    @Test
++    public void empowerJace8CreatesTokenWithEightCounters() {
++        addCard(Zone.BATTLEFIELD, playerA, "Island", 3);
++        addCard(Zone.HAND, playerA, "Jace's Machinations");
++
++        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Jace's Machinations");
++
++        setStopAt(1, PhaseStep.END_TURN);
++        setStrictChooseMode(true);
++        execute();
++
++        assertPermanentCount(playerA, "Jace", 1);
++        assertCounterCount(playerA, "Jace", CounterType.LOYALTY, 8);
++    }
++}
+diff --git a/Mage/src/main/java/mage/abilities/effects/common/continuous/ActivateAbilitiesAnyTimeYouCouldCastInstantEffect.java b/Mage/src/main/java/mage/abilities/effects/common/continuous/ActivateAbilitiesAnyTimeYouCouldCastInstantEffect.java
+index b35deee00eb..fc0bccd5b3d 100644
+--- a/Mage/src/main/java/mage/abilities/effects/common/continuous/ActivateAbilitiesAnyTimeYouCouldCastInstantEffect.java
++++ b/Mage/src/main/java/mage/abilities/effects/common/continuous/ActivateAbilitiesAnyTimeYouCouldCastInstantEffect.java
+@@ -7,7 +7,9 @@ import mage.abilities.effects.AsThoughEffectImpl;
+ import mage.constants.AsThoughEffectType;
+ import mage.constants.Duration;
+ import mage.constants.Outcome;
++import mage.filter.FilterPermanent;
+ import mage.game.Game;
++import mage.game.permanent.Permanent;
+ 
+ /**
+  * @author Styxo
+@@ -15,16 +17,29 @@ import mage.game.Game;
+ public class ActivateAbilitiesAnyTimeYouCouldCastInstantEffect extends AsThoughEffectImpl {
+ 
+     private final Class activatedAbility;
++    private final FilterPermanent filter;
+ 
+     public ActivateAbilitiesAnyTimeYouCouldCastInstantEffect(Class activatedAbility, String activatedAbilityName) {
+-        super(AsThoughEffectType.ACTIVATE_AS_INSTANT, Duration.EndOfGame, Outcome.Benefit);
++        this(activatedAbility, activatedAbilityName, Duration.EndOfGame, null);
++    }
++
++    /**
++     * Same as {@link #ActivateAbilitiesAnyTimeYouCouldCastInstantEffect(Class, String)} but with a
++     * configurable duration and an optional filter on the source permanent of the affected ability.
++     * Used by "until end of turn, you may activate &lt;kind&gt; of &lt;filter&gt; any time you could
++     * cast an instant" effects (e.g. Jace's Machinations).
++     */
++    public ActivateAbilitiesAnyTimeYouCouldCastInstantEffect(Class activatedAbility, String activatedAbilityName, Duration duration, FilterPermanent filter) {
++        super(AsThoughEffectType.ACTIVATE_AS_INSTANT, duration, Outcome.Benefit);
+         this.activatedAbility = activatedAbility;
++        this.filter = filter;
+         staticText = "You may activate " + activatedAbilityName + " any time you could cast an instant";
+     }
+ 
+     protected ActivateAbilitiesAnyTimeYouCouldCastInstantEffect(final ActivateAbilitiesAnyTimeYouCouldCastInstantEffect effect) {
+         super(effect);
+         this.activatedAbility = effect.activatedAbility;
++        this.filter = effect.filter == null ? null : effect.filter.copy();
+     }
+ 
+     @Override
+@@ -39,8 +54,17 @@ public class ActivateAbilitiesAnyTimeYouCouldCastInstantEffect extends AsThoughE
+ 
+     @Override
+     public boolean applies(UUID objectId, Ability affectedAbility, Ability source, Game game, UUID playerId) {
+-        return affectedAbility.isControlledBy(source.getControllerId())
+-                && activatedAbility.isAssignableFrom(affectedAbility.getClass());
++        if (!affectedAbility.isControlledBy(source.getControllerId())
++                || !activatedAbility.isAssignableFrom(affectedAbility.getClass())) {
++            return false;
++        }
++        if (filter != null) {
++            Permanent permanent = game.getPermanent(affectedAbility.getSourceId());
++            if (permanent == null || !filter.match(permanent, source.getControllerId(), source, game)) {
++                return false;
++            }
++        }
++        return true;
+     }
+ 
+     @Override
+-- 
+2.53.0.windows.3
+

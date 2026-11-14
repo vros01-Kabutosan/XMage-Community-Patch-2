@@ -1,0 +1,593 @@
+diff --git a/Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java b/Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java
+index 37d7d15a912..f01c6d3c6ed 100644
+--- a/Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java
++++ b/Mage.Client/src/main/java/mage/client/chat/ChatPanelBasic.java
+@@ -28,7 +28,9 @@ public class ChatPanelBasic extends javax.swing.JPanel {
+     /**
+      * Time formatter
+      */
+-    protected final DateFormat timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT);
++    // v33: fixed 24 h format (DateFormat.getTimeInstance made the timestamp look
++    // different on every machine depending on the OS locale, e.g. 1:30 PM vs 13:30)
++    protected final DateFormat timeFormatter = new java.text.SimpleDateFormat("HH:mm:ss");
+ 
+     protected UUID chatId;
+     /**
+diff --git a/Mage.Client/src/main/java/mage/client/components/ability/MageScrollButton.java b/Mage.Client/src/main/java/mage/client/components/ability/MageScrollButton.java
+index 0b51ad1d101..eaa7cf2a1c4 100644
+--- a/Mage.Client/src/main/java/mage/client/components/ability/MageScrollButton.java
++++ b/Mage.Client/src/main/java/mage/client/components/ability/MageScrollButton.java
+@@ -3,11 +3,15 @@ package mage.client.components.ability;
+ import java.awt.Dimension;
+ import java.awt.Graphics;
+ import java.awt.Image;
++import java.awt.image.BufferedImage;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
+ 
+ import javax.swing.ImageIcon;
+ import javax.swing.plaf.basic.BasicArrowButton;
+ import javax.swing.plaf.metal.MetalScrollButton;
+ 
++import mage.client.util.TransformedImageCache;
+ 
+ /**
+  * Buttons for scroll bar.
+@@ -21,6 +25,10 @@ public class MageScrollButton extends MetalScrollButton {
+     private static final ImageIcon buttonUp;
+     private static final ImageIcon buttonDown;
+ 
++    // v33: scaled icons per size instead of mutating the shared static icons in the constructor
++    // (different scrollbars used to overwrite each other's image and used the old getScaledInstance API)
++    private static final Map<Integer, ImageIcon[]> scaledIconsBySize = new ConcurrentHashMap<>();
++
+     private int width;
+ 
+     static {
+@@ -34,10 +42,21 @@ public class MageScrollButton extends MetalScrollButton {
+         super(direction, width, freeStanding);
+         setOpaque(false);
+         this.width = width;
+-        buttonUp.setImage(buttonUp.getImage().getScaledInstance(width, width, Image.SCALE_SMOOTH));
+-        buttonDown.setImage(buttonDown.getImage().getScaledInstance(width, width, Image.SCALE_SMOOTH));
+-        buttonLeft.setImage(buttonLeft.getImage().getScaledInstance(width, width, Image.SCALE_SMOOTH));
+-        buttonRight.setImage(buttonRight.getImage().getScaledInstance(width, width, Image.SCALE_SMOOTH));
++    }
++
++    private static ImageIcon scaledIcon(int slot, ImageIcon base, int size) {
++        ImageIcon[] icons = scaledIconsBySize.computeIfAbsent(size, s -> new ImageIcon[4]);
++        synchronized (icons) {
++            if (icons[slot] == null) {
++                Image img = base.getImage();
++                if (img instanceof BufferedImage) {
++                    icons[slot] = new ImageIcon(TransformedImageCache.getResizedImage((BufferedImage) img, size, size));
++                } else {
++                    icons[slot] = new ImageIcon(img.getScaledInstance(size, size, Image.SCALE_SMOOTH));
++                }
++            }
++            return icons[slot];
++        }
+     }
+ 
+     @Override
+@@ -59,16 +78,16 @@ public class MageScrollButton extends MetalScrollButton {
+     public void paint(Graphics g) {
+         switch (getDirection()) {
+         case BasicArrowButton.WEST:
+-            buttonLeft.paintIcon(null, g, 0, 0);
++            scaledIcon(0, buttonLeft, width).paintIcon(null, g, 0, 0);
+             break;
+         case BasicArrowButton.EAST:
+-            buttonRight.paintIcon(null, g, 0, 0);
++            scaledIcon(1, buttonRight, width).paintIcon(null, g, 0, 0);
+             break;
+         case BasicArrowButton.NORTH:
+-            buttonUp.paintIcon(null, g, 0, 0);
++            scaledIcon(2, buttonUp, width).paintIcon(null, g, 0, 0);
+             break;
+         case BasicArrowButton.SOUTH:
+-            buttonDown.paintIcon(null, g, 0, 0);
++            scaledIcon(3, buttonDown, width).paintIcon(null, g, 0, 0);
+             break;
+         }
+     }
+diff --git a/Mage.Client/src/main/java/mage/client/components/ext/dlg/DialogManager.java b/Mage.Client/src/main/java/mage/client/components/ext/dlg/DialogManager.java
+index 8b0ea5f4ff8..3deac742c0f 100644
+--- a/Mage.Client/src/main/java/mage/client/components/ext/dlg/DialogManager.java
++++ b/Mage.Client/src/main/java/mage/client/components/ext/dlg/DialogManager.java
+@@ -21,22 +21,19 @@ import java.util.UUID;
+  */
+ public class DialogManager extends JComponent implements MouseListener, MouseMotionListener {
+ 
+-    private static final Map<UUID, DialogManager> dialogManagers = new HashMap<>();
++    // v33: ConcurrentHashMap + computeIfAbsent (stock used a non thread-safe HashMap with a broken
++    // double-checked locking pattern: two racing threads could create two managers for one game)
++    private static final Map<UUID, DialogManager> dialogManagers = new java.util.concurrent.ConcurrentHashMap<>();
+ 
+     public static DialogManager getManager(UUID gameId) {
+-        if (!dialogManagers.containsKey(gameId)) {
+-            synchronized (dialogManagers) {
+-                if (!dialogManagers.containsKey(gameId)) {
+-                    DialogManager dialogManager = new DialogManager();
+-                    dialogManager.screen_width = 768;
+-                    dialogManager.screen_height = 1024;
+-                    dialogManager.setBounds(0, 0, 768, 1024);
+-                    dialogManager.setVisible(false);
+-                    dialogManagers.put(gameId, dialogManager);
+-                }
+-            }
+-        }
+-        return dialogManagers.get(gameId);
++        return dialogManagers.computeIfAbsent(gameId, id -> {
++            DialogManager dialogManager = new DialogManager();
++            dialogManager.screen_width = 768;
++            dialogManager.screen_height = 1024;
++            dialogManager.setBounds(0, 0, 768, 1024);
++            dialogManager.setVisible(false);
++            return dialogManager;
++        });
+     }
+ 
+     public enum MTGDialogs {
+@@ -50,12 +47,10 @@ public class DialogManager extends JComponent implements MouseListener, MouseMot
+      * @param gameId 
+      */
+     public static void removeGame(UUID gameId) {
+-        if (dialogManagers.containsKey(gameId)) {
+-            synchronized (dialogManagers) {
+-                DialogManager dialogManager = dialogManagers.get(gameId);
+-                dialogManager.cleanUp();
+-                dialogManagers.remove(gameId);
+-            }
++        // v33: atomic removal from the shared map, then cleanup of the detached manager
++        DialogManager dialogManager = dialogManagers.remove(gameId);
++        if (dialogManager != null) {
++            dialogManager.cleanUp();
+         }
+     }
+ 
+diff --git a/Mage.Client/src/main/java/mage/client/deckeditor/CardSelector.java b/Mage.Client/src/main/java/mage/client/deckeditor/CardSelector.java
+index 3e0bd4c6eab..3f2e147ed8b 100644
+--- a/Mage.Client/src/main/java/mage/client/deckeditor/CardSelector.java
++++ b/Mage.Client/src/main/java/mage/client/deckeditor/CardSelector.java
+@@ -32,6 +32,8 @@ import org.apache.log4j.Logger;
+ import org.mage.card.arcane.ManaSymbolsCellRenderer;
+ 
+ import javax.swing.*;
++import javax.swing.event.DocumentEvent;
++import javax.swing.event.DocumentListener;
+ import javax.swing.table.DefaultTableCellRenderer;
+ import java.awt.*;
+ import java.awt.event.*;
+@@ -62,6 +64,11 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
+ 
+     private final ActionListener searchAction = evt -> jButtonSearchActionPerformed(evt);
+ 
++    // v33: search-as-you-type. Stock filtered the card list only when pressing ENTER or the
++    // Search button; this debounce timer re-runs the same filter after a short typing pause.
++    private javax.swing.Timer liveSearchTimer;
++    private static final int LIVE_SEARCH_DELAY_MS = 250;
++
+     /**
+      * Creates new form CardSelector
+      */
+@@ -71,6 +78,7 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
+         cardGrid = new CardGrid();
+         makeTransparent();
+         initListViewComponents();
++        initLiveSearch();
+         setGUISize();
+         currentView = mainModel; // by default we use List View
+ 
+@@ -164,6 +172,9 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
+     public void cleanUp() {
+         this.cardGrid.clear();
+         this.mainModel.clear();
++        if (liveSearchTimer != null) {
++            liveSearchTimer.stop();
++        }
+         MageFrame.getPreferences().put(KEY_DECK_EDITOR_SEARCH_NAMES, Boolean.toString(chkNames.isSelected()));
+         MageFrame.getPreferences().put(KEY_DECK_EDITOR_SEARCH_RULES, Boolean.toString(chkRules.isSelected()));
+         MageFrame.getPreferences().put(KEY_DECK_EDITOR_SEARCH_TYPES, Boolean.toString(chkTypes.isSelected()));
+@@ -186,6 +197,36 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
+ 
+     }
+ 
++    // v33: re-run the stock filter after a short typing pause so results appear while writing
++    private String lastAppliedSearchQuery = null;
++
++    private void initLiveSearch() {
++        liveSearchTimer = new javax.swing.Timer(LIVE_SEARCH_DELAY_MS, evt -> {
++            // skip when an ENTER/button click already applied this exact query
++            if (!Objects.equals(lastAppliedSearchQuery, jTextFieldSearch.getText())) {
++                lastAppliedSearchQuery = jTextFieldSearch.getText();
++                filterCards();
++            }
++        });
++        liveSearchTimer.setRepeats(false);
++        jTextFieldSearch.getDocument().addDocumentListener(new DocumentListener() {
++            @Override
++            public void insertUpdate(DocumentEvent e) {
++                liveSearchTimer.restart();
++            }
++
++            @Override
++            public void removeUpdate(DocumentEvent e) {
++                liveSearchTimer.restart();
++            }
++
++            @Override
++            public void changedUpdate(DocumentEvent e) {
++                liveSearchTimer.restart();
++            }
++        });
++    }
++
+     public void switchToGrid() {
+         jToggleListView.setSelected(false);
+         jToggleCardView.setSelected(true);
+@@ -1395,11 +1436,19 @@ public class CardSelector extends javax.swing.JPanel implements ComponentListene
+     }//GEN-LAST:event_jButtonRemoveFromSideboardActionPerformed
+ 
+     private void jButtonSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSearchActionPerformed
++        if (liveSearchTimer != null) {
++            liveSearchTimer.stop();
++        }
++        lastAppliedSearchQuery = jTextFieldSearch.getText();
+         filterCards();
+     }//GEN-LAST:event_jButtonSearchActionPerformed
+ 
+     private void jButtonCleanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonCleanActionPerformed
+         jTextFieldSearch.setText("");
++        if (liveSearchTimer != null) {
++            liveSearchTimer.stop();
++        }
++        lastAppliedSearchQuery = jTextFieldSearch.getText();
+         filterCards();
+     }//GEN-LAST:event_jButtonCleanActionPerformed
+ 
+diff --git a/Mage.Client/src/main/java/mage/client/game/GamePanel.java b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+index 9b7b3a40f9d..8ddb9601ebf 100644
+--- a/Mage.Client/src/main/java/mage/client/game/GamePanel.java
++++ b/Mage.Client/src/main/java/mage/client/game/GamePanel.java
+@@ -572,6 +572,12 @@ extends JPanel {
+         this.removeListener();
+         this.pendingCardInfoWindowClosures.values().forEach(Timer::stop);
+         this.pendingCardInfoWindowClosures.clear();
++        // v33: stop the deferred resize timer and drop the per-player life animation cache
++        // (stock left both alive for the whole session; see PlayerPanelExt.clearLifeCache)
++        if (this.resizeTimer != null) {
++            this.resizeTimer.stop();
++        }
++        PlayerPanelExt.clearLifeCache();
+         this.retainedReveals.clear();
+         this.graveyardWindowFingerprints.clear();
+         this.activeSpellRevealName = null;
+diff --git a/Mage.Client/src/main/java/mage/client/game/HelperPanel.java b/Mage.Client/src/main/java/mage/client/game/HelperPanel.java
+index e8323643708..f667c68bc79 100644
+--- a/Mage.Client/src/main/java/mage/client/game/HelperPanel.java
++++ b/Mage.Client/src/main/java/mage/client/game/HelperPanel.java
+@@ -9,6 +9,7 @@ import mage.client.game.FeedbackPanel.FeedbackMode;
+ import mage.client.util.AppUtil;
+ import mage.client.util.GUISizeHelper;
+ import mage.client.util.audio.AudioManager;
++import mage.client.components.tray.MageTray;
+ import mage.constants.TurnPhase;
+ 
+ import javax.swing.*;
+@@ -106,9 +107,11 @@ public class HelperPanel extends JPanel {
+             if (!AppUtil.isAppActive() || !AppUtil.isGameActive(this.gameId)) {
+                 // sound notification
+                 AudioManager.playFeedbackNeeded();
+-                // tray notification (baloon + icon blinking)
+-                //MageTray.instance.displayMessage("Game needs your action.");
+-                //MageTray.instance.blink();
++                // tray notification (baloon + icon blinking) - v33: re-enabled (it was disabled
++                // in stock XMage, so a waiting player with the window in background only heard a sound;
++                // both calls are safe no-ops when the system tray is unavailable)
++                MageTray.instance.displayMessage("Game needs your action.");
++                MageTray.instance.blink();
+             }
+         }));
+     }
+@@ -255,10 +258,10 @@ public class HelperPanel extends JPanel {
+ 
+         btnUndo.addActionListener(evt -> {
+             if (linkUndo != null) {
+-                {
+-                    Thread worker = new Thread(() -> SwingUtilities.invokeLater(() -> linkUndo.doClick()));
+-                    worker.start();
+-                }
++                // v33: invokeLater already runs the click outside this listener; the old
++                // "new Thread(() -> SwingUtilities.invokeLater(...))" wrapper added nothing
++                JButton undoButton = linkUndo;
++                SwingUtilities.invokeLater(undoButton::doClick);
+             }
+         });
+ 
+@@ -291,12 +294,12 @@ public class HelperPanel extends JPanel {
+     }
+ 
+     private void clickButton(final JButton button) {
+-        Thread worker = new Thread(() -> SwingUtilities.invokeLater(() -> {
++        // v33: direct EDT hop (the extra worker thread around invokeLater added nothing)
++        SwingUtilities.invokeLater(() -> {
+             setState("", false, "", false, null);
+             setSpecial("", false);
+             button.doClick();
+-        }));
+-        worker.start();
++        });
+     }
+ 
+     public void setState(String txtLeft, boolean leftVisible, String txtRight, boolean rightVisible, FeedbackMode mode) {
+@@ -363,6 +366,8 @@ public class HelperPanel extends JPanel {
+         } else {
+             // stop notification sound timer
+             this.needFeedbackTimer.stop();
++            // v33: the player answered, stop the tray blinking from the notification (if any)
++            MageTray.instance.stopBlink();
+         }
+     }
+ 
+diff --git a/Mage.Client/src/main/java/mage/client/game/PlayerPanelExt.java b/Mage.Client/src/main/java/mage/client/game/PlayerPanelExt.java
+index c380c88e401..75799f31337 100644
+--- a/Mage.Client/src/main/java/mage/client/game/PlayerPanelExt.java
++++ b/Mage.Client/src/main/java/mage/client/game/PlayerPanelExt.java
+@@ -94,6 +94,15 @@ public class PlayerPanelExt extends javax.swing.JPanel {
+     private Color lastPanelBackgroundColor;
+     private static final Map<UUID, Integer> playerLives = new HashMap<>();
+ 
++    /**
++     * v33: playerLives was a session-growth leak (entries were only ever added, per game player id).
++     * GamePanel.cleanUp calls this when a game window closes; the map is animation baseline data only,
++     * so dropping it between games is safe.
++     */
++    public static void clearLifeCache() {
++        playerLives.clear();
++    }
++
+     private final Font defaultFont;
+ 
+     private PriorityTimer timer;
+diff --git a/Mage.Client/src/main/java/mage/client/table/TablesPanel.java b/Mage.Client/src/main/java/mage/client/table/TablesPanel.java
+index fdba76f7155..306102d5e19 100644
+--- a/Mage.Client/src/main/java/mage/client/table/TablesPanel.java
++++ b/Mage.Client/src/main/java/mage/client/table/TablesPanel.java
+@@ -10,6 +10,7 @@ import mage.client.dialog.*;
+ import mage.client.util.GUISizeHelper;
+ import mage.client.util.IgnoreList;
+ import mage.client.util.MageTableRowSorter;
++import mage.client.util.TransformedImageCache;
+ import mage.client.util.URLHandler;
+ import mage.client.util.gui.GuiDisplayUtil;
+ import mage.client.util.gui.TableUtil;
+@@ -44,6 +45,7 @@ import java.awt.*;
+ import java.awt.event.ActionEvent;
+ import java.awt.event.MouseAdapter;
+ import java.awt.event.MouseEvent;
++import java.awt.image.BufferedImage;
+ import java.beans.PropertyVetoException;
+ import java.io.File;
+ import java.text.DateFormat;
+@@ -598,6 +600,17 @@ public class TablesPanel extends javax.swing.JPanel {
+         setGUISize();
+     }
+ 
++    /**
++     * v33: high quality icon scaling through the shared resized-image cache
++     * (replaces Image.getScaledInstance, an old lazy AWT API with mid quality).
++     */
++    private static Image scaledIconImage(Image img, int size) {
++        if (img instanceof BufferedImage) {
++            return TransformedImageCache.getResizedImage((BufferedImage) img, size, size);
++        }
++        return img.getScaledInstance(size, size, java.awt.Image.SCALE_SMOOTH);
++    }
++
+     private void setGUISize() {
+         tableTables.getTableHeader().setFont(GUISizeHelper.tableFont);
+         tableTables.setFont(GUISizeHelper.tableFont);
+@@ -614,28 +627,28 @@ public class TablesPanel extends javax.swing.JPanel {
+ 
+         ImageIcon icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/state_waiting.png"));
+         Image img = icon.getImage();
+-        Image newimg = img.getScaledInstance(GUISizeHelper.dialogFont.getSize(), GUISizeHelper.dialogFont.getSize(), java.awt.Image.SCALE_SMOOTH);
++        Image newimg = scaledIconImage(img, GUISizeHelper.dialogFont.getSize());
+         btnStateWaiting.setIcon(new ImageIcon(newimg));
+ 
+         icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/state_active.png"));
+         img = icon.getImage();
+-        newimg = img.getScaledInstance(GUISizeHelper.dialogFont.getSize(), GUISizeHelper.dialogFont.getSize(), java.awt.Image.SCALE_SMOOTH);
++        newimg = scaledIconImage(img, GUISizeHelper.dialogFont.getSize());
+         btnStateActive.setIcon(new ImageIcon(newimg));
+ 
+         icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/state_finished.png"));
+         img = icon.getImage();
+-        newimg = img.getScaledInstance(GUISizeHelper.dialogFont.getSize(), GUISizeHelper.dialogFont.getSize(), java.awt.Image.SCALE_SMOOTH);
++        newimg = scaledIconImage(img, GUISizeHelper.dialogFont.getSize());
+         btnStateFinished.setIcon(new ImageIcon(newimg));
+ 
+         int iconSize = 48 + GUISizeHelper.dialogFont.getSize() * 2 - 15;
+         icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/match_new.png"));
+         img = icon.getImage();
+-        newimg = img.getScaledInstance(iconSize, iconSize, java.awt.Image.SCALE_SMOOTH);
++        newimg = scaledIconImage(img, iconSize);
+         btnNewTable.setIcon(new ImageIcon(newimg));
+ 
+         icon = new javax.swing.ImageIcon(getClass().getResource("/buttons/tourney_new.png"));
+         img = icon.getImage();
+-        newimg = img.getScaledInstance(iconSize, iconSize, java.awt.Image.SCALE_SMOOTH);
++        newimg = scaledIconImage(img, iconSize);
+         btnNewTournament.setIcon(new ImageIcon(newimg));
+ 
+         for (JToggleButton component : filterButtons) {
+diff --git a/Mage.Client/src/main/java/mage/client/util/TransformedImageCache.java b/Mage.Client/src/main/java/mage/client/util/TransformedImageCache.java
+index 3e0f05f709e..46e3a4bf22f 100644
+--- a/Mage.Client/src/main/java/mage/client/util/TransformedImageCache.java
++++ b/Mage.Client/src/main/java/mage/client/util/TransformedImageCache.java
+@@ -96,11 +96,33 @@ public final class TransformedImageCache {
+     }
+ 
+     private static BufferedImage resizeImage(BufferedImage original, int width, int height) {
+-        Image scaled = original.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+-        BufferedImage output = new BufferedImage(width, height, original.getType());
++        // v33: modern resampling instead of Image.getScaledInstance (old lazy AWT API with
++        // mid quality whose work could land on EDT at first paint). Progressive halving for
++        // big down-scales keeps detail without aliasing; the last pass uses bicubic.
++        BufferedImage source = original;
++        if (width < source.getWidth() && height < source.getHeight()) {
++            while (source.getWidth() / 2 > width && source.getHeight() / 2 > height) {
++                int passWidth = Math.max(source.getWidth() / 2, width);
++                int passHeight = Math.max(source.getHeight() / 2, height);
++                source = drawScaled(source, passWidth, passHeight, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
++            }
++        }
++        return drawScaled(source, width, height, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
++    }
++
++    private static BufferedImage drawScaled(BufferedImage image, int width, int height, Object interpolation) {
++        int imageType = image.getType();
++        if (imageType == BufferedImage.TYPE_CUSTOM) {
++            imageType = BufferedImage.TYPE_INT_ARGB;
++        }
++        BufferedImage output = new BufferedImage(width, height, imageType);
+         Graphics2D g2 = output.createGraphics();
+         try {
+-            g2.drawImage(scaled, 0, 0, null);
++            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, interpolation);
++            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
++            g2.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
++            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
++            g2.drawImage(image, 0, 0, width, height, null);
+         } finally {
+             g2.dispose();
+         }
+diff --git a/Mage.Client/src/main/java/mage/client/util/gui/countryBox/CountryItemRenderer.java b/Mage.Client/src/main/java/mage/client/util/gui/countryBox/CountryItemRenderer.java
+index bb5bb8df964..dec81a8b4aa 100644
+--- a/Mage.Client/src/main/java/mage/client/util/gui/countryBox/CountryItemRenderer.java
++++ b/Mage.Client/src/main/java/mage/client/util/gui/countryBox/CountryItemRenderer.java
+@@ -6,6 +6,9 @@ import java.awt.Component;
+ import java.awt.GridBagConstraints;
+ import java.awt.GridBagLayout;
+ import java.awt.Insets;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++import javax.swing.Icon;
+ import javax.swing.ImageIcon;
+ import javax.swing.JLabel;
+ import javax.swing.JList;
+@@ -21,6 +24,16 @@ import javax.swing.ListCellRenderer;
+ 
+ public class CountryItemRenderer extends JPanel implements ListCellRenderer {
+     private final JLabel labelItem = new JLabel();
++
++    // v33: flags were re-read from disk on every repaint of the combo popup
++    private static final Map<String, Icon> flagIcons = new ConcurrentHashMap<>();
++
++    private static Icon flagIcon(String path) {
++        if (path == null || path.isEmpty()) {
++            return null;
++        }
++        return flagIcons.computeIfAbsent(path, p -> new ImageIcon(p));
++    }
+      
+     public CountryItemRenderer() {
+         setLayout(new GridBagLayout());
+@@ -33,27 +46,35 @@ public class CountryItemRenderer extends JPanel implements ListCellRenderer {
+         labelItem.setHorizontalAlignment(JLabel.LEFT);
+          
+         add(labelItem, constraints);
+-        setBackground(Color.LIGHT_GRAY);
+     }
+      
+     @Override
+     public Component getListCellRendererComponent(JList list, Object value,
+             int index, boolean isSelected, boolean cellHasFocus) {
+-        String[] countryItem = (String[]) value;
+- 
+-        // set country name
+-        labelItem.setText(countryItem[0]);
+-         
+-        // set country flag
+-        labelItem.setIcon(new ImageIcon(countryItem[1]));
+-         
+-        if (isSelected) {
+-            labelItem.setBackground(Color.BLUE);
+-            labelItem.setForeground(Color.YELLOW);
++        if (!(value instanceof String[])) {
++            // v33: defensive, e.g. editable combo rendering a plain string
++            labelItem.setText(value == null ? "" : value.toString());
++            labelItem.setIcon(null);
+         } else {
+-            labelItem.setForeground(Color.BLACK);
+-            labelItem.setBackground(Color.LIGHT_GRAY);
++            String[] countryItem = (String[]) value;
++
++            // set country name
++            labelItem.setText(countryItem[0]);
++
++            // set country flag (cached)
++            labelItem.setIcon(flagIcon(countryItem[1]));
++        }
++
++        // v33: follow the list / current look&feel selection colors instead of hard-coded blue/yellow
++        Color bg = list != null ? list.getBackground() : Color.WHITE;
++        Color fg = list != null ? list.getForeground() : Color.BLACK;
++        if (isSelected) {
++            bg = list.getSelectionBackground();
++            fg = list.getSelectionForeground();
+         }
++        labelItem.setBackground(bg);
++        labelItem.setForeground(fg);
++        setBackground(bg);
+          
+         return this;
+     }
+diff --git a/Mage.Client/src/main/java/org/mage/card/arcane/SvgUtils.java b/Mage.Client/src/main/java/org/mage/card/arcane/SvgUtils.java
+index b1ebea9ef92..19289f48f5a 100644
+--- a/Mage.Client/src/main/java/org/mage/card/arcane/SvgUtils.java
++++ b/Mage.Client/src/main/java/org/mage/card/arcane/SvgUtils.java
+@@ -35,6 +35,10 @@ public class SvgUtils {
+ 
+     private static boolean haveSvgSupport = false;
+ 
++    // v33: css file -> data URI. The css temp file is only re-read/re-encoded once per css file;
++    // prepareCss invalidates the entry whenever it (re)writes the file (e.g. on theme reload).
++    private static final java.util.Map<String, String> cssDataURICache = new java.util.concurrent.ConcurrentHashMap<>();
++
+     // basic css settings for good svg rendering quality, other default settings can be defined by additional param
+     private static final String CSS_BASE_SETTINGS = ""
+             + "shape-rendering: geometricPrecision;"
+@@ -72,11 +76,12 @@ public class SvgUtils {
+                 cssFile.createNewFile();
+                 w = new FileWriter(cssFile);
+                 w.write(css);
+-            } catch (Throwable e) {
++             } catch (Throwable e) {
+                 logger.error("Can't create css file for svg: " + cssFile.toPath().toAbsolutePath().toString(), e);
+             } finally {
+                 StreamUtils.closeQuietly(w);
+             }
++            cssDataURICache.remove(cssFileName); // v33: file content changed (or was just created), refresh the cached data URI
+         }
+     }
+ 
+@@ -112,9 +117,14 @@ public class SvgUtils {
+ 
+         // css settings for svg
+         SvgUtils.prepareCss(cssFileName, cssAdditionalSettings, false);
+-        File cssFile = new File(SvgUtils.getSvgTempFile(cssFileName));
+-        byte[] cssFileContent = Files.readAllBytes(cssFile.toPath());
+-        String cssDataURI = "data:text/css;base64," + Base64.getEncoder().encodeToString(cssFileContent);
++        String cssDataURI = cssDataURICache.get(cssFileName);
++        if (cssDataURI == null) {
++            // v33: read + base64 encode only once per css file (it used to hit disk on every svg load)
++            File cssFile = new File(SvgUtils.getSvgTempFile(cssFileName));
++            byte[] cssFileContent = Files.readAllBytes(cssFile.toPath());
++            cssDataURI = "data:text/css;base64," + Base64.getEncoder().encodeToString(cssFileContent);
++            cssDataURICache.put(cssFileName, cssDataURI);
++        }
+         TranscodingHints transcoderHints = new TranscodingHints();
+ 
+         // resize

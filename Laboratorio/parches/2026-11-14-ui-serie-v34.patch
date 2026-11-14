@@ -1,0 +1,623 @@
+diff --git a/Mage.Client/src/main/java/mage/client/components/KeyBindButton.java b/Mage.Client/src/main/java/mage/client/components/KeyBindButton.java
+index 1849b44d155..bb0e6898487 100644
+--- a/Mage.Client/src/main/java/mage/client/components/KeyBindButton.java
++++ b/Mage.Client/src/main/java/mage/client/components/KeyBindButton.java
+@@ -39,16 +39,28 @@ public class KeyBindButton extends JButton implements ActionListener {
+     }
+ 
+     private void applyNewKeycode(int code, int modifier) {
+-        // clear used keys
+-        preferences.getKeybindButtons().stream()
+-                .filter(b -> b != KeyBindButton.this)
+-                .filter(b -> {
+-                    return b.keyCode == code && b.modifierCode == modifier;
+-                })
+-                .forEach(b -> {
+-                    b.setKeyCode(0);
+-                    b.setModifierCode(0);
+-                });
++        // v34: stock silently cleared the conflicting action; ask the user first instead
++        KeyBindButton conflict = null;
++        for (KeyBindButton b : preferences.getKeybindButtons()) {
++            if (b != KeyBindButton.this && b.keyCode == code && b.modifierCode == modifier) {
++                conflict = b;
++                break;
++            }
++        }
++        if (conflict != null) {
++            String modStr = KeyEvent.getKeyModifiersText(modifier);
++            String combo = (modStr.isEmpty() ? "" : modStr + " + ") + KeyEvent.getKeyText(code);
++            int answer = JOptionPane.showConfirmDialog(this,
++                    combo + " is already assigned to another action (" + conflict.getKey() + ").\n"
++                    + "Remove it from that action and assign it here?",
++                    "Shortcut conflict", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
++            if (answer != JOptionPane.YES_OPTION) {
++                menu.setVisible(false);
++                return;
++            }
++            conflict.setKeyCode(0);
++            conflict.setModifierCode(0);
++        }
+ 
+         // set new
+         setKeyCode(code);
+diff --git a/Mage.Client/src/main/java/mage/client/dialog/ConnectDialog.java b/Mage.Client/src/main/java/mage/client/dialog/ConnectDialog.java
+index 3d10a77241e..6a097e46436 100644
+--- a/Mage.Client/src/main/java/mage/client/dialog/ConnectDialog.java
++++ b/Mage.Client/src/main/java/mage/client/dialog/ConnectDialog.java
+@@ -7,6 +7,7 @@ import mage.client.SessionHandler;
+ import mage.client.preference.MagePreferences;
+ import mage.client.util.AppUtil;
+ import mage.client.util.ClientDefaultSettings;
++import mage.client.util.GUISizeHelper;
+ import mage.client.util.gui.countryBox.CountryItemEditor;
+ import mage.remote.Connection;
+ import mage.utils.StreamUtils;
+@@ -15,6 +16,8 @@ import org.apache.log4j.Logger;
+ import javax.swing.*;
+ import java.awt.event.ActionListener;
+ import java.awt.event.KeyEvent;
++import java.awt.event.MouseAdapter;
++import java.awt.event.MouseEvent;
+ import java.io.*;
+ import java.net.*;
+ import java.util.List;
+@@ -51,6 +54,8 @@ public class ConnectDialog extends MageDialog {
+         this.txtUserName.addActionListener(connectAction);
+         this.txtPassword.addActionListener(connectAction);
+ 
++        initRecentServersPopup(); // v34: right click on the server field to pick a recent server
++
+         registerUserDialog = new RegisterUserDialog();
+         MageFrame.getDesktop().add(registerUserDialog, registerUserDialog.isModal() ? JLayeredPane.MODAL_LAYER : JLayeredPane.PALETTE_LAYER);
+ 
+@@ -62,6 +67,70 @@ public class ConnectDialog extends MageDialog {
+         void onConnectClosed();
+     }
+ 
++    // v34: recent servers list (the stock TODO) - saved on every successful connect,
++    // offered as a right click popup on the server field (no layout changes needed)
++    private static final String KEY_RECENT_SERVERS = "recentServers";
++    private static final int MAX_RECENT_SERVERS = 8;
++
++    private List<String> readRecentServers() {
++        List<String> res = new ArrayList<>();
++        for (String s : MageFrame.getPreferences().get(KEY_RECENT_SERVERS, "").split(",")) {
++            if (!s.trim().isEmpty()) {
++                res.add(s.trim());
++            }
++        }
++        return res;
++    }
++
++    private void rememberRecentServer(String host, int port) {
++        String entry = host + ':' + port;
++        List<String> recent = readRecentServers();
++        recent.remove(entry);
++        recent.add(0, entry);
++        while (recent.size() > MAX_RECENT_SERVERS) {
++            recent.remove(recent.size() - 1);
++        }
++        MageFrame.getPreferences().put(KEY_RECENT_SERVERS, String.join(",", recent));
++    }
++
++    private void initRecentServersPopup() {
++        txtServer.addMouseListener(new MouseAdapter() {
++            @Override
++            public void mousePressed(MouseEvent e) {
++                maybeShowRecent(e);
++            }
++
++            @Override
++            public void mouseReleased(MouseEvent e) {
++                maybeShowRecent(e);
++            }
++
++            private void maybeShowRecent(MouseEvent e) {
++                if (!e.isPopupTrigger()) {
++                    return;
++                }
++                List<String> recent = readRecentServers();
++                if (recent.isEmpty()) {
++                    return;
++                }
++                JPopupMenu menu = new JPopupMenu();
++                for (String entry : recent) {
++                    JMenuItem item = new JMenuItem(entry);
++                    item.addActionListener(ev -> {
++                        int i = entry.lastIndexOf(':');
++                        if (i > 0) {
++                            txtServer.setText(entry.substring(0, i));
++                            txtPort.setText(entry.substring(i + 1));
++                        }
++                    });
++                    menu.add(item);
++                }
++                menu.show(txtServer, e.getX(), e.getY());
++                e.consume();
++            }
++        });
++    }
++
+     public void showDialog(ConnectCallback callback) {
+         this.lblStatus.setText("");
+         String serverAddress = MagePreferences.getServerAddressWithDefault(ClientDefaultSettings.serverName);
+@@ -238,7 +307,7 @@ public class ConnectDialog extends MageDialog {
+             }
+         });
+ 
+-        btnConnect.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
++        btnConnect.setFont(GUISizeHelper.dialogFont.deriveFont(java.awt.Font.BOLD)); // v34: scaled dialog font instead of fixed Tahoma bold
+         btnConnect.setText("Connect to server");
+         btnConnect.setMargin(new java.awt.Insets(2, 2, 2, 2));
+         btnConnect.addActionListener(new java.awt.event.ActionListener() {
+@@ -676,6 +745,9 @@ public class ConnectDialog extends MageDialog {
+     }
+ 
+     private void doAfterConnected() {
++        if (this.connection != null) {
++            this.rememberRecentServer(this.connection.getHost(), this.connection.getPort()); // v34
++        }
+         this.saveSettings();
+         this.hideDialog();
+         if (this.callback != null) {
+diff --git a/Mage.Client/src/main/java/mage/client/draft/DraftPanel.java b/Mage.Client/src/main/java/mage/client/draft/DraftPanel.java
+index 87c3e9ab8f9..323b5442601 100644
+--- a/Mage.Client/src/main/java/mage/client/draft/DraftPanel.java
++++ b/Mage.Client/src/main/java/mage/client/draft/DraftPanel.java
+@@ -495,9 +495,9 @@
+          // red color for small time
+          Color timerColor;
+          if (s <= 10) {
+-             timerColor = Color.RED;
++             timerColor = PreferencesDialog.getCurrentTheme().getTimerDangerColor(); // v34: theme token
+          } else if (s <= 30) {
+-             timerColor = new Color(255, 160, 60); // orange
++             timerColor = PreferencesDialog.getCurrentTheme().getTimerWarningColor(); // v34: theme token
+          } else {
+              timerColor = PreferencesDialog.getCurrentTheme().getTextColor();
+          }
+@@ -725,7 +725,7 @@
+         panelInfo.setLayout(new java.awt.BorderLayout());
+ 
+         editTimeRemaining.setEditable(false);
+-        editTimeRemaining.setFont(new java.awt.Font("Tahoma", 0, 36)); // NOI18N
++        editTimeRemaining.setFont(GUISizeHelper.dialogFont.deriveFont(Math.max(24f, GUISizeHelper.dialogFont.getSize2D() * 2.2f))); // v34: scalable big timer instead of fixed Tahoma 36
+         editTimeRemaining.setForeground(java.awt.Color.red);
+         editTimeRemaining.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+         editTimeRemaining.setText("WAITING");
+@@ -821,7 +821,7 @@
+         panelPlayersLeft.setVerifyInputWhenFocusTarget(false);
+         panelPlayersLeft.setLayout(new java.awt.GridLayout(8, 1));
+ 
+-        labelPlayer01.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer01.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer01.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+         labelPlayer01.setText("player 1");
+         labelPlayer01.setAlignmentX(1.0F);
+@@ -831,7 +831,7 @@
+         labelPlayer01.setVerifyInputWhenFocusTarget(false);
+         panelPlayersLeft.add(labelPlayer01);
+ 
+-        labelPlayer02.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer02.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer02.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+         labelPlayer02.setText("player 2");
+         labelPlayer02.setAlignmentX(1.0F);
+@@ -841,7 +841,7 @@
+         labelPlayer02.setVerifyInputWhenFocusTarget(false);
+         panelPlayersLeft.add(labelPlayer02);
+ 
+-        labelPlayer03.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer03.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer03.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+         labelPlayer03.setText("player 3");
+         labelPlayer03.setAlignmentX(1.0F);
+@@ -851,7 +851,7 @@
+         labelPlayer03.setVerifyInputWhenFocusTarget(false);
+         panelPlayersLeft.add(labelPlayer03);
+ 
+-        labelPlayer04.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer04.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer04.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+         labelPlayer04.setText("player 4");
+         labelPlayer04.setAlignmentX(1.0F);
+@@ -861,7 +861,7 @@
+         labelPlayer04.setVerifyInputWhenFocusTarget(false);
+         panelPlayersLeft.add(labelPlayer04);
+ 
+-        labelPlayer05.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer05.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer05.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+         labelPlayer05.setText("player 5");
+         labelPlayer05.setAlignmentX(1.0F);
+@@ -871,7 +871,7 @@
+         labelPlayer05.setVerifyInputWhenFocusTarget(false);
+         panelPlayersLeft.add(labelPlayer05);
+ 
+-        labelPlayer06.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer06.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer06.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+         labelPlayer06.setText("player 6");
+         labelPlayer06.setAlignmentX(1.0F);
+@@ -881,7 +881,7 @@
+         labelPlayer06.setVerifyInputWhenFocusTarget(false);
+         panelPlayersLeft.add(labelPlayer06);
+ 
+-        labelPlayer07.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer07.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer07.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+         labelPlayer07.setText("player 7");
+         labelPlayer07.setAlignmentX(1.0F);
+@@ -891,7 +891,7 @@
+         labelPlayer07.setVerifyInputWhenFocusTarget(false);
+         panelPlayersLeft.add(labelPlayer07);
+ 
+-        labelPlayer08.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer08.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer08.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+         labelPlayer08.setText("player 8");
+         labelPlayer08.setAlignmentX(1.0F);
+@@ -911,7 +911,7 @@
+         labelTableImage.setVerifyInputWhenFocusTarget(false);
+ 
+         panelPlayersRight.setFocusable(false);
+-        panelPlayersRight.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        panelPlayersRight.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         panelPlayersRight.setMaximumSize(new java.awt.Dimension(80, 132));
+         panelPlayersRight.setMinimumSize(new java.awt.Dimension(80, 132));
+         panelPlayersRight.setOpaque(false);
+@@ -920,7 +920,7 @@
+         panelPlayersRight.setVerifyInputWhenFocusTarget(false);
+         panelPlayersRight.setLayout(new java.awt.GridLayout(8, 1));
+ 
+-        labelPlayer09.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer09.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer09.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+         labelPlayer09.setText("player 9");
+         labelPlayer09.setFocusable(false);
+@@ -928,7 +928,7 @@
+         labelPlayer09.setVerifyInputWhenFocusTarget(false);
+         panelPlayersRight.add(labelPlayer09);
+ 
+-        labelPlayer10.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer10.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer10.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+         labelPlayer10.setText("player 10");
+         labelPlayer10.setFocusable(false);
+@@ -936,7 +936,7 @@
+         labelPlayer10.setVerifyInputWhenFocusTarget(false);
+         panelPlayersRight.add(labelPlayer10);
+ 
+-        labelPlayer11.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer11.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer11.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+         labelPlayer11.setText("player 11");
+         labelPlayer11.setFocusable(false);
+@@ -944,7 +944,7 @@
+         labelPlayer11.setVerifyInputWhenFocusTarget(false);
+         panelPlayersRight.add(labelPlayer11);
+ 
+-        labelPlayer12.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer12.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer12.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+         labelPlayer12.setText("player 12");
+         labelPlayer12.setFocusable(false);
+@@ -952,7 +952,7 @@
+         labelPlayer12.setVerifyInputWhenFocusTarget(false);
+         panelPlayersRight.add(labelPlayer12);
+ 
+-        labelPlayer13.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer13.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer13.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+         labelPlayer13.setText("player 13");
+         labelPlayer13.setFocusable(false);
+@@ -960,7 +960,7 @@
+         labelPlayer13.setVerifyInputWhenFocusTarget(false);
+         panelPlayersRight.add(labelPlayer13);
+ 
+-        labelPlayer14.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer14.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer14.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+         labelPlayer14.setText("player 14");
+         labelPlayer14.setFocusable(false);
+@@ -968,7 +968,7 @@
+         labelPlayer14.setVerifyInputWhenFocusTarget(false);
+         panelPlayersRight.add(labelPlayer14);
+ 
+-        labelPlayer15.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer15.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer15.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+         labelPlayer15.setText("player 15");
+         labelPlayer15.setFocusable(false);
+@@ -976,7 +976,7 @@
+         labelPlayer15.setVerifyInputWhenFocusTarget(false);
+         panelPlayersRight.add(labelPlayer15);
+ 
+-        labelPlayer16.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        labelPlayer16.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         labelPlayer16.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+         labelPlayer16.setText("player 16");
+         labelPlayer16.setFocusable(false);
+diff --git a/Mage.Client/src/main/java/mage/client/table/PlayersChatPanel.java b/Mage.Client/src/main/java/mage/client/table/PlayersChatPanel.java
+index dfc9dbedbff..b9645ed56ec 100644
+--- a/Mage.Client/src/main/java/mage/client/table/PlayersChatPanel.java
++++ b/Mage.Client/src/main/java/mage/client/table/PlayersChatPanel.java
+@@ -2,6 +2,7 @@ package mage.client.table;
+ 
+ import mage.client.cards.BigCard;
+ import mage.client.chat.ChatPanelBasic;
++import mage.client.dialog.PreferencesDialog;
+ import mage.client.util.GUISizeHelper;
+ import mage.client.util.MageTableRowSorter;
+ import mage.client.util.gui.TableUtil;
+@@ -71,10 +72,10 @@ public class PlayersChatPanel extends javax.swing.JPanel {
+         userTableModel = new UserTableModel(); // needs to be set before initComponents();
+ 
+         initComponents();
+-        setBackground(new Color(0, 0, 0, CHAT_ALPHA));
+-
+-        jTablePlayers.setBackground(new Color(0, 0, 0, CHAT_ALPHA));
+-        jTablePlayers.setForeground(Color.white);
++        // v34: theme tokens for the users overlay (light themes keep the historic black/white look)
++        setBackground(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA));
++        jTablePlayers.setBackground(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA));
++        jTablePlayers.setForeground(PreferencesDialog.getCurrentTheme().getOverlayForeground());
+         jTablePlayers.setRowSorter(new MageTableRowSorter(userTableModel));
+         setGUISize();
+ 
+@@ -88,11 +89,11 @@ public class PlayersChatPanel extends javax.swing.JPanel {
+         jScrollPaneSystem.getViewport().setOpaque(false);
+         jScrollPaneSystem.setViewportBorder(null);
+ 
+-        colorPaneSystem.setExtBackgroundColor(new Color(0, 0, 0, CHAT_ALPHA)); // Alpha = 255 not transparent
++        colorPaneSystem.setExtBackgroundColor(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA)); // v34: theme token
+         colorPaneSystem.setBorder(new EmptyBorder(5, 5, 5, 5));
+         if (jScrollPanePlayers != null) {
+-            jScrollPanePlayers.setBackground(new Color(0, 0, 0, CHAT_ALPHA));
+-            jScrollPanePlayers.getViewport().setBackground(new Color(0, 0, 0, CHAT_ALPHA));
++            jScrollPanePlayers.setBackground(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA)); // v34: theme token
++            jScrollPanePlayers.getViewport().setBackground(PreferencesDialog.getCurrentTheme().getOverlayBackground(CHAT_ALPHA)); // v34: theme token
+             jScrollPanePlayers.setViewportBorder(null);
+         }
+     }
+@@ -271,7 +272,7 @@ public class PlayersChatPanel extends javax.swing.JPanel {
+         colorPaneSystem.setEditable(false);
+         colorPaneSystem.setBackground(new java.awt.Color(0, 0, 0));
+         colorPaneSystem.setBorder(null);
+-        colorPaneSystem.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
++        colorPaneSystem.setFont(GUISizeHelper.chatFont); // v34: scaled chat font instead of fixed Arial 14
+         colorPaneSystem.setMargin(new java.awt.Insets(0, 0, 0, 0));
+         colorPaneSystem.setOpaque(false);
+         jScrollPaneSystem.setViewportView(colorPaneSystem);
+diff --git a/Mage.Client/src/main/java/mage/client/table/TablesPanel.java b/Mage.Client/src/main/java/mage/client/table/TablesPanel.java
+index 306102d5e19..623aba093bf 100644
+--- a/Mage.Client/src/main/java/mage/client/table/TablesPanel.java
++++ b/Mage.Client/src/main/java/mage/client/table/TablesPanel.java
+@@ -253,9 +253,9 @@ public class TablesPanel extends javax.swing.JPanel {
+                 greenLabel.setText(val);
+                 greenLabel.setHorizontalAlignment(JLabel.CENTER);
+                 greenLabel.setFont(defaultLabel.getFont());
+-                greenLabel.setForeground(Color.black);
++                greenLabel.setForeground(PreferencesDialog.getCurrentTheme().getSeatAvailableForeground()); // v34: theme token
+                 greenLabel.setOpaque(true);
+-                greenLabel.setBackground(new Color(156, 240, 146));
++                greenLabel.setBackground(PreferencesDialog.getCurrentTheme().getSeatAvailableBackground()); // v34: theme token
+                 greenLabel.setBorder(new LineBorder(defaultBack, 1));
+                 return greenLabel;
+             } else {
+@@ -400,8 +400,8 @@ public class TablesPanel extends javax.swing.JPanel {
+             component.setOpaque(false);
+         }
+ 
+-        jScrollPaneTablesActive.getViewport().setBackground(new Color(255, 255, 255, 50));
+-        jScrollPaneTablesFinished.getViewport().setBackground(new Color(255, 255, 255, 50));
++        jScrollPaneTablesActive.getViewport().setBackground(PreferencesDialog.getCurrentTheme().getLobbyViewportTint()); // v34: theme token
++        jScrollPaneTablesFinished.getViewport().setBackground(PreferencesDialog.getCurrentTheme().getLobbyViewportTint()); // v34: theme token
+ 
+         restoreFilters();
+         setGUISize();
+@@ -1086,7 +1086,7 @@ public class TablesPanel extends javax.swing.JPanel {
+ 
+         setLayout(new java.awt.GridBagLayout());
+ 
+-        jPanelTop.setBackground(java.awt.Color.white);
++        jPanelTop.setBackground(PreferencesDialog.getCurrentTheme().getControl()); // v34: theme token
+         jPanelTop.setOpaque(false);
+ 
+         btnNewTable.setIcon(new javax.swing.ImageIcon(getClass().getResource("/buttons/match_new.png"))); // NOI18N
+@@ -1108,7 +1108,7 @@ public class TablesPanel extends javax.swing.JPanel {
+         });
+ 
+         filterBar1.setFloatable(false);
+-        filterBar1.setForeground(new java.awt.Color(102, 102, 255));
++        filterBar1.setForeground(PreferencesDialog.getCurrentTheme().getFilterBarInk()); // v34: theme token
+         filterBar1.setFocusable(false);
+         filterBar1.setOpaque(false);
+ 
+@@ -1672,7 +1672,7 @@ public class TablesPanel extends javax.swing.JPanel {
+         });
+         jPanelBottom.add(buttonNextMessage);
+ 
+-        labelMessageHeader.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
++        labelMessageHeader.setFont(GUISizeHelper.dialogFont.deriveFont(java.awt.Font.BOLD)); // v34: scaled dialog font instead of fixed Tahoma 11
+         labelMessageHeader.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+         labelMessageHeader.setText("Message of the Day:");
+         labelMessageHeader.setAlignmentY(0.3F);
+diff --git a/Mage.Client/src/main/java/mage/client/themes/ThemeType.java b/Mage.Client/src/main/java/mage/client/themes/ThemeType.java
+index 8f607caff41..87bf0b95172 100644
+--- a/Mage.Client/src/main/java/mage/client/themes/ThemeType.java
++++ b/Mage.Client/src/main/java/mage/client/themes/ThemeType.java
+@@ -288,6 +288,57 @@ public enum ThemeType {
+         return textColor;
+     }
+ 
++    // v34: semantic tokens for the remaining stock custom painting (lobby, users list, draft).
++    // Light themes keep the historic hard-coded values (zero visual change); dark themes get
++    // readable equivalents. New painting code should ask these tokens instead of new Color(...).
++
++    public boolean isDarkTheme() {
++        Color c = control != null ? control : Color.white;
++        return (c.getRed() * 299 + c.getGreen() * 587 + c.getBlue() * 114) / 1000 < 128;
++    }
++
++    /** Free-seats highlight in the lobby tables (historic light value: 156,240,146 with black text). */
++    public Color getSeatAvailableBackground() {
++        return isDarkTheme() ? new Color(46, 110, 60) : new Color(156, 240, 146);
++    }
++
++    public Color getSeatAvailableForeground() {
++        return isDarkTheme() ? new Color(220, 240, 220) : Color.black;
++    }
++
++    /** Translucent viewport tint used over the desktop background in the lobby. */
++    public Color getLobbyViewportTint() {
++        return isDarkTheme() ? new Color(0, 0, 0, 90) : new Color(255, 255, 255, 50);
++    }
++
++    /** Ink color of the lobby filter toolbar labels (historic light value: 102,102,255). */
++    public Color getFilterBarInk() {
++        return isDarkTheme() ? new Color(150, 170, 220) : new Color(102, 102, 255);
++    }
++
++    /** Translucent panel overlay (users list, chats): dark themes follow the control color. */
++    public Color getOverlayBackground(int alpha) {
++        if (isDarkTheme()) {
++            Color c = control;
++            return new Color(c.getRed() / 2, c.getGreen() / 2, c.getBlue() / 2, alpha);
++        }
++        return new Color(0, 0, 0, alpha);
++    }
++
++    /** Text color over getOverlayBackground (historic stock value: pure white). */
++    public Color getOverlayForeground() {
++        return isDarkTheme() ? textColor : Color.white;
++    }
++
++    /** Draft timer warning colors (historic light values: RED and 255,160,60). */
++    public Color getTimerDangerColor() {
++        return isDarkTheme() ? new Color(255, 90, 90) : Color.RED;
++    }
++
++    public Color getTimerWarningColor() {
++        return isDarkTheme() ? new Color(255, 170, 80) : new Color(255, 160, 60);
++    }
++
+     public Color getPlayerPanel_inactiveBackgroundColor() {
+         return playerPanel_inactiveBackgroundColor;
+     }
+diff --git a/Mage.Client/src/main/java/mage/client/tournament/TournamentPanel.java b/Mage.Client/src/main/java/mage/client/tournament/TournamentPanel.java
+index d614593caa2..118edd08926 100644
+--- a/Mage.Client/src/main/java/mage/client/tournament/TournamentPanel.java
++++ b/Mage.Client/src/main/java/mage/client/tournament/TournamentPanel.java
+@@ -9,9 +9,11 @@ import mage.client.table.TablesUtil;
+ import mage.client.table.TournamentMatchesTableModel;
+ import mage.client.util.Format;
+ import mage.client.util.GUISizeHelper;
++import mage.client.util.MageTableRowSorter;
+ import mage.client.util.gui.TableUtil;
+ import mage.client.util.gui.countryBox.CountryCellRenderer;
+ import mage.constants.PlayerAction;
++import mage.util.RandomUtil;
+ import mage.view.TournamentPlayerView;
+ import mage.view.TournamentView;
+ import mage.view.UserRequestMessage;
+@@ -67,9 +69,12 @@ public class TournamentPanel extends javax.swing.JPanel {
+         tablePlayers.createDefaultColumnsFromModel();
+         TableUtil.setColumnWidthAndOrder(tablePlayers, DEFAULT_COLUMNS_WIDTH_PLAYERS, KEY_TOURNAMENT_PLAYER_COLUMNS_WIDTH, KEY_TOURNAMENT_PLAYER_COLUMNS_ORDER);
+         tablePlayers.setDefaultRenderer(Icon.class, new CountryCellRenderer());
++        // v34: standings and matches were not sortable in stock (the lobby tables already use this sorter)
++        tablePlayers.setRowSorter(new MageTableRowSorter(playersModel));
+ 
+         tableMatches.createDefaultColumnsFromModel();
+         TableUtil.setColumnWidthAndOrder(tableMatches, DEFAULT_COLUMNS_WIDTH_MATCHES, KEY_TOURNAMENT_MATCH_COLUMNS_WIDTH, KEY_TOURNAMENT_MATCH_COLUMNS_ORDER);
++        tableMatches.setRowSorter(new MageTableRowSorter(matchesModel));
+ 
+         chatPanel1.useExtendedView(ChatPanelBasic.VIEW_MODE.NONE);
+         chatPanel1.setChatType(ChatPanelBasic.ChatType.TOURNAMENT);
+@@ -83,8 +88,13 @@ public class TournamentPanel extends javax.swing.JPanel {
+                     return;
+                 }
+ 
+-                String state = (String) tableMatches.getValueAt(modelRow, tableMatches.convertColumnIndexToView(2));
+-                String actionText = (String) tableMatches.getValueAt(modelRow, tableMatches.convertColumnIndexToView(TournamentMatchesTableModel.ACTION_COLUMN));
++                // v34: the table is sortable now, so the model row must be mapped to the view row
++                int viewRow = tableMatches.convertRowIndexToView(modelRow);
++                if (viewRow < 0) {
++                    return;
++                }
++                String state = (String) tableMatches.getValueAt(viewRow, tableMatches.convertColumnIndexToView(2));
++                String actionText = (String) tableMatches.getValueAt(viewRow, tableMatches.convertColumnIndexToView(TournamentMatchesTableModel.ACTION_COLUMN));
+                 UUID tableId = UUID.fromString((String) matchesModel.getValueAt(modelRow, TournamentMatchesTableModel.ACTION_COLUMN + 1));
+                 UUID gameId = UUID.fromString((String) matchesModel.getValueAt(modelRow, TournamentMatchesTableModel.ACTION_COLUMN + 3));
+ 
+@@ -318,7 +328,7 @@ public class TournamentPanel extends javax.swing.JPanel {
+ 
+         setPreferredSize(new java.awt.Dimension(908, 580));
+ 
+-        actionPanel.setFont(new java.awt.Font("Arial", 0, 10)); // NOI18N
++        actionPanel.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Arial 10
+ 
+         txtName.setEditable(false);
+         txtName.setHorizontalAlignment(javax.swing.JTextField.LEFT);
+@@ -365,19 +375,19 @@ public class TournamentPanel extends javax.swing.JPanel {
+         btnCloseWindow.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+         btnCloseWindow.addActionListener(evt -> btnCloseWindowActionPerformed(evt));
+ 
+-        lblName.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        lblName.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font instead of fixed Tahoma 10
+         lblName.setText("Name:");
+ 
+-        lblType.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        lblType.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font
+         lblType.setText("Type:");
+ 
+-        lblState.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        lblState.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font
+         lblState.setText("State:");
+ 
+-        lblStartTime.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        lblStartTime.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font
+         lblStartTime.setText("Start time:");
+ 
+-        lblEndTime.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
++        lblEndTime.setFont(GUISizeHelper.dialogFont); // v34: scaled dialog font
+         lblEndTime.setText("End time:");
+ 
+         javax.swing.GroupLayout actionPanelLayout = new javax.swing.GroupLayout(actionPanel);
+@@ -613,7 +623,8 @@ class UpdateTournamentTask extends SwingWorker<Void, TournamentView> {
+     protected Void doInBackground() throws Exception {
+         while (!isCancelled()) {
+             this.publish(SessionHandler.getTournament(tournamentId));
+-            TimeUnit.SECONDS.sleep(2);
++            // v34: randomized delay like the lobby tasks (fixed 2 s made every client hit all servers at once)
++            TimeUnit.SECONDS.sleep(2 + RandomUtil.nextInt(2));
+         }
+         return null;
+     }
+diff --git a/Mage.Client/src/main/java/org/mage/plugins/card/images/DownloadPicturesService.java b/Mage.Client/src/main/java/org/mage/plugins/card/images/DownloadPicturesService.java
+index e7b59da54af..80616b35b12 100644
+--- a/Mage.Client/src/main/java/org/mage/plugins/card/images/DownloadPicturesService.java
++++ b/Mage.Client/src/main/java/org/mage/plugins/card/images/DownloadPicturesService.java
+@@ -7,6 +7,7 @@ import mage.cards.repository.CardInfo;
+ import mage.cards.repository.CardRepository;
+ import mage.cards.repository.TokenRepository;
+ import mage.client.MageFrame;
++import mage.client.components.tray.MageTray;
+ import mage.client.dialog.DownloadImagesDialog;
+ import mage.client.dialog.PreferencesDialog;
+ import mage.client.remote.XmageURLConnection;
+@@ -922,6 +923,13 @@ public class DownloadPicturesService extends DefaultBoundedRangeModel implements
+             enableDialogButtons();
+             this.downloadRunning = false;
+ 
++            // v34: inform the user when a long images download finishes (the stock TODO) -
++            // safe no-op when the system tray is unavailable
++            if (this.cardIndex > 0) {
++                MageTray.instance.displayMessage("Card images download finished (" + this.cardIndex + " images processed)");
++                MageTray.instance.blink();
++            }
++
+             // dialog was opened again while the download was finishing - now it can load missing cards
+             if (this.reloadAfterDownload) {
+                 this.reloadAfterDownload = false;

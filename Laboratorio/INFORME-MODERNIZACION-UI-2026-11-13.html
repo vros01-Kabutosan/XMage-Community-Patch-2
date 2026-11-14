@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe UI v2 — Solo lo de serie mejorable · XMage</title>
+<style>
+  :root{
+    --bg:#0d1117; --bg2:#161b22; --bg3:#1c2330; --border:#2d3646;
+    --text:#dbe2ea; --muted:#8b98a9; --accent:#58a6ff; --gold:#e3b341;
+    --green:#3fb950; --red:#f85149; --amber:#d29922; --purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font:16px/1.65 'Segoe UI',system-ui,sans-serif;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 90px}
+  header.hero{padding:60px 24px 40px;background:
+    radial-gradient(1100px 380px at 18% -10%, rgba(63,185,80,.14), transparent),
+    radial-gradient(900px 420px at 85% 0%, rgba(227,179,65,.10), transparent);
+    border-bottom:1px solid var(--border);margin-bottom:14px}
+  .hero-in{max-width:1080px;margin:0 auto;padding:0 24px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--green);margin-bottom:14px}
+  h1{font-size:36px;line-height:1.15;font-weight:800;letter-spacing:-.01em}
+  h1 span{color:var(--gold)}
+  .sub{color:var(--muted);margin-top:14px;max-width:820px}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+  .chip{font-family:var(--mono);font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:999px;background:var(--bg2);color:var(--muted)}
+  .chip b{color:var(--text);font-weight:600}
+  h2{font-size:25px;margin:54px 0 6px;letter-spacing:-.01em;display:flex;align-items:center;gap:12px}
+  h2 .num{font-family:var(--mono);font-size:14px;color:var(--bg);background:var(--accent);border-radius:8px;padding:2px 9px;font-weight:700}
+  h3{font-size:18px;margin:28px 0 8px;color:#fff}
+  .lede{color:var(--muted);margin-bottom:18px}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;background:var(--bg2);border-radius:12px;overflow:hidden}
+  th{background:var(--bg3);text-align:left;font-weight:600;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  th,td{padding:9px 13px;border-bottom:1px solid var(--border);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  code,.ev{font-family:var(--mono);font-size:.85em;background:rgba(110,118,129,.22);padding:2px 7px;border-radius:6px;color:#9ecbff;white-space:nowrap}
+  .ev{color:var(--purple)}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin:16px 0}
+  .card.finding{border-left:4px solid var(--green)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:18px 0}
+  .stat{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+  .stat .big{font-size:30px;font-weight:800;color:var(--gold);font-family:var(--mono)}
+  .stat .lbl{color:var(--muted);font-size:13.5px;margin-top:2px}
+  .badge{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.05em;padding:3px 10px;border-radius:999px;text-transform:uppercase;margin-right:6px}
+  .b-alto{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.4)}
+  .b-medio{background:rgba(210,153,34,.15);color:var(--amber);border:1px solid rgba(210,153,34,.4)}
+  .b-bajo{background:rgba(88,166,255,.13);color:var(--accent);border:1px solid rgba(88,166,255,.4)}
+  .b-riesgo{background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.4)}
+  .b-stock{background:rgba(188,140,255,.13);color:var(--purple);border:1px solid rgba(188,140,255,.4)}
+  .row{margin:13px 0}
+  .row .tag{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+  ul{padding-left:22px;margin:8px 0}
+  li{margin:4px 0}
+  .phase{display:flex;gap:16px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin:14px 0}
+  .phase .ph{flex:0 0 auto;font-family:var(--mono);font-weight:800;font-size:13px;color:var(--bg);background:var(--green);border-radius:10px;padding:6px 12px;white-space:nowrap}
+  .phase.p1 .ph{background:var(--accent)} .phase.p2 .ph{background:var(--purple)}
+  .phase ol{padding-left:20px} .phase li{margin:6px 0}
+  .excluded{background:var(--bg3);border:1px dashed var(--border);border-radius:14px;padding:16px 20px;color:var(--muted);font-size:14.5px}
+  .excluded b{color:var(--text)}
+  .verdict{background:linear-gradient(135deg,rgba(63,185,80,.08),rgba(88,166,255,.06));border:1px solid rgba(63,185,80,.35);border-radius:14px;padding:20px 24px;margin:20px 0}
+  footer{margin-top:70px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px;font-family:var(--mono)}
+  nav.toc{position:sticky;top:0;z-index:9;background:rgba(13,17,23,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);margin-bottom:10px}
+  .toc-in{max-width:1080px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;flex-wrap:wrap;font-size:13px}
+  .toc-in a{color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:8px;font-family:var(--mono)}
+  .toc-in a:hover{background:var(--bg3);color:var(--text)}
+  @media print{body{background:#fff;color:#111}.card,table,.stat,.phase{background:#fff;border-color:#ccc}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-in">
+    <div class="kicker">XMage · Fork Kabutosan · 1.4.63V1 · Mage.Client · v2 re-escopado</div>
+    <h1>Lo que sigue <span>de serie</span> y se puede modernizar</h1>
+    <p class="sub">Segunda edición del informe: se ha separado el código <b>oficial sin tocar</b> del que la fork ya
+    modernizó (está bien y no se cuenta). Método: diff de árbol contra el tag oficial <code>xmage_1.4.63V1</code>,
+    blame línea a línea y verificación de cada cita en el árbol del upstream. Solo investigación: no se ha modificado nada.</p>
+    <div class="meta">
+      <span class="chip">📅 <b>13/11/2026</b></span>
+      <span class="chip">🏷️ Base oficial: <b>79aec614fc2 (1.4.63V1)</b></span>
+      <span class="chip">🧩 Cliente: <b>48 de 293</b> ficheros tocados por la fork</span>
+      <span class="chip">📦 <b>84 % de la UI sigue 100 % de serie</b></span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc"><div class="toc-in">
+  <a href="#excluido">Exclusiones</a><a href="#temas">A · Temas/L&F</a><a href="#render">B · Imagen</a>
+  <a href="#fuentes">C · Fuentes/DPI</a><a href="#arq">D · Threading/Memoria</a><a href="#ux">E · UX diaria</a>
+  <a href="#a11y">F · Accesibilidad</a><a href="#roadmap">Roadmap</a><a href="#bugs">Bugs oficiales</a>
+</div></nav>
+
+<div class="wrap">
+
+<!-- ===================== EXCLUIDO ===================== -->
+<h2 id="excluido"><span class="num">0</span> Lo que la fork ya modernizó — fuera de este informe</h2>
+<div class="excluded">
+Campo de batalla auto-fit y filas espejo (v24-26) · auras/PT dinámico/flechas/decisiones (v29) ·
+pila flotante interactiva (v28) · <b>PHASE-FUSION</b> (barra de fases clicable, v1.0-1.5) · botones de
+decisión semánticos con auto-answer · marcador de match y salida de match · cementerio/biblioteca con
+buscador y multi-columna oscuro (v30) · selector de ediciones (v1.6) · editor de mazos (v1.7) ·
+dashboard del descargador de decks · diálogos de elección auto-ajustados · fix layout 4K ·
+serie de optimizaciones anti-repaints redundantes.
+<b>Nada de esto se repite abajo.</b> Queda lo demás: lobby, torneos, draft, colección, diálogos de
+conexión/descargas/preferencias, el pipeline de imagen completo, el sistema de temas, el teclado de serie y toda la red de threading/memoria.
+</div>
+
+<div class="verdict"><b>Verificación:</b> los 20 hallazgos clave de este informe se han buscado en el árbol
+oficial <code>git show xmage_1.4.63V1:&lt;fichero&gt;</code> y existen idénticos (marcados
+<span class="badge b-stock">oficial ✔</span>). El pipeline de imagen entero
+(<code>TransformedImageCache</code>, <code>ImageCache</code>, <code>SvgUtils</code>,
+<code>SoftValuesLoadingCache</code>, <code>ImageHelper</code>) <b>no está en los 48 ficheros tocados</b>: 100 % de serie.</div>
+
+<!-- ===================== A TEMAS ===================== -->
+<h2 id="temas"><span class="num">A</span> Look &amp; Feel y temas — de serie</h2>
+
+<div class="card finding">
+<span class="badge b-alto">Impacto alto</span><span class="badge b-riesgo">Riesgo medio · Fase 2</span><span class="badge b-stock">oficial ✔</span>
+<h3>A1 · Nimbus forzado y único</h3>
+<div class="row"><span class="tag">Evidencia</span><span class="ev">GuiDisplayUtil.java:481 (oficial)</span> fuerza
+<code>NimbusLookAndFeel</code> sin alternativa; 0 referencias a FlatLaf/system en el cliente. 4 clases son
+workarounds de bugs de transparencia de Nimbus con <code>JInternalFrame</code>: <code>MageSynthStyleFactory</code>,
+<code>TranslucentSynthSytle</code>, painter de <code>MageJDesktop</code>, <code>ColorPane</code>.</div>
+<div class="row"><span class="tag">Propuesta</span><b>FlatLaf opcional</b> (drop-in Swing, Apache-2.0) con Nimbus de
+default y fallback: dark mode real «gratis» para TODA la UI de serie (diálogos, tablas, preferencias, lobby),
+mapeo 1:1 de claves de tema en <code>refreshThemeSettings()</code>, y retirada posterior de los 4 workarounds.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 2</span><span class="badge b-stock">oficial ✔</span>
+<h3>A2 · Temas como enum cerrado</h3>
+<div class="row"><span class="tag">Evidencia</span><span class="ev">ThemeType.java</span> — su diff frente al oficial es
+<b>solo whitespace</b>: 100 % de serie. 6 presets compilados; en prefs solo se guarda el nombre del tema
+(<span class="ev">PreferencesDialog.java:110</span>).</div>
+<div class="row"><span class="tag">Propuesta</span>Sobrescrituras por properties/JSON en <code>~/.xmage/themes/</code>
+fusionadas en <code>reload()</code>. Sin fichero, comportamiento idéntico al actual.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-alto">Impacto alto</span><span class="badge b-bajo">Riesgo bajo · Fase 1</span><span class="badge b-stock">oficial ✔</span>
+<h3>A3 · Tokens semánticos para los colores de serie hardcodeados</h3>
+<div class="row"><span class="tag">Evidencia (solo las que siguen de serie)</span>
+Verde fosforito de asientos <span class="ev">TablesPanel.java:254-257</span> · viewport blanco y toolbar azul
+<span class="ev">TablesPanel.java:401,1076,1098</span> · scrollbar <b>Metal puro</b> dentro del AbilityPicker
+(a pesar de correr sobre Nimbus) <span class="ev">components/ability/MageScrollbarUI.java:62,131-133</span> ·
+texto blanco puro sobre negro en la lista de jugadores <span class="ev">PlayersChatPanel.java:74-94</span> ·
+rareza triplicada: <span class="ev">CardRenderer.java:414 (oficial)</span> + HTML <span class="ev">GuiDisplayUtil.java:309 (oficial)</span>
++ renderers Modern/Retro · libro de colección <span class="ev">MageBook.java:524</span>,
+<span class="ev">CollectionViewerPanel.java:64-178</span> · <span class="ev">MageRoundPane.java:23-25</span>.</div>
+<div class="row"><span class="tag">Propuesta</span>Tokens (<code>surface</code>, <code>accent</code>, <code>success</code>,
+<code>danger</code>, <code>text-primary</code>…) en el <code>ThemeType</code> actual; los paintComponent/renderers de serie
+consultan el tema. Defaults = colores actuales → cero cambio visual el día 1, dark mode posible el día 2.</div>
+</div>
+
+<!-- ===================== B IMAGEN ===================== -->
+<h2 id="render"><span class="num">B</span> Pipeline de imagen — 100 % de serie (ningún fichero del pipeline fue tocado)</h2>
+
+<div class="card finding">
+<span class="badge b-alto">Impacto alto</span><span class="badge b-bajo">Riesgo bajo · Fase 0</span><span class="badge b-stock">oficial ✔</span>
+<h3>B1 · getScaledInstance(SCALE_SMOOTH): API de 1996 en la ruta caliente</h3>
+<div class="row"><span class="tag">Evidencia</span><span class="ev">TransformedImageCache.java:98-105</span> (resize de TODAS las cartas
+escaladas), <span class="ev">MageScrollButton.java:37-40</span>, <span class="ev">TablesPanel.java:615-639</span> (iconos del lobby),
+<span class="ev">ImageManagerImpl.java:450,471</span>. <b>0</b> usos de <code>RenderingHints.KEY_INTERPOLATION</code> en el cliente:
+el escalado nunca usa los hints modernos y el trabajo perezoso cae en el primer <code>drawImage</code> (a veces dentro de un paint en EDT).</div>
+<div class="row"><span class="tag">Propuesta</span>Reescribir <code>resizeImage()</code> con <code>Graphics2D</code> +
+<code>VALUE_INTERPOLATION_BILINEAR</code>/doble-bilinear escalonado y destino <code>ARGB_PRE</code>. ~8 líneas,
+la cache existente intacta. Cartas nítidas al zoom en toda la app.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 1</span><span class="badge b-stock">oficial ✔</span>
+<h3>B2 · Mutación in-place de entradas cacheadas compartidas</h3>
+<div class="row"><span class="tag">Evidencia</span><span class="ev">ImageCache.java:317-333,345-361</span> — tras un resize,
+<code>data.setImage(newImage)</code> muta el entry de <code>SHARED_CARD_IMAGES_CACHE</code> (el objeto cacheado pierde el
+original) en posible carrera con el pool de precarga.</div>
+<div class="row"><span class="tag">Propuesta</span>Devolver la imagen transformada sin mutar el entry (la cache de
+transformadas ya indexa por tamaño). Solo corrección, sin cambio observable.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 0</span><span class="badge b-stock">oficial ✔</span>
+<h3>B3 · Batik: disco y rasterizado dentro del hilo de pintura</h3>
+<div class="row"><span class="tag">Evidencia</span><span class="ev">ManaSymbols.java:420 (oficial)</span> —
+<code>draw()</code> rasteriza tamaños de símbolo no pre-cargados (solo 15/25/50) <b>on-demand desde paint</b>;
+<span class="ev">SvgUtils.java:96-215</span> escribe/lee un <b>CSS temporal en disco y re-codifica base64 en cada
+carga</b> (sin cachear el <code>data:URI</code>).</div>
+<div class="row"><span class="tag">Propuesta</span>Precargar los tamaños que calcula <code>GUISizeHelper</code> al cambiar
+preferencias + cachear el CSS URI por (css, settings). Elimina micro-stutters al redimensionar o cambiar tema.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 2</span><span class="badge b-stock">oficial ✔</span>
+<h3>B4 · Caches sin techo real de memoria</h3>
+<div class="row"><span class="tag">Evidencia</span><span class="ev">SoftValuesLoadingCache.java:20-26</span> — las 8 caches de
+imagen usan <code>maximumSize(3000)+softValues</code>; 3000 cartas ARGB grandes ≈ GB. La mitigación de serie es reactiva:
+capturar <code>OutOfMemoryError</code> y loguear «increase -xmx».</div>
+<div class="row"><span class="tag">Propuesta</span>Techo <b>en MB</b> (Weigher de Guava) según <code>-Xmx</code>. Una clase, misma API.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-riesgo">Riesgo medio · Fase 2</span><span class="badge b-stock">oficial ✔</span>
+<h3>B5 · Mesa: optimized drawing desactivado siempre</h3>
+<div class="row"><span class="tag">Evidencia</span><span class="ev">BattlefieldPanel.java:387-388</span> —
+<code>isOptimizedDrawingEnabled()</code> devuelve <code>false</code> de forma permanente (línea de serie; la fork tocó el layout pero no esto):
+todo lo solapado se repinta back-to-front en cada repaint. Nota: la fork ya redujo los repaints <i>innecesarios</i>;
+esto recorta el coste de los que quedan.</div>
+<div class="row"><span class="tag">Propuesta</span>Devolver <code>true</code> condicionalmente o aislar la subcapa que necesita solapamiento.
+Smoke de laboratorio obligatorio (z-order de iconos).</div>
+</div>
+
+<!-- ===================== C FUENTES ===================== -->
+<h2 id="fuentes"><span class="num">C</span> Fuentes, iconos y DPI — de serie</h2>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 1</span><span class="badge b-stock">oficial ✔</span>
+<h3>C1 · Tahoma/Arial/Segoe por nombre y ninguna fuente empaquetada</h3>
+<div class="row"><span class="tag">Evidencia</span>101 <code>new Font(</code> de serie. Tahoma fija salta el escalado de GUI en:
+<span class="ev">ConnectDialog.java:241</span> (botón Connect), <span class="ev">TablesPanel.java:1662</span> (banner),
+<span class="ev">TablePlayerPanel.java:105</span>, <span class="ev">TournamentPanel.java:321,368-381</span>,
+<span class="ev">DraftPanel.java:728</span> (timer Tahoma 36) <span class="ev">:824-985</span> (16 labels),
+<span class="ev">PreferencesDialog.java:2850</span> — ficheros todos sin tocar. «Segoe UI 48» + tamaños fijos en la toolbar
+(<span class="ev">MageFrame.java:1073 oficial</span>). Ningún .ttf en recursos; la infraestructura de carga existe sin usar
+(<code>ModernCardResourceLoader.loadFont()</code>).</div>
+<div class="row"><span class="tag">Propuesta</span>Empaquetar Inter/Noto Sans con el <code>loadFont()</code> ya escrito +
+<code>FontTheme</code> central; sustituir Tahoma/Arial de diálogos por <code>GUISizeHelper.dialogFont</code>. Uniforme en los 3 SO.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-riesgo">Riesgo medio · Fase 2</span><span class="badge b-stock">oficial ✔</span>
+<h3>C2 · Sin detección real de escala; iconos UI a una resolución</h3>
+<div class="row"><span class="tag">Evidencia</span><span class="ev">PreferencesDialog.java:417-468</span> elige preset con
+<code>getScreenResolution()</code> — siempre 96 en Windows (el comentario oficial lo admite, :424-441); 4 presets discretos,
+nada para 125/150 %. 694 PNG de UI re-muestreados con <code>getScaledInstance</code> (B1) cuando toca.</div>
+<div class="row"><span class="tag">Propuesta</span>Escala real con <code>getDefaultTransform().getScaleX()</code> (Java 9+) como
+insumo del preset; iconos de menú/botones a SVG (el pipeline SVG themed de iconos de carta ya valida el enfoque en el propio proyecto).</div>
+</div>
+
+<!-- ===================== D ARQ ===================== -->
+<h2 id="arq"><span class="num">D</span> Threading y memoria — líneas verificadas en el oficial</h2>
+
+<div class="card finding">
+<span class="badge b-alto">Impacto alto</span><span class="badge b-bajo">Riesgo bajo · Fase 1</span><span class="badge b-stock">oficial ✔</span>
+<h3>D1 · Conexión/reconexión bloqueando el EDT</h3>
+<div class="row"><span class="tag">Evidencia</span><span class="ev">MageFrame.java:934 (oficial)</span> <code>performConnect()</code>
+hace I/O de red bloqueante (TCP+SSL+login, segundos) y se invoca dentro de <code>invokeLater</code>
+(<span class="ev">:1855 oficial</span> reconexión). Es el «freeze» más perceptible de la app. Contraste: el pipeline de mensajes
+del servidor ya era correcto de serie (<code>CallbackClientImpl:63-77</code>).</div>
+<div class="row"><span class="tag">Propuesta</span>Worker + <code>invokeLater</code> con el resultado.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 1</span><span class="badge b-stock">oficial ✔</span>
+<h3>D2 · Modalidad y esperas bloqueantes de serie</h3>
+<ul>
+  <li><span class="ev">MageDialog.java:155-157</span> — modales con <code>startModal()/wait()</code> sobre EDT: dos modales solapados = riesgo de bloqueo.</li>
+  <li><span class="ev">MageUI.java:79-103</span> — <code>getComponent()</code> espera con <code>wait()</code> de otro hilo (deadlock potencial).</li>
+</ul>
+<div class="row"><span class="tag">Propuesta</span><code>CompletableFuture</code>/callbacks en ambos.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 0</span><span class="badge b-stock">oficial ✔</span>
+<h3>D3 · Fugas y races de serie (1-5 líneas cada una)</h3>
+<ul>
+  <li><span class="ev">PlayerPanelExt.java:95</span> — <code>static Map playerLives</code>: solo <code>put</code>, <b>sin remove al cerrar partida</b> (línea de serie en fichero que la fork tocó para otras cosas) ✔.</li>
+  <li><span class="ev">ImageHelper.java:28-29</span> — <code>images</code>/<code>backgrounds</code> sin eviction → a la <code>SoftValuesLoadingCache</code> que ya existe.</li>
+  <li><span class="ev">DialogManager.java:24-39</span> — double-checked locking sobre <code>HashMap</code> → <code>ConcurrentHashMap.computeIfAbsent</code>.</li>
+  <li><span class="ev">EDTExceptionHandler.java:18</span> — <code>foundErrors</code> sin límite; <code>resizeTimer</code> sin stop en <code>cleanUp()</code>; AWTEventListener del Toolkit nunca removido (menor).</li>
+</ul>
+</div>
+
+<!-- ===================== E UX ===================== -->
+<h2 id="ux"><span class="num">E</span> UX de serie en las pantallas de uso diario</h2>
+
+<div class="card finding">
+<span class="badge b-alto">Impacto alto</span><span class="badge b-bajo">Riesgo bajo · Fase 0-1</span><span class="badge b-stock">oficial ✔</span>
+<h3>E1 · Lobby de mesas (ficheros <code>table/</code> sin tocar — lo más usado tras la partida)</h3>
+<ul>
+  <li>Look 2004: verde <code>(156,240,146)</code> asientos <span class="ev">TablesPanel.java:254-257</span>, viewport blanco <span class="ev">:401,1076</span>, toolbar azul <span class="ev">:1098</span>, Tahoma en el banner <span class="ev">:1662</span>, texto blanco puro sobre negro en la lista de jugadores <span class="ev">PlayersChatPanel.java:77</span>.</li>
+  <li>15 columnas por defecto con valores string (<code>"YES"</code>/vacío) y columnas ocultas recicladas <span class="ev">TablesTableModel.java:51,181-189</span>; truco de filtro vacío <code>regexFilter("Nothing")</code> <span class="ev">TablesPanel.java:957</span>.</li>
+  <li>Sin tooltips por celda <span class="ev">(:167-243)</span>, sin buscador de texto libre sobre mesas, botón de acción Join/Watch/Replay sin icono ni color <span class="ev">TablesButtonColumn.java:62-68</span>, y filtros persistidos <b>por posición</b> — reordenar un botón corrompe la config <span class="ev">TableUtil.java:26-44</span>.</li>
+</ul>
+<div class="row"><span class="tag">Propuesta</span>Tokens de tema (A3) + tooltip por celda + caja de filtro rápido + ocultar columnas de bajo valor + iconos SVG en toggles + filtros por <code>actionCommand</code>.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-alto">Impacto alto</span><span class="badge b-bajo">Riesgo bajo · Fase 0</span><span class="badge b-stock">oficial ✔</span>
+<h3>E2 · Deck builder y gestión de mazos</h3>
+<ul>
+  <li>Búsqueda del builder <b>solo con ENTER</b> <span class="ev">CardSelector.java:98</span>; vista tabla <b>sin RowSorter</b> (no ordena por columna) cuando el componente listo ya está en el repo: <code>MageTableRowSorter</code> ✔.</li>
+  <li>«Mis mazos» es solo el combo de <code>MageFrame</code>: sin búsqueda ni gestor (crear/duplicar/renombrar/borrar por contexto). <code>FastSearchUtil</code> ya existe para reutilizarlo en el combo.</li>
+  <li>Sin buscador en ventanas de zonas (TODO de serie <span class="ev">CardArea.java:40</span> — la fork ya dio buscador a cementerio/biblioteca; queda el patrón extensible al resto).</li>
+</ul>
+<div class="row"><span class="tag">Propuesta</span>Debounce ~200 ms en el buscador + montar el sorter existente + diálogo «Manage decks» con tabla + búsqueda en el combo de mazos.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 1</span><span class="badge b-stock">oficial ✔</span>
+<h3>E3 · Torneo y draft (100 % de serie)</h3>
+<ul>
+  <li><b>Torneo</b>: campos tipo formulario con <code>JTextField</code>-solo-lectura y <code>EtchedBorder</code> <span class="ev">TournamentPanel.java:325-355</span>, Tahoma <span class="ev">:368-381</span>, y <b>las tablas de clasificación y partidas sin RowSorter</b> — no se puede ordenar por puntos <span class="ev">(:68-72)</span>; refresco fijo 2 s <span class="ev">:616</span>.</li>
+  <li><b>Draft</b>: 16 jugadores como <code>JLabel</code> de texto puro con Tahoma fijo <span class="ev">DraftPanel.java:824-985</span> (sin avatares, cuando el sistema de avatares existe), timer Tahoma 36 <span class="ev">:728</span>, mesa con <code>BevelBorder.RAISED</code> + PNG <span class="ev">:904-906</span>, auto-ajuste manual con aritmética <code>*18</code> y TODO «wtf» <span class="ev">:241</span>.</li>
+</ul>
+<div class="row"><span class="tag">Propuesta</span>Sorter en torneo; <code>dialogFont</code> en ambos; avatares en draft reutilizando <code>MyAvatar</code>; timer con color derivado del tema.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-alto">Impacto alto</span><span class="badge b-bajo">Riesgo bajo · Fase 0-1</span><span class="badge b-stock">oficial ✔</span>
+<h3>E4 · Teclado y confirmaciones de serie</h3>
+<ul>
+  <li>Bug: <b>F2 no confirma con textos no ingleses</b> — <span class="ev">FeedbackPanel.java:304-306 (oficial)</span> compara <code>getText().equals("OK"/"Yes"/"Done")</code> ✔. Fix: usar <code>actionCommand</code>/<code>FeedbackMode</code> (la semántica ya está en el modelo).</li>
+  <li>Alerta visual de «te toca decidir» <b>desactivada de serie</b>: <span class="ev">HelperPanel.java:84 (oficial)</span> <code>//MageTray.instance.blink();</code> ✔ — solo suena. Reactivar = descomentar + test.</li>
+  <li>Rebind de serie: un solo modificador y los conflictos <b>limpian en silencio</b> la otra acción <span class="ev">KeyBindButton.java:41-57</span> ✔; <code>Alt+E/S/1</code> hardcodeados; TODO oficial <span class="ev">AbilityPicker.java:436</span>: F4-F12 se disparan desde el lobby ✔.</li>
+  <li>Confirmación «Are you sure you want to <i>bling your deck</i>?» con patrón <code>==1</code> confuso <span class="ev">DragCardGrid.java:1608 (oficial)</span> ✔ → unificar en el diálogo de usuario ya existente.</li>
+</ul>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 0-1</span><span class="badge b-stock">oficial ✔</span>
+<h3>E5 · Diálogos de conexión, descargas y preferencias (sin tocar)</h3>
+<ul>
+  <li><b>ConnectDialog</b>: sin servidores recientes (TODO propio <span class="ev">:138</span>), validación con 4 <code>JOptionPane</code> modales <span class="ev">:570-583</span>, botones muertos <code>setEnabled(false)</code> (Main/US/Other/Check status), <code>setLocation(50,50)</code>.</li>
+  <li><b>DownloadImagesDialog</b>: Stop no implementado (TODO <span class="ev">:434-436</span>), sin notificación al acabar, progreso como string kilométrico en la barra <span class="ev">:391</span>, pestaña «Custom» muerta con combos «Item 1..4».</li>
+  <li><b>PreferencesDialog</b>: 9 pestañas sin buscador de opciones ni iconos (el propio descargador ya sabe poner iconos de pestaña).</li>
+  <li><b>CountryItemRenderer</b> <span class="ev">:36-55</span>: combo de bandera con LIGHT_GRAY/BLUE/YELLOW/BLACK duros → heredar <code>DefaultListCellRenderer</code>. 10 líneas, se ve en cada arranque.</li>
+  <li><b>Chat</b>: formato de hora dependiente del locale del SO <span class="ev">ChatPanelBasic.java:31</span> (cada usuario ve la hora distinto) → <code>HH:mm</code> explícito.</li>
+</ul>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-bajo">Riesgo bajo · Fase 1</span><span class="badge b-stock">oficial ✔</span>
+<h3>E6 · Drag &amp; drop entre aplicaciones, inexistente de serie</h3>
+<div class="row"><span class="tag">Evidencia</span>0 usos de <code>TransferHandler</code>/<code>DragGestureListener</code> en el
+oficial. No se puede arrastrar una lista de mazo fuera de XMage (sí entra: hay drop-in de .dck en el editor).</div>
+<div class="row"><span class="tag">Propuesta</span>TransferHandler de <b>export</b> en las tablas del builder (lista como texto
+.dck al escritorio/chat externo). Aditivo, no toca el DnD interno del editor.</div>
+</div>
+
+<div class="card finding">
+<span class="badge b-medio">Impacto medio</span><span class="badge b-riesgo">Riesgo medio · Fase 2</span><span class="badge b-stock">oficial ✔</span>
+<h3>E7 · Colección «libro» (MageBook/CollectionViewerPanel, de serie)</h3>
+<div class="row"><span class="tag">Evidencia</span>Lienzo fijo <code>950×700/1250×900</code> <span class="ev">MageBook.java:648-662</span>,
+cartas colocadas con <code>translate</code> manual, fuentes del LaF sin escalar (<code>deriveFont(25f/17f)</code>), aviso
+<code>new Color(150,0,0)</code> <span class="ev">:524</span>, <code>Color.white</code> asumido en el panel de control
+<span class="ev">CollectionViewerPanel.java:64-178</span> (ilegible en tema claro).</div>
+<div class="row"><span class="tag">Propuesta</span>Escalar por <code>GUISizeHelper</code>, colores por tema e indicador de
+página — manteniendo la metáfora del libro, que es de serie y querida.</div>
+</div>
+
+<!-- ===================== F A11Y ===================== -->
+<h2 id="a11y"><span class="num">F</span> Accesibilidad — de serie</h2>
+<div class="card finding">
+<ul>
+  <li><b>Foco de teclado eliminado</b> en los 30+ toggles de filtro del lobby <span class="ev">TablesPanel.java:1105-1369</span>
+  y en <span class="ev">FeedbackPanel</span> (<code>setFocusable(false)</code> de serie) → sin navegación por teclado en la pantalla más usada.</li>
+  <li><b>Fuentes mínimas ilegibles</b>: <code>MIN_FONT_SIZE=7</code> <span class="ev">GUISizeHelper.java:32</span> ✔, preset 768p con dialogFont=10, Tahoma 9-10 fijo (C1).</li>
+  <li><b>Contrastes</b> WCAG fallidos de serie: gris <code>(100,100,100)</code> de vidas en cero <span class="ev">PlayerPanelExt.java:61</span> ✔, texto <code>#646464</code> sobre blanco en el grid de cartas.</li>
+  <li><b>Información solo por color</b> (rareza, rated, estado de mesa) sin refuerzo de texto/icono <span class="ev">GuiDisplayUtil.java:309</span> ✔.</li>
+</ul>
+</div>
+
+<!-- ===================== ROADMAP ===================== -->
+<h2 id="roadmap"><span class="num">★</span> Roadmap — solo de serie</h2>
+
+<div class="phase p0">
+  <span class="ph">FASE 0 · Quick wins</span>
+  <ol>
+    <li>B1 · <code>resizeImage</code> con interpolación moderna (nitidez de zoom en toda la app)</li>
+    <li>E4 · Fix F2 por <code>actionCommand</code> + reactivar el blink de bandeja</li>
+    <li>E2 · Búsqueda incremental y RowSorter en el deck builder</li>
+    <li>B3 · Símbolos de maná precargados + CSS URI cacheado</li>
+    <li>D3 · Limpiezas de memoria (playerLives, ImageHelper, DialogManager, resizeTimer)</li>
+    <li>E5 · CountryItemRenderer → DefaultListCellRenderer · hora fija HH:mm · servidores recientes</li>
+    <li>E1 · Tooltip por celda en el lobby</li>
+  </ol>
+</div>
+
+<div class="phase p1">
+  <span class="ph">FASE 1 · Visibles sin tocar arquitectura</span>
+  <ol>
+    <li>D1 · performConnect fuera del EDT (fin del congelón al conectar)</li>
+    <li>A3 · Tokens de color de serie (lobby, chat, torneo, draft, libro) sobre el ThemeType actual</li>
+    <li>C1 · Fuente empaquetada + retirar Tahoma/Arial de diálogos</li>
+    <li>E3 · RowSorter en torneo; E1 filtros por clave y selector de columnas</li>
+    <li>E4 · Rebind con detección de conflictos + scoping de teclas de juego</li>
+    <li>E5 · Preferencias con buscador de opciones + Stop real y progreso legible en descargas</li>
+    <li>E6 · Export de listas por TransferHandler · D2 · modal/CompletableFuture</li>
+    <li>B2 · Fin de la mutación in-place de la cache</li>
+  </ol>
+</div>
+
+<div class="phase p2">
+  <span class="ph">FASE 2 · Estratégicas (smoke en laboratorio)</span>
+  <ol>
+    <li>A1 · FlatLaf opcional con fallback → dark mode real para toda la UI de serie + retirar workarounds Synth y el scrollbar Metal</li>
+    <li>A2 · Temas por fichero</li>
+    <li>B5 · isOptimizedDrawingEnabled condicional</li>
+    <li>B4 · Techos de memoria en MB · C2 · escala real + iconos SVG · E7 · libro theme-aware</li>
+  </ol>
+</div>
+
+<!-- ===================== BUGS ===================== -->
+<h2 id="bugs"><span class="num">!</span> Anexo — 10 bugs/robos de serie (todos existen idénticos en el oficial 1.4.63)</h2>
+<table>
+<tr><th>#</th><th>Bug</th><th>Oficial 1.4.63</th></tr>
+<tr><td>1</td><td>F2 no confirma con botones «Sí/Hecho» (compara texto inglés literal)</td><td><span class="ev">FeedbackPanel.java:304-306</span></td></tr>
+<tr><td>2</td><td>Congelación de UI al conectar/reconectar (network I/O en EDT)</td><td><span class="ev">MageFrame.java:934,1855</span></td></tr>
+<tr><td>3</td><td><code>playerLives</code> estático crece toda la sesión (sin remove)</td><td><span class="ev">PlayerPanelExt.java:95</span></td></tr>
+<tr><td>4</td><td>Race: double-checked locking sobre HashMap</td><td><span class="ev">DialogManager.java:24-39</span></td></tr>
+<tr><td>5</td><td>El botón Stop de descargas no cancela nada (TODO propio)</td><td><span class="ev">DownloadImagesDialog.java:434</span></td></tr>
+<tr><td>6</td><td>Segunda cara de las DFC no clicable (TODO confeso upstream)</td><td><span class="ev">GamePanel (rama :2862)</span></td></tr>
+<tr><td>7</td><td>F4-F12 se disparan con foco en el lobby (TODO propio)</td><td><span class="ev">AbilityPicker.java:436</span></td></tr>
+<tr><td>8</td><td>Alerta visual de decisión desactivada de serie (parpadeo comentado)</td><td><span class="ev">HelperPanel.java:84</span></td></tr>
+<tr><td>9</td><td>Confirmación «bling your deck» con <code>==1</code> confuso</td><td><span class="ev">DragCardGrid.java:1608</span></td></tr>
+<tr><td>10</td><td>Sin servidores recientes en la conexión (TODO propio)</td><td><span class="ev">ConnectDialog.java:138</span></td></tr>
+</table>
+
+<footer>
+Informe v2 (sustituye al v1 que mezclaba zonas ya modernizadas por la fork) · Método: diff de árbol vs tag oficial
+xmage_1.4.63V1 + blame por línea + verificación en git show del oficial · J:\MTG\Laboratorio\XMage-1.4.62V1-src ·
+rama upgrade/official-1.4.63V1 · 13/11/2026 · Ningún archivo, jar ni preferencia modificado
+</footer>
+</div>
+</body>
+</html>

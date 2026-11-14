@@ -1,0 +1,29 @@
+From dc5abcb7c2fa3dd0e49bd04aef38d61feae08ac7 Mon Sep 17 00:00:00 2001
+From: v r <vros01-Kabutosan@users.noreply.github.com>
+Date: Sat, 14 Nov 2026 17:02:28 +0100
+Subject: [PATCH] Sets v37: habilitar las 5 lecciones de SecretsOfStrixhaven
+ (implementadas, solo excluidas como unfinished)
+
+---
+ Mage.Sets/src/mage/sets/SecretsOfStrixhaven.java | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/Mage.Sets/src/mage/sets/SecretsOfStrixhaven.java b/Mage.Sets/src/mage/sets/SecretsOfStrixhaven.java
+index c730bfcb04a..de630541d51 100644
+--- a/Mage.Sets/src/mage/sets/SecretsOfStrixhaven.java
++++ b/Mage.Sets/src/mage/sets/SecretsOfStrixhaven.java
+@@ -12,7 +12,10 @@ import java.util.List;
+  */
+ public final class SecretsOfStrixhaven extends ExpansionSet {
+ 
+-    private static final List<String> unfinished = Arrays.asList("Decorum Dissertation", "Echocasting Symposium", "Germination Practicum", "Improvisation Capstone", "Restoration Seminar");
++    // v37: las 5 lecciones estaban excluidas como "unfinished", pero están implementadas
++    // (Decorum Dissertation, Echocasting Symposium, Germination Practicum, Improvisation
++    // Capstone y Restoration Seminar). Se habilitan para que los mazos descargados las resuelvan.
++    private static final List<String> unfinished = Arrays.asList();
+     private static final SecretsOfStrixhaven instance = new SecretsOfStrixhaven();
+ 
+     public static SecretsOfStrixhaven getInstance() {
+-- 
+2.53.0.windows.3
+

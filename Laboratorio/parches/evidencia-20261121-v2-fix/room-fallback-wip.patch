@@ -1,0 +1,50 @@
+diff --git a/Mage/src/main/java/mage/cards/RoomCard.java b/Mage/src/main/java/mage/cards/RoomCard.java
+index 8c670452b8..ef8389717d 100644
+--- a/Mage/src/main/java/mage/cards/RoomCard.java
++++ b/Mage/src/main/java/mage/cards/RoomCard.java
+@@ -136,7 +136,25 @@ class RoomEnterUnlockEffect extends OneShotEffect {
+ 
+         // Read the half from the permanent, not the mutable card blueprint.
+         SpellAbilityType castHalf = permanent.getRoomCastHalf();
++        RoomCard dbgBlueprint = (RoomCard) RoomCharacteristicsEffect.findRoomCard(permanent);
++        System.err.println("ROOMDBG apply perm=" + permanent.getId() + " class=" + permanent.getClass().getSimpleName()
++                + " name=" + permanent.getName() + " roomCastHalf=" + castHalf
++                + " blueprint=" + (dbgBlueprint == null ? "null"
++                        : dbgBlueprint.getClass().getSimpleName() + '/' + dbgBlueprint.getId()
++                                + "/lastCastHalf=" + dbgBlueprint.getLastCastHalf()));
+         permanent.setRoomCastHalf(null);
++        if (castHalf != SpellAbilityType.SPLIT_LEFT && castHalf != SpellAbilityType.SPLIT_RIGHT) {
++            // A copied spell enters the battlefield as a token-based permanent, so PermanentCard never
++            // recorded the half and the blueprint is the only source left.
++            RoomCard roomCardBlueprint = (RoomCard) RoomCharacteristicsEffect.findRoomCard(permanent);
++            if (roomCardBlueprint == null) {
++                return true;
++            }
++            castHalf = roomCardBlueprint.getLastCastHalf();
++            if (castHalf == SpellAbilityType.SPLIT_LEFT || castHalf == SpellAbilityType.SPLIT_RIGHT) {
++                roomCardBlueprint.setLastCastHalf(null);
++            }
++        }
+         if (castHalf == SpellAbilityType.SPLIT_LEFT || castHalf == SpellAbilityType.SPLIT_RIGHT) {
+             return permanent.unlockDoor(game, source, castHalf == SpellAbilityType.SPLIT_LEFT);
+         }
+diff --git a/Mage/src/main/java/mage/game/permanent/PermanentCard.java b/Mage/src/main/java/mage/game/permanent/PermanentCard.java
+index 0bdc7a3bf8..8ce745230b 100644
+--- a/Mage/src/main/java/mage/game/permanent/PermanentCard.java
++++ b/Mage/src/main/java/mage/game/permanent/PermanentCard.java
+@@ -103,9 +103,12 @@ public class PermanentCard extends PermanentImpl {
+         copyFromCard(card, game, false);
+         // A Room spell resolves from a half, while the battlefield object is
+         // built from the parent card. Preserve the selected half explicitly.
+-        if (card instanceof RoomCard
+-                && game.getState().getZone(card.getId()) == Zone.STACK) {
+-            setRoomCastHalf(((RoomCard) card).getLastCastHalf());
++        if (card instanceof RoomCard) {
++            System.err.println("ROOMDBG init id=" + card.getId() + " zone=" + game.getState().getZone(card.getId())
++                    + " lastCastHalf=" + ((RoomCard) card).getLastCastHalf());
++            if (game.getState().getZone(card.getId()) == Zone.STACK) {
++                setRoomCastHalf(((RoomCard) card).getLastCastHalf());
++            }
+         }
+         // if temporary added abilities to the spell/card exist, you need to add it to the permanent derived from that card
+         Abilities<Ability> otherAbilities = game.getState().getAllOtherAbilities(card.getId());

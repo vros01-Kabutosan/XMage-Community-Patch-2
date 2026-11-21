@@ -1,0 +1,3 @@
+# Los scripts de bash del laboratorio se ejecutan con Git Bash: con CRLF fallan al leer el
+# shebang y los cierres de bloque, asi que se fuerzan a LF en el checkout.
+*.sh text eol=lf

@@ -1,0 +1,16 @@
+AI.basic.AttackAndBlockByAITest
+AI.basic.BlockSimulationAITest
+AI.basic.CastAlternateCastingCostsTest
+AI.basic.CastCreaturesTest
+AI.basic.CastDestroySpellsTest
+AI.basic.ChooseModalAbilityAITest
+AI.basic.ChooseTargetTest
+AI.basic.CopyAITest
+AI.basic.CostModificationTest
+AI.basic.ExileTargetTest
+AI.basic.GainControlAITest
+AI.basic.GameStatePerformanceTest
+AI.basic.ModeChoiceAITest
+AI.basic.PossibleTargetsSelectorAITest
+AI.basic.PreventRepeatedActionsTest
+AI.basic.SimulationPerformanceAITest

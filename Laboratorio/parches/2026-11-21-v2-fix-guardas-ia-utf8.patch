@@ -1,0 +1,116 @@
+commit 93d18d2aad376acd0d80eca531ca666dbe13125d
+Author: v r <vros01-Kabutosan@users.noreply.github.com>
+Date:   Sat Nov 21 22:47:19 2026 +0100
+
+    fix migracion V2: recoloca las 6 guardas isInterrupted del mod de IA y recupera el UTF-8 de PermanentImpl
+    
+    Verificacion independiente de la migracion 1.4.63V2: el worker interrumpido inserto las
+    guardas del fork con la profundidad de llaves equivocada (2 totalmente inertes, 1 por
+    llamada en lugar de por modo, addCostTargetOptions sin ninguna) y quedo un bloque duplicado
+    en la rama "// fill cost". Se restaura la colocacion exacta de upgrade/official-1.4.63V1:
+    9 ocurrencias y 0 lineas de diferencia estructural contra esa rama.
+    
+    Ademas el comentario 701.52a de PermanentImpl llego como mojibake (UTF-8 leido como CP1252);
+    unico byte corrupto de las 57.899 lineas anadidas por el delta V1 -> V2.
+
+diff --git a/Mage/src/main/java/mage/game/permanent/PermanentImpl.java b/Mage/src/main/java/mage/game/permanent/PermanentImpl.java
+index 83bbabb291..796d4a8267 100644
+--- a/Mage/src/main/java/mage/game/permanent/PermanentImpl.java
++++ b/Mage/src/main/java/mage/game/permanent/PermanentImpl.java
+@@ -1962,7 +1962,7 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
+         if (value) {
+             // The player may have another Ringbearer. We need to clear it if so.
+             //
+-            // 701.52a Certain spells and abilities have the text ÔÇ£the Ring tempts you.ÔÇØ
++            // 701.52a Certain spells and abilities have the text “the Ring tempts you.”
+             // Each time the Ring tempts you, choose a creature you control.
+             // That creature becomes your Ring-bearer until another creature
+             // becomes your Ring-bearer or another player gains control of it.
+diff --git a/Mage/src/main/java/mage/players/PlayerImpl.java b/Mage/src/main/java/mage/players/PlayerImpl.java
+index 5f214a068e..c6ccb1025b 100644
+--- a/Mage/src/main/java/mage/players/PlayerImpl.java
++++ b/Mage/src/main/java/mage/players/PlayerImpl.java
+@@ -4697,11 +4697,11 @@ public abstract class PlayerImpl implements Player, Serializable {
+             return;
+         }
+ 
+-        if (Thread.currentThread().isInterrupted()) {
+-            return;
+-        }
+         // continue to adding more modes
+         for (Mode mode : availableModes) {
++            if (Thread.currentThread().isInterrupted()) {
++                return;
++            }
+             Ability newOption = option.copy();
+             newOption.getModes().addSelectedMode(mode.getId());
+             newOption.getModes().setActiveMode(mode);
+@@ -4723,14 +4723,14 @@ public abstract class PlayerImpl implements Player, Serializable {
+             } else {
+                 // 3
+                 withTargetsFilled.add(newOption);
+-        if (Thread.currentThread().isInterrupted()) {
+-            return;
+-        }
+             }
+ 
+             // now we have added mode with combination of filled targets
+             // add it recursively with additional modes
+             for (Ability filled : withTargetsFilled) {
++                if (Thread.currentThread().isInterrupted()) {
++                    return;
++                }
+                 addModeOptions(options, filled, game);
+             }
+         }
+@@ -4747,11 +4747,11 @@ public abstract class PlayerImpl implements Player, Serializable {
+      * AI related code, generate all possible usage use cases for activating ability (all possible targets combination)
+      */
+     protected void addTargetOptions(List<Ability> options, Ability option, int targetNum, Game game) {
+-        // TODO: target options calculated for triggered ability too, but do not used in real game
+-        if (targetNum >= option.getTargets().size()) {
+         if (Thread.currentThread().isInterrupted()) {
+             return;
+         }
++        // TODO: target options calculated for triggered ability too, but do not used in real game
++        if (targetNum >= option.getTargets().size()) {
+             return;
+         }
+ 
+@@ -4763,6 +4763,9 @@ public abstract class PlayerImpl implements Player, Serializable {
+ 
+         // analyse all possible use cases
+         for (Target targetOption : currentTarget.getTargetOptions(option, game)) {
++            if (Thread.currentThread().isInterrupted()) {
++                return;
++            }
+             // fill target
+             Ability newOption = option.copy();
+             if (targetOption instanceof TargetAmount) {
+@@ -4783,12 +4786,6 @@ public abstract class PlayerImpl implements Player, Serializable {
+                 addTargetOptions(options, newOption, targetNum + 1, game);
+             } else if (!option.getCosts().getTargets().isEmpty()) {
+                 // fill cost
+-        if (Thread.currentThread().isInterrupted()) {
+-        if (Thread.currentThread().isInterrupted()) {
+-            return;
+-        }
+-            return;
+-        }
+                 addCostTargetOptions(options, newOption, 0, game);
+             } else {
+                 // all filled, ability ready with all targets and costs
+@@ -4802,7 +4799,13 @@ public abstract class PlayerImpl implements Player, Serializable {
+      * AI related code
+      */
+     private void addCostTargetOptions(List<Ability> options, Ability option, int targetNum, Game game) {
++        if (Thread.currentThread().isInterrupted()) {
++            return;
++        }
+         for (UUID targetId : option.getCosts().getTargets().get(targetNum).possibleTargets(playerId, option, game)) {
++            if (Thread.currentThread().isInterrupted()) {
++                return;
++            }
+             Ability newOption = option.copy();
+             newOption.getCosts().getTargets().get(targetNum).addTarget(targetId, option, game, true);
+             if (targetNum < option.getCosts().getTargets().size() - 1) {

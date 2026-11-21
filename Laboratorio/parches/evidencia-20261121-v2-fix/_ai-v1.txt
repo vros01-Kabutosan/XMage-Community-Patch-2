@@ -1,0 +1,16 @@
+org.mage.test.AI.basic.AttackAndBlockByAITest 14 0 0 3
+org.mage.test.AI.basic.BlockSimulationAITest 13 0 0 0
+org.mage.test.AI.basic.CastAlternateCastingCostsTest 1 0 0 1
+org.mage.test.AI.basic.CastCreaturesTest 9 0 0 1
+org.mage.test.AI.basic.CastDestroySpellsTest 2 0 0 0
+org.mage.test.AI.basic.ChooseModalAbilityAITest 8 0 0 0
+org.mage.test.AI.basic.ChooseTargetTest 2 0 0 0
+org.mage.test.AI.basic.CopyAITest 8 0 0 0
+org.mage.test.AI.basic.CostModificationTest 1 0 0 0
+org.mage.test.AI.basic.ExileTargetTest 1 0 0 0
+org.mage.test.AI.basic.GainControlAITest 3 0 0 0
+org.mage.test.AI.basic.GameStatePerformanceTest 1 0 0 0
+org.mage.test.AI.basic.ModeChoiceAITest 1 0 0 0
+org.mage.test.AI.basic.PossibleTargetsSelectorAITest 2 0 0 0
+org.mage.test.AI.basic.PreventRepeatedActionsTest 4 1 0 1
+org.mage.test.AI.basic.SimulationPerformanceAITest 13 0 0 7

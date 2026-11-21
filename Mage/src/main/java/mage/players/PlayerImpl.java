@@ -4697,11 +4697,11 @@ public abstract class PlayerImpl implements Player, Serializable {
             return;
         }
 
-        if (Thread.currentThread().isInterrupted()) {
-            return;
-        }
         // continue to adding more modes
         for (Mode mode : availableModes) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             Ability newOption = option.copy();
             newOption.getModes().addSelectedMode(mode.getId());
             newOption.getModes().setActiveMode(mode);
@@ -4723,14 +4723,14 @@ public abstract class PlayerImpl implements Player, Serializable {
             } else {
                 // 3
                 withTargetsFilled.add(newOption);
-        if (Thread.currentThread().isInterrupted()) {
-            return;
-        }
             }
 
             // now we have added mode with combination of filled targets
             // add it recursively with additional modes
             for (Ability filled : withTargetsFilled) {
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
                 addModeOptions(options, filled, game);
             }
         }
@@ -4747,11 +4747,11 @@ public abstract class PlayerImpl implements Player, Serializable {
      * AI related code, generate all possible usage use cases for activating ability (all possible targets combination)
      */
     protected void addTargetOptions(List<Ability> options, Ability option, int targetNum, Game game) {
-        // TODO: target options calculated for triggered ability too, but do not used in real game
-        if (targetNum >= option.getTargets().size()) {
         if (Thread.currentThread().isInterrupted()) {
             return;
         }
+        // TODO: target options calculated for triggered ability too, but do not used in real game
+        if (targetNum >= option.getTargets().size()) {
             return;
         }
 
@@ -4763,6 +4763,9 @@ public abstract class PlayerImpl implements Player, Serializable {
 
         // analyse all possible use cases
         for (Target targetOption : currentTarget.getTargetOptions(option, game)) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             // fill target
             Ability newOption = option.copy();
             if (targetOption instanceof TargetAmount) {
@@ -4783,12 +4786,6 @@ public abstract class PlayerImpl implements Player, Serializable {
                 addTargetOptions(options, newOption, targetNum + 1, game);
             } else if (!option.getCosts().getTargets().isEmpty()) {
                 // fill cost
-        if (Thread.currentThread().isInterrupted()) {
-        if (Thread.currentThread().isInterrupted()) {
-            return;
-        }
-            return;
-        }
                 addCostTargetOptions(options, newOption, 0, game);
             } else {
                 // all filled, ability ready with all targets and costs
@@ -4802,7 +4799,13 @@ public abstract class PlayerImpl implements Player, Serializable {
      * AI related code
      */
     private void addCostTargetOptions(List<Ability> options, Ability option, int targetNum, Game game) {
+        if (Thread.currentThread().isInterrupted()) {
+            return;
+        }
         for (UUID targetId : option.getCosts().getTargets().get(targetNum).possibleTargets(playerId, option, game)) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             Ability newOption = option.copy();
             newOption.getCosts().getTargets().get(targetNum).addTarget(targetId, option, game, true);
             if (targetNum < option.getCosts().getTargets().size() - 1) {

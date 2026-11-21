@@ -1962,7 +1962,7 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
         if (value) {
             // The player may have another Ringbearer. We need to clear it if so.
             //
-            // 701.52a Certain spells and abilities have the text ÔÇ£the Ring tempts you.ÔÇØ
+            // 701.52a Certain spells and abilities have the text “the Ring tempts you.”
             // Each time the Ring tempts you, choose a creature you control.
             // That creature becomes your Ring-bearer until another creature
             // becomes your Ring-bearer or another player gains control of it.

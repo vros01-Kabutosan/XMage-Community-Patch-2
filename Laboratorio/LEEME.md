@@ -209,3 +209,10 @@ en `CHECKPOINT-2026-11-09-fix-token-api.md`):
 - Ignorados a partir del 2026-11-09 (no se versionan): `.kilo/` y `Laboratorio/acl-recovery-*/`.
 - `Instalacion-XMage/` sigue sin versionarse (binarios pesados); su estado queda documentado en
   los checkpoints y con backups de jars en `Instalacion-XMage\xmage\backup-jars-*`.
+
+29. Migracion upstream 1.4.63 V1 -> V2 (2026-11-21):
+    - Arbol superpuesto con xmage_1.4.63V2 (c5a5215fa086) en rama nueva upgrade/official-1.4.63V2 (commit b43984215b, pusheada); la rama v38 queda intacta.
+    - 9 solapes fork x upstream resueltos (MageVersion V2+serialVersionUID, PlayerImpl V2+8 guardas, Permanent/PermanentImpl V2+roomCastHalf, ComputerPlayer6 fork+hunk isInGame, MageEditorPane V2+lastBodyRule, SuperiorSpiderMan V2+fix imagen, JacesMachinations/RealityFracture adoptadas de V2).
+    - Los 43 marcadores de mods verificados PRESENTE tras la migracion; build limpio BUILD SUCCESS; BD a 595 sets / 94942 cartas.
+    - Smoke OK en laboratorio 17191 (capturas\20261121-v2-migracion\) y despliegue oficial verificado: backup en backup-jars-1.4.63-20261121-203017_pre-V2, servidor 17171 y cliente oficial en 1.4.63-V2 conectando sin dialogo de version.
+    - Parches: 2026-11-21-migracion-1.4.63V2.patch (consolidado) y 2026-11-21-mods-fork-sobre-V2.patch (mods sobre V2). Restos upstream-deleted sin borrar documentados en CHECKPOINT-2026-11-21.

@@ -1045,8 +1045,7 @@ public class ComputerPlayer6 extends ComputerPlayer {
     protected boolean allPassed(Game game) {
         for (Player player : game.getPlayers().values()) {
             if (!player.isPassed()
-                    && !player.hasLost()
-                    && !player.hasLeft()) {
+                    && player.isInGame()) {
                 return false;
             }
         }
@@ -1427,9 +1426,9 @@ public class ComputerPlayer6 extends ComputerPlayer {
             }
         }
 
-        // Solo rechazar manos claramente injugables. La regla anterior exigía siempre
-        // dos tierras y tiraba manos de una tierra con una jugada temprana válida;
-        // eso hacía perder demasiadas cartas y dejaba a la IA sin desarrollo.
+        // Solo rechazar manos claramente injugables. La regla anterior exig├¡a siempre
+        // dos tierras y tiraba manos de una tierra con una jugada temprana v├ílida;
+        // eso hac├¡a perder demasiadas cartas y dejaba a la IA sin desarrollo.
         if (landCount == 0 || landCount >= hand.size() - 1) {
             return true;
         }

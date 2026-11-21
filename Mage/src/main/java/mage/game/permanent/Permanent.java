@@ -101,6 +101,11 @@ public interface Permanent extends Card, Controllable {
 
     boolean isPrepared();
 
+    /**
+     * Prepare spell's copy in exile, created by the current prepared designation (722.3c)
+     */
+    UUID getPreparedSpellCopyId();
+
     void setPrepared(boolean prepared, Game game);
 
     int getClassLevel();
@@ -289,6 +294,10 @@ public interface Permanent extends Card, Controllable {
     void setLegendRuleApplies(boolean legendRuleApplies);
 
     boolean legendRuleApplies();
+
+    void setZeroLoyaltyRuleApplies(boolean zeroLoyaltyRuleApplies);
+
+    boolean zeroLoyaltyRuleApplies();
 
     void resetControl();
 

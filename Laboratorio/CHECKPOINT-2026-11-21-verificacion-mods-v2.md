@@ -246,11 +246,26 @@ pulsar botones, hacerlo en la misma ventana ya traída al frente.
 - Evidencia versionada en `Laboratorio/parches/evidencia-20261121-v2-fix/`: las 2 capturas del smoke,
   las tablas de paridad `_ai-v1/v2.txt` y `_ai2-v1/v2.txt`, y el `room-fallback-wip.patch` descartado.
 
-## 12. Lo que queda fuera de esta tarea (decision de Kabutosan)
+## 12. Despliegue oficial y push (autorizados y ejecutados el 2026-11-21 22:53)
 
-1. **Desplegar** el core `a4a7aaae910341f5` en `Instalacion-XMage\xmage\mage-server\lib`: requiere cerrar
-   el cliente oficial y reiniciar el servidor 17171 (no tocado hasta confirmar).
-2. **Push** de `upgrade/official-1.4.63V2` (fuente) y de la rama de docs.
-3. Bug preexistente del mod Room al **copiar** un hechizo Room: `HANDOFF-2026-11-21-room-copia-hechizo.md`.
-4. Pendientes 1 y 4 del handoff anterior (ficheros huerfanos y backups `.before-1.4.61`): politica de
-   solo sumar, pendiente de autorizacion.
+1. **Desplegado en `Instalacion-XMage`** con la regla de oro del proyecto (jars juntos y del mismo
+   build limpio, nunca un subset): `Laboratorio\desplegar-oficial.ps1 -Yes -Tag v2-fix` copia
+   5 lib + 27 plugins al servidor, y despues 5 jars al cliente (`mage`, `mage-client`, `mage-common`,
+   `mage-sets`, `mage-deck-constructed`) porque el script oficial no cubre `mage-client\lib` y esos 5
+   venian de un build anterior (20:23).
+   - Backup: `Instalacion-XMage\xmage\backup-jars-1.4.63-20261121-225345_v2-fix\` (lib+plugins) y su
+     subcarpeta `cliente\` con los 5 jars previos del cliente.
+   - Coherencia verificada tras copiar: **37 jars oficiales = 37 jars del build, 0 distintos**, core con
+     `Build-Time: 2026-11-21T21:28:46Z` (= 22:28 local, el que paso el smoke del lab).
+   - El servidor oficial estaba **parado** al desplegar (no escuchaba en 17171) y se deja parado: arranca
+     con `Instalacion-XMage\xmage\mage-server\startServer.bat` o desde el launcher.
+2. **Pusheado**: fuente `upgrade/official-1.4.63V2` `b43984215b..93d18d2aad` y docs
+   `docs-v2-20261121` `77e4f75b00d..f94060267ca` en `vros01-Kabutosan/XMage-Community-Patch-2`.
+
+## 13. Lo que queda pendiente (decision de Kabutosan)
+
+1. Bug preexistente del mod Room al **copiar** un hechizo Room: `HANDOFF-2026-11-21-room-copia-hechizo.md`
+   (BLOQUEADO a la espera de «arregla ahora» o «deja en pendiente»).
+2. Pendientes 1 y 4 del handoff anterior (4+5 ficheros huerfanos de upstream y los 65 backups
+   `.before-1.4.61` en `mage-server\plugins`): politica de solo sumar, sin autorizacion.
+3. PR/merge `upgrade/official-1.4.63V2` -> rama v38: sigue abierto.
